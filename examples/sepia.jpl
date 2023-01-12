@@ -1,0 +1,53 @@
+/**
+ * @file sepia.jpl
+ * @package Homework 1
+ * @author Cayden Lund (u1182408)
+ * @brief Given an image, converts it to sepia-tone.
+ *
+ */
+
+/**
+ * @brief Represents a single RGBA color.
+ *
+ */
+type color = {float,float,float,float}
+
+/**
+ * @brief Represents a rank-2 array of pixels.
+ * @details A pixel is a tuple containing four floats:
+ *          {red, green, blue, alpha}.
+ *
+ */
+type pict = color[,]
+
+/**
+ * @brief Converts a single pixel to sepia-tone.
+ *
+ * @param pixel The pixel to convert to sepia-tone.
+ * @return The pixel in sepia-tone.
+ */
+fn color_to_sepia(pixel : color) : color {
+    let r = 0.393 * pixel{0} + 0.769 * pixel{1} + 0.189 * pixel{2}
+    let g = 0.349 * pixel{0} + 0.686 * pixel{1} + 0.168 * pixel{2}
+    let b = 0.272 * pixel{0} + 0.534 * pixel{1} + 0.131 * pixel{2}
+    return {                       \
+        if r > 1. then 1. else r,  \
+        if g > 1. then 1. else g,  \
+        if b > 1. then 1. else b,  \
+        pixel{3}                   \
+    }
+}
+ 
+
+/**
+ * @brief Converts the colors in the given image to sepia-tone.
+ *
+ * @param img The image to recolor.
+ * @return The given image with sepia-tone.
+ */
+fn sepia(img[H, W] : pict) : pict {
+    return array[y : H, x : W] color_to_sepia(img[y, x])
+}
+ 
+read image "sample.png" to img
+write image sepia(img) to "sample-sepia.png"
