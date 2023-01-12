@@ -1,0 +1,105 @@
+/**
+ * @file blur.jpl
+ * @package Homework 1
+ * @author Cayden Lund (u1182408)
+ * @brief Blurs the given image.
+ *
+ */
+
+/**
+ * @brief Represents a single RGBA color.
+ *
+ */
+type color = {float,float,float,float}
+
+/**
+ * @brief Represents a rank-2 array of pixels.
+ * @details A pixel is a tuple containing four floats:
+ *          {red, green, blue, alpha}.
+ *
+ */
+type pict = color[,]
+
+/**
+ * @brief Adds two pixel values together.
+ *
+ * @param left The first pixel to add.
+ * @param right The second pixel to add.
+ * @return The sum of the two pixels.
+ */
+fn add(pixel_one : color, pixel_two : color) : color {
+    return {                          \
+        pixel_one{0} + pixel_two{0},  \
+        pixel_one{1} + pixel_two{1},  \
+        pixel_one{2} + pixel_two{2},  \
+        pixel_one{3} + pixel_two{3}   \
+    }
+}
+
+/**
+ * @brief Blurs the pixel at the given location.
+ *
+ * @param img The source image.
+ * @param x The x-coordinate of the pixel.
+ * @param y The y-coordinate of the pixel.
+ * @return The blurred pixel.
+ */
+fn blur_one(img[H, W] : pict, x : int, y : int) : color {
+    let left = x > 0
+    let right = x < (W - 1)
+    let up = y > 0
+    let down = y < (H - 1)
+    //  This is a little bit complicated.
+    //  Average the values of this pixel and its surrounding eight pixels.
+    //  Number the pixels like so:
+    //      0 1 2
+    //      3 4 5
+    //      6 7 8
+    //  In the following set, each of the pixels exists (true) or doesn't
+    //  (false).
+    //  E.g., in the top-left corner of the image, only pixels 4, 5, 7, and 8
+    //  exist, while in the center of an image, all nine exist.
+    let included = [                 \
+        left && up,    //  Pixel 0.  \
+        up,            //  Pixel 1.  \
+        right && up,   //  Pixel 2.  \
+        left,          //  Pixel 3.  \
+        1 == 1,        //  Pixel 4.  \
+        right,         //  Pixel 5.  \
+        left && down,  //  Pixel 6.  \
+        down,          //  Pixel 7.  \
+        right && down  //  Pixel 8.  \
+    ]
+    let coordinates = [         \
+        [-1, -1],  //  Pixel 0. \
+        [0, -1],   //  Pixel 1. \
+        [1, -1],   //  Pixel 2. \
+        [-1, 0],   //  Pixel 3. \
+        [0, 0],    //  Pixel 4. \
+        [1, 0],    //  Pixel 5. \
+        [-1, 1],   //  Pixel 6. \
+        [0, 1],    //  Pixel 7. \
+        [1, 1]     //  Pixel 8. \
+    ]
+    let total = sum[i: 9] if included[i] then 1. else 0.
+    let values = array[i: 9] if included[i] then img[y + coordinates[i][1], x + coordinates[i][0]] else {0., 0., 0., 0.}
+    return {                              \
+        (sum[i: 9] values[i]{0}) / total, \
+        (sum[i: 9] values[i]{1}) / total, \
+        (sum[i: 9] values[i]{2}) / total, \
+        (sum[i: 9] values[i]{3}) / total, \
+    }
+}
+
+/**
+ * @brief Blurs the given image.
+ *
+ * @param img The image to blur.
+ * @return The blurred image.
+ */
+fn blur(img[H, W] : pict) : pict {
+    return array[y : H, x : W] blur_one(img, x, y)
+}
+ 
+read image "sample.png" to img
+write image blur(img) to "sample-blurry.png"
