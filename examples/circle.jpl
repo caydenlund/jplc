@@ -52,5 +52,5 @@ fn circle(radius : float, thickness : float) : pict {
                                   else {0., 0., 0., 1.}
 }
 
-write image circle(100., 1.) to "circle.png"
+write image circle(400., 10.) to "circle.png"
 
