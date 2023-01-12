@@ -1,0 +1,29 @@
+/**
+ * @file red.jpl
+ * @package Homework 1
+ * @author Cayden Lund (u1182408)
+ * @brief Creates a red image.
+ *
+ */
+ 
+/**
+ * @brief Represents a rank-2 array of pixels.
+ * @details A pixel is a tuple containing four floats:
+ *          {red, green, blue, alpha}.
+ *
+ */
+type pict = {float,float,float,float}[,]
+
+/**
+ * @brief Creates a red image of the given size.
+ *
+ * @param width The image width.
+ * @param height The image height.
+ * @return A red image of the given height and width.
+ */
+fn red(width : int, height : int) : pict {
+    return array[a : height, b : width] { 1., 0., 0., 1.}
+}
+
+let { W, H } = { 800, 600 }
+write image red(W, H) to "red.png"
