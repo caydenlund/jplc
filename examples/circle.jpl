@@ -1,0 +1,56 @@
+/**
+ * @file circle.jpl
+ * @package Homework 1
+ * @author Cayden Lund (u1182408)
+ * @brief Draws a white circle on a black background.
+ *
+ */
+
+/**
+ * @brief The width and height of the output image.
+ *
+ */
+let { W, H } = { 800, 600 }
+ 
+/**
+ * @brief Represents a rank-2 array of pixels.
+ * @details A pixel is a tuple containing four floats:
+ *          {red, green, blue, alpha}.
+ *
+ */
+type pict = {float,float,float,float}[,]
+
+/**
+ * @brief Determines whether the given pixel should be white or black.
+ *
+ * @param x The x-coordinate of the pixel.
+ * @param y The y-coordinate of the pixel.
+ * @param radius The radius of the circle.
+ * @param thickness The thickness of the circle.
+ */
+fn is_white(x : int, y : int, radius : float, thickness : float) : bool {
+    let min_radius = radius - thickness / 2.
+    let max_radius = radius + thickness / 2.
+    let distance_x = to_float(x) - to_float(W) / 2.
+    let distance_y = to_float(y) - to_float(H) / 2.
+    let distance_squared = distance_x * distance_x + distance_y * distance_y
+    return (min_radius * min_radius) < distance_squared && distance_squared < (max_radius * max_radius)
+}
+
+/**
+ * @brief Draws a white circle on a black background.
+ *
+ * @param radius The radius of the circle (in pixels).
+ * @param thickness The thickness of the white line (in pixels).
+ * @return A black image of size { W, H } with a white circle drawn on it.
+ */
+fn circle(radius : float, thickness : float) : pict {
+    let min_radius = (radius - (thickness / 2.))
+    let max_radius = (radius + (thickness / 2.))
+    return array[y : H, x : W] if is_white(x, y, radius, thickness) \
+                                  then { 1., 1., 1., 1.}            \
+                                  else {0., 0., 0., 1.}
+}
+
+write image circle(100., 1.) to "circle.png"
+
