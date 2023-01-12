@@ -1,0 +1,33 @@
+/**
+ * @file invert.jpl
+ * @package Homework 1
+ * @author Cayden Lund (u1182408)
+ * @brief Given an image, inverts the colors.
+ *
+ */
+
+/**
+ * @brief Represents a rank-2 array of pixels.
+ * @details A pixel is a tuple containing four floats:
+ *          {red, green, blue, alpha}.
+ *
+ */
+type pict = {float,float,float,float}[,]
+
+/**
+ * @brief Inverts the colors in the given image.
+ *
+ * @param img The image to invert.
+ * @return The given image with inverted colors.
+ */
+fn invert(img[H, W] : pict) : pict {
+    return array[y : H, x : W] {    \
+            1. - img[y, x]{0},      \
+            1. - img[y, x]{1},      \
+            1. - img[y, x]{2},      \
+            1.,                     \
+        }
+}
+
+read image "sample.png" to img
+write image invert(img) to "sample-inverted.png"
