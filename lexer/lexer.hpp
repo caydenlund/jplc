@@ -59,7 +59,7 @@ namespace lexer {
          * @param index The starting position from which to read.
          * @return A pair of the lexed token and the new starting position.
          */
-        result_t operator()(const std::string& input, unsigned int index);
+        result_t operator()(const std::string& input, unsigned int index) const;
     };
 
     /**

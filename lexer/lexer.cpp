@@ -15,7 +15,7 @@
 namespace lexer {
     lexer::lexer(const std::string& pattern, token::token_type type) : pattern(pattern), type(type) {}
 
-    result_t lexer::operator()(const std::string& input, unsigned int index) {
+    result_t lexer::operator()(const std::string& input, unsigned int index) const {
         std::smatch match;
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
             return {{index, match[0], this->type}, index + match[0].length()};
@@ -26,6 +26,8 @@ namespace lexer {
 
     std::vector<lexer> assemble_lexers() {
         std::vector<lexer> lexers;
+        lexers.emplace_back("^ ", token::token_type::SPACE);     //  The character ' '.
+        lexers.emplace_back("^\n", token::token_type::NEWLINE);  //  The character '\n'.
 
         //  Keywords:
         //  ---------
@@ -61,6 +63,34 @@ namespace lexer {
         std::vector<lexer> lexers = assemble_lexers();
 
         std::vector<token::token> tokens;
+
+        unsigned int start = 0;
+        bool valid_token;
+        while (start < input.size()) {
+            valid_token = false;
+            for (const lexer& one_lexer : lexers) {
+                result_t result = one_lexer(input, start);
+                unsigned int new_start = std::get<1>(result);
+                if (new_start != start) {
+                    //  The lexer succeeded.
+                    //  Add the new token to the vector, unless the token is a space.
+                    token::token new_token = std::get<0>(result);
+                    if (new_token.type != token::token_type::SPACE) tokens.push_back(new_token);
+
+                    valid_token = true;
+                    start = new_start;
+                    break;
+                }
+                //  Otherwise, try the next lexer.
+            }
+            //  If we tried every lexer and weren't able to move on, then we need to throw an exception.
+            if (!valid_token) {
+                //  TODO: Throw exception.
+                std::cerr << "Invalid token. Quitting." << std::endl;
+                return tokens;
+            }
+        }
+
         return tokens;
     }
 }  //  namespace lexer
