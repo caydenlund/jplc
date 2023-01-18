@@ -142,7 +142,7 @@ namespace token {
      * @param type The type to translate to string.
      * @return The string representation of the given type.
      */
-    std::string token_type_to_string(token_type type) {
+    inline std::string token_type_to_string(token_type type) {
         switch (type) {
             case ARRAY:
                 return "ARRAY";
@@ -220,6 +220,8 @@ namespace token {
                 return "NEWLINE";
             case END_OF_FILE:
                 return "END_OF_FILE";
+            default:
+                return "MISSING_TOKEN";
         }
     }
 }  //  namespace token
