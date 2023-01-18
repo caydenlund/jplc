@@ -67,9 +67,10 @@ namespace token {
         //  ======================
         //  ||  Miscellaneous:  ||
         //  ======================
-        OP,          //  All arithmetic and boolean operators ('+', '-', etc.).
-        NEWLINE,     //  '\n'
-        END_OF_FILE  //  The end of the file.
+        OP,           //  All arithmetic and boolean operators ('+', '-', etc.).
+        NEWLINE,      //  '\n'
+        END_OF_FILE,  //  The end of the file.
+        SPACE         //  ' '
     };
 
     /**
