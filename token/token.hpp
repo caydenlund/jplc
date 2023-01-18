@@ -95,6 +95,24 @@ namespace token {
          *
          */
         token_type type;
+
+        /**
+         * @brief `==` operator.
+         *
+         * @param other The other token to compare.
+         * @return True if the two tokens are equal.
+         */
+        bool operator==(const token& other) const {
+            return (this->start == other.start) && (this->text == other.text) && (this->type == other.type);
+        }
+
+        /**
+         * @brief `!=` operator.
+         *
+         * @param other The other token to compare.
+         * @return True if the two tokens are not equal.
+         */
+        bool operator!=(const token& other) const { return !(*this == other); }
     };
 
     /**
