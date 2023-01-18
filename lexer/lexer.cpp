@@ -18,7 +18,7 @@ namespace lexer {
     result_t lexer::operator()(const std::string& input, unsigned int index) const {
         std::smatch match;
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            return {{index, match[0], this->type}, index + match[0].length()};
+            return {{index, match[0], this->type}, index + (unsigned int)match[0].length()};
         } else {
             return {token::token(), index};
         }
