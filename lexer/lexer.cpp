@@ -15,7 +15,7 @@
 namespace lexer {
     lexer::lexer(const std::string& pattern, token::token_type type) : pattern(pattern), type(type) {}
 
-    std::tuple<token::token, unsigned int> lexer::operator()(const std::string& input, unsigned int index) {
+    result_t lexer::operator()(const std::string& input, unsigned int index) {
         std::smatch match;
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
             return {{index, match[0], this->type}, index + match[0].length()};

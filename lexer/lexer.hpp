@@ -18,6 +18,13 @@
 
 namespace lexer {
     /**
+     * @brief Defines the result of a lexer call.
+     * @details A tuple of the lexed token and the new starting position.
+     *
+     */
+    typedef std::tuple<token::token, unsigned int> result_t;
+
+    /**
      * @brief Defines the `lexer` functor class.
      * @details An instance is used to lex a particular case of input.
      *
@@ -52,7 +59,7 @@ namespace lexer {
          * @param index The starting position from which to read.
          * @return A pair of the lexed token and the new starting position.
          */
-        std::tuple<token::token, unsigned int> operator()(const std::string& input, unsigned int index);
+        result_t operator()(const std::string& input, unsigned int index);
     };
 
     /**
