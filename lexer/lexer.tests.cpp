@@ -6,12 +6,19 @@
  *
  */
 
-#define STRLEN(x) ((unsigned int)std::string(x).length())
-
 #include "lexer.hpp"
 #include "tests/tests.hpp"
 
 namespace tests::lexer_tests {
+    /**
+     * @brief Returns the length of the given string as an `unsigned int`.
+     * @details This function is explicitly inline.
+     *
+     * @param input The input string.
+     * @return The length of the input string.
+     */
+    inline unsigned int strlen(const std::string& input) { return (unsigned int)input.length(); }
+
     /**
      * @brief Ensures that the `lexer` constructor does not throw an exception.
      *
@@ -48,9 +55,9 @@ namespace tests::lexer_tests {
         const lexer::lexer array_matcher("^array", token::token_type::ARRAY);
         lexer::result_t result = array_matcher("array other phrase", 0);
 
-        if (std::get<1>(result) != STRLEN("array")) return "Lexer did not match an input that it should match";
+        if (std::get<1>(result) != strlen("array")) return "Lexer did not match an input that it should match";
 
-        const token::token actual = std::get<0>(result);
+        const token::token actual = *std::get<0>(result);
         const token::token expected {0, "array", token::token_type::ARRAY};
         if (actual != expected) return "The returned token was not correct.";
 
@@ -74,21 +81,21 @@ namespace tests::lexer_tests {
      * @return The empty string if successful; an error message otherwise.
      */
     std::string lex_all_keywords() {
-        std::vector<token::token> actual = lexer::lex_all("array bool assert else");
+        lexer::token_list_t tokens = lexer::lex_all("array bool assert else");
 
         std::vector<token::token> expected;
         token::token tok = {0, "array", token::token_type::ARRAY};
         expected.push_back(tok);
-        tok = {STRLEN("array "), "bool", token::token_type::BOOL};
+        tok = {strlen("array "), "bool", token::token_type::BOOL};
         expected.push_back(tok);
-        tok = {STRLEN("array bool "), "assert", token::token_type::ASSERT};
+        tok = {strlen("array bool "), "assert", token::token_type::ASSERT};
         expected.push_back(tok);
-        tok = {STRLEN("array bool assert "), "else", token::token_type::ELSE};
+        tok = {strlen("array bool assert "), "else", token::token_type::ELSE};
         expected.push_back(tok);
 
-        if (actual.size() != expected.size()) return "Lexer did not return the correct number of tokens";
-        for (unsigned int i = 0; i < actual.size(); i++) {
-            if (actual[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+        for (unsigned int i = 0; i < tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
 
         return "";
@@ -100,23 +107,23 @@ namespace tests::lexer_tests {
      * @return The empty string if successful; an error message otherwise.
      */
     std::string lex_all_punctuation() {
-        std::vector<token::token> actual = lexer::lex_all(": , ( {{");
+        lexer::token_list_t tokens = lexer::lex_all(": , ( {{");
 
         std::vector<token::token> expected;
         token::token tok = {0, ":", token::token_type::COLON};
         expected.push_back(tok);
-        tok = {STRLEN(": "), ",", token::token_type::COMMA};
+        tok = {strlen(": "), ",", token::token_type::COMMA};
         expected.push_back(tok);
-        tok = {STRLEN(": , "), "(", token::token_type::LPAREN};
+        tok = {strlen(": , "), "(", token::token_type::LPAREN};
         expected.push_back(tok);
-        tok = {STRLEN(": , ( "), "{", token::token_type::LCURLY};
+        tok = {strlen(": , ( "), "{", token::token_type::LCURLY};
         expected.push_back(tok);
-        tok = {STRLEN(": , ( {"), "{", token::token_type::LCURLY};
+        tok = {strlen(": , ( {"), "{", token::token_type::LCURLY};
         expected.push_back(tok);
 
-        if (actual.size() != expected.size()) return "Lexer did not return the correct number of tokens";
-        for (unsigned int i = 0; i < actual.size(); i++) {
-            if (actual[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+        for (unsigned int i = 0; i < tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
 
         return "";

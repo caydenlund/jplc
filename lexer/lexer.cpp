@@ -19,10 +19,12 @@ namespace lexer {
         std::smatch match;
 
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            return {{index, match[0], this->type}, index + (unsigned int)match[0].length()};
+            //  This creates a smart pointer to a new `token` object.
+            const token_ptr_t new_token = std::make_shared<token::token>(token::token {index, match[0], this->type});
+            return {new_token, index + (unsigned int)match[0].length()};
         }
 
-        return {token::token(), index};
+        return {std::make_shared<token::token>(), index};
     }
 
     std::vector<lexer> assemble_lexers() {
@@ -58,12 +60,12 @@ namespace lexer {
         return lexers;
     }
 
-    std::vector<token::token> lex_all(const std::string& input) {
+    token_list_t lex_all(const std::string& input) {
         //  First, assemble the set of lexers in the correct order.
         //  These will be used one by one.
         const std::vector<lexer> lexers = assemble_lexers();
 
-        std::vector<token::token> tokens;
+        token_list_t tokens;
 
         unsigned int start = 0;
         bool valid_token;
@@ -75,8 +77,8 @@ namespace lexer {
                 if (new_start != start) {
                     //  The lexer succeeded.
                     //  Add the new token to the vector, unless the token is a space.
-                    const token::token new_token = std::get<0>(result);
-                    if (new_token.type != token::token_type::SPACE) tokens.push_back(new_token);
+                    const token_ptr_t new_token = std::get<0>(result);
+                    if (new_token->type != token::token_type::SPACE) tokens.push_back(new_token);
 
                     valid_token = true;
                     start = new_start;
