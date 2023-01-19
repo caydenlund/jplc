@@ -261,7 +261,7 @@ namespace tests::lexer_tests {
     std::string lex_all_variables_with_keywords() {
         const lexer::token_list_t tokens = lexer::lex_all("float float_variable");
         std::vector<token::token> expected;
-        token::token tok {0, "float", token::token_type::FLOATVAL};
+        token::token tok {0, "float", token::token_type::FLOAT};
         expected.emplace_back(tok);
         tok = {strlen("float "), "float_variable", token::token_type::VARIABLE};
         expected.emplace_back(tok);

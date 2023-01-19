@@ -102,6 +102,25 @@ namespace lexer {
         lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
         lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
 
+        //  Variables:
+        //  ----------
+        //  The regular expression for this one is a little involved.
+        std::stringstream variable_regex;
+        //  First off, it must not be a keyword:
+        variable_regex << "(?!^(";
+        for (const std::string keyword :
+             {"array", "assert", "bool",   "else", "false", "float", "fn",   "if", "image", "int", "let",
+              "print", "read",   "return", "show", "sum",   "then",  "time", "to", "true",  "type"}) {
+            variable_regex << keyword << "|";
+        }
+        variable_regex << "write)"
+                       << R"(([^\w\.]|$)))";
+        //  Next, the first character must be a letter:
+        variable_regex << "^[a-zA-Z]";
+        //  After that, any sequence of letters, numbers, underscores, and periods:
+        variable_regex << R"([\w\.]*)";
+        lexers.emplace_back(construct_lexer(variable_regex.str(), token::token_type::VARIABLE));  //  Variables.
+
         //  Keywords:
         //  ---------
         lexers.emplace_back(construct_lexer("^array", token::token_type::ARRAY));    //  The keyword "array".
