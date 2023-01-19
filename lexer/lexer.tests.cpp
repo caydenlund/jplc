@@ -212,6 +212,50 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Ensures that the `lexer::lex_all` method correctly parses string literals.
+     * @details Tests with multiple strings on one line.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_strings_multi() {
+        const lexer::token_list_t tokens = lexer::lex_all(R"("string 1" "string 2")");
+
+        if (tokens.size() != 2) return "Lexer did not return the correct number of tokens";
+
+        if ((*tokens[0] != token::token {0, "\"string 1\"", token::token_type::STRING})
+            || (std::static_pointer_cast<token::string_token>(tokens[0])->value != "string 1"))
+            return "Lexer did not correctly lex the token 'string 1'";
+        if ((*tokens[1] != token::token {strlen("\"string 1\" "), "\"string 2\"", token::token_type::STRING})
+            || (std::static_pointer_cast<token::string_token>(tokens[1])->value != "string 2"))
+            return "Lexer did not correctly lex the token 'string 1'";
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly parses string literals.
+     * @details Tests with multiple lines.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_strings_multi_line() {
+        const lexer::token_list_t tokens = lexer::lex_all("\"string 1\"\n\"string 2\"");
+
+        if (tokens.size() != 3) return "Lexer did not return the correct number of tokens";
+
+        if ((*tokens[0] != token::token {0, "\"string 1\"", token::token_type::STRING})
+            || (std::static_pointer_cast<token::string_token>(tokens[0])->value != "string 1"))
+            return "Lexer did not correctly lex the token 'string 1'";
+        if (*tokens[1] != token::token {strlen("\"string 1\""), "\n", token::token_type::NEWLINE})
+            return "Lexer did not correctly lex the newline";
+        if ((*tokens[2] != token::token {strlen("\"string 1\"\n"), "\"string 2\"", token::token_type::STRING})
+            || (std::static_pointer_cast<token::string_token>(tokens[2])->value != "string 2"))
+            return "Lexer did not correctly lex the token 'string 1'";
+
+        return "";
+    }
+
+    /**
      * @brief Ensures that the `lexer::lex_all` method correctly identifies variables that start with keywords.
      *
      * @return The empty string if successful; an error message otherwise.
@@ -261,6 +305,8 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_integers, "Lexer `lex_all`: integers");
         tests.emplace_back(lex_all_floats, "Lexer `lex_all`: floats");
         tests.emplace_back(lex_all_strings, "Lexer `lex_all`: strings");
+        tests.emplace_back(lex_all_strings_multi, "Lexer `lex_all`: multiple strings");
+        tests.emplace_back(lex_all_strings_multi_line, "Lexer `lex_all`: multiline strings");
         tests.emplace_back(lex_all_variables_with_keywords, "Lexer `lex_all`: variables with keywords");
         tests.emplace_back(lex_all_exception, "Lexer `lex_all`: throwing an exception");
         return tests;
