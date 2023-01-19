@@ -22,7 +22,7 @@ namespace lexer {
      * @details A tuple of the lexed token and the new starting position.
      *
      */
-    typedef std::tuple<token::token, unsigned int> result_t;
+    using result_t = std::tuple<token::token, unsigned int>;
 
     /**
      * @brief Defines the `lexer` functor class.

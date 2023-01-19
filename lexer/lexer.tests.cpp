@@ -17,9 +17,9 @@ namespace tests::lexer_tests {
      */
     std::string constructor_no_fail() {
         try {
-            lexer::lexer empty_pattern("", token::token_type::ARRAY);
-            lexer::lexer valid_regex("^abc.*", token::token_type::ARRAY);
-            lexer::lexer invalid_regex(R"(\a\b\c\d)", token::token_type::ARRAY);
+            const lexer::lexer empty_pattern("", token::token_type::ARRAY);
+            const lexer::lexer valid_regex("^abc.*", token::token_type::ARRAY);
+            const lexer::lexer invalid_regex(R"(\a\b\c\d)", token::token_type::ARRAY);
         } catch (std::exception& e) { return "Lexer constructor threw exception '" + std::string(e.what()) + "'"; }
 
         return "";
@@ -32,7 +32,7 @@ namespace tests::lexer_tests {
      */
     std::string lexer_no_match() {
         try {
-            lexer::lexer array_matcher("^array", token::token_type::ARRAY);
+            const lexer::lexer array_matcher("^array", token::token_type::ARRAY);
             lexer::result_t result = array_matcher("other phrase", 0);
 
             if (std::get<1>(result) != 0) return "Lexer matched an input that it should not match";
@@ -48,13 +48,14 @@ namespace tests::lexer_tests {
      */
     std::string lexer_match() {
         try {
-            lexer::lexer array_matcher("^array", token::token_type::ARRAY);
+            const lexer::lexer array_matcher("^array", token::token_type::ARRAY);
             lexer::result_t result = array_matcher("array other phrase", 0);
 
-            if (std::get<1>(result) != 5) return "Lexer did not match an input that it should match";
+            if (std::get<1>(result) != std::string("array").length())
+                return "Lexer did not match an input that it should match";
 
-            token::token actual = std::get<0>(result);
-            token::token expected {0, "array", token::token_type::ARRAY};
+            const token::token actual = std::get<0>(result);
+            const token::token expected {0, "array", token::token_type::ARRAY};
             if (actual != expected) return "The returned token was not correct.";
         } catch (std::exception& e) { return "Lexer threw exception '" + std::string(e.what()) + "'"; }
 
@@ -88,11 +89,11 @@ namespace tests::lexer_tests {
             std::vector<token::token> expected;
             token::token tok = {0, "array", token::token_type::ARRAY};
             expected.push_back(tok);
-            tok = {6, "bool", token::token_type::BOOL};
+            tok = {(unsigned int)std::string("array ").length(), "bool", token::token_type::BOOL};
             expected.push_back(tok);
-            tok = {11, "assert", token::token_type::ASSERT};
+            tok = {(unsigned int)std::string("array bool ").length(), "assert", token::token_type::ASSERT};
             expected.push_back(tok);
-            tok = {18, "else", token::token_type::ELSE};
+            tok = {(unsigned int)std::string("array bool assert ").length(), "else", token::token_type::ELSE};
             expected.push_back(tok);
 
             if (actual.size() != expected.size()) return "Lexer did not return the correct number of tokens";

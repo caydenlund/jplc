@@ -15,9 +15,9 @@ namespace tests {
         unsigned int num_passed = 0;
 
         for (const test_t& test : tests) {
-            std::string name = std::get<1>(test);
+            const std::string name = std::get<1>(test);
             std::cout << "Running test \"" << name << "\"." << std::endl << "    ";
-            std::string result = std::get<0>(test)();
+            const std::string result = std::get<0>(test)();
 
             if (result.empty()) {
                 num_passed++;

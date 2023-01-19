@@ -17,11 +17,12 @@ namespace lexer {
 
     result_t lexer::operator()(const std::string& input, unsigned int index) const {
         std::smatch match;
+
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
             return {{index, match[0], this->type}, index + (unsigned int)match[0].length()};
-        } else {
-            return {token::token(), index};
         }
+
+        return {token::token(), index};
     }
 
     std::vector<lexer> assemble_lexers() {
@@ -60,7 +61,7 @@ namespace lexer {
     std::vector<token::token> lex_all(const std::string& input) {
         //  First, assemble the set of lexers in the correct order.
         //  These will be used one by one.
-        std::vector<lexer> lexers = assemble_lexers();
+        const std::vector<lexer> lexers = assemble_lexers();
 
         std::vector<token::token> tokens;
 
@@ -70,11 +71,11 @@ namespace lexer {
             valid_token = false;
             for (const lexer& one_lexer : lexers) {
                 result_t result = one_lexer(input, start);
-                unsigned int new_start = std::get<1>(result);
+                const unsigned int new_start = std::get<1>(result);
                 if (new_start != start) {
                     //  The lexer succeeded.
                     //  Add the new token to the vector, unless the token is a space.
-                    token::token new_token = std::get<0>(result);
+                    const token::token new_token = std::get<0>(result);
                     if (new_token.type != token::token_type::SPACE) tokens.push_back(new_token);
 
                     valid_token = true;

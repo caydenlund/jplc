@@ -22,7 +22,7 @@ namespace tests {
      *          The string in the tuple is the name of the test.
      *
      */
-    typedef std::tuple<std::function<std::string()>, std::string> test_t;
+    using test_t = std::tuple<std::function<std::string ()>, std::string>;
 
     /**
      * @brief Runs the given sequence of unit tests.
