@@ -156,6 +156,26 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Ensures that the `lexer::lex_all` method correctly identifies variables that start with keywords.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_variables_with_keywords() {
+        const lexer::token_list_t tokens = lexer::lex_all("float float_variable");
+        std::vector<token::token> expected;
+        token::token tok {0, "float", token::token_type::FLOATVAL};
+        expected.emplace_back(tok);
+        tok = {strlen("float "), "float_variable", token::token_type::VARIABLE};
+        expected.emplace_back(tok);
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+        if (*tokens[0] != expected[0]) return "Keyword token was not correct";
+        if (*tokens[1] != expected[1]) return "Variable token was not correct";
+
+        return "";
+    }
+
+    /**
      * @brief Assembles the set of all lexer unit tests.
      *
      * @return The set of all lexer unit tests.
@@ -169,6 +189,7 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_keywords, "Lexer `lex_all`: keywords");
         tests.emplace_back(lex_all_punctuation, "Lexer `lex_all`: punctuation");
         tests.emplace_back(lex_all_integers, "Lexer `lex_all`: integers");
+        tests.emplace_back(lex_all_variables_with_keywords, "Lexer `lex_all`: variables with keywords");
         return tests;
     }
 }  //  namespace tests::lexer_tests
