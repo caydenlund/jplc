@@ -129,12 +129,12 @@ namespace tests::lexer_tests {
      */
     std::vector<test_t> get_all_tests() {
         std::vector<test_t> tests;
-        tests.emplace_back(constructor_no_fail, "Lexer constructor no-fail");
+        tests.emplace_back(constructor_no_fail, "Lexer constructor: no-fail");
         tests.emplace_back(lexer_no_match, "Lexer no-match");
         tests.emplace_back(lexer_match, "Lexer match");
-        tests.emplace_back(assemble_lexers_no_fail, "Lexer `assemble_lexer` no-fail");
-        tests.emplace_back(lex_all_keywords, "Lexer `lex_all` keywords");
-        tests.emplace_back(lex_all_punctuation, "Lexer `lex_all` punctuation");
+        tests.emplace_back(assemble_lexers_no_fail, "Lexer `assemble_lexers`: no-fail");
+        tests.emplace_back(lex_all_keywords, "Lexer `lex_all`: keywords");
+        tests.emplace_back(lex_all_punctuation, "Lexer `lex_all`: punctuation");
         return tests;
     }
 }  //  namespace tests::lexer_tests
