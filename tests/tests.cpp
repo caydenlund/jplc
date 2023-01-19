@@ -17,7 +17,10 @@ namespace tests {
         for (const test_t& test : tests) {
             const std::string name = std::get<1>(test);
             std::cout << "Running test \"" << name << "\"." << std::endl << "    ";
-            const std::string result = std::get<0>(test)();
+            std::string result;
+            try {
+                result = std::get<0>(test)();
+            } catch (std::exception& e) { result = "Test threw an exception: '" + std::string(e.what()) + "'"; }
 
             if (result.empty()) {
                 num_passed++;
