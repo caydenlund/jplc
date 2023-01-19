@@ -6,7 +6,9 @@
  *
  */
 
-//  TODO: Test for negative numbers.
+//  TODO: Add test for single-line comments.
+//  TODO: Add test for multi-line comments.
+//  TODO: Add test for lines ending with '\'.
 
 #include "lexer.hpp"
 #include "tests/tests.hpp"
@@ -137,49 +139,48 @@ namespace tests::lexer_tests {
      * @return The empty string if successful; an error message otherwise.
      */
     std::string lex_all_integers() {
-        const lexer::token_list_t tokens = lexer::lex_all("1 2 345");
-
-        if (tokens.size() != 3) return "Lexer did not return the correct number of tokens";
-        for (const lexer::token_ptr_t& token : tokens) {
-            if (token->type != token::token_type::INTVAL) {
-                return "Lexer did not correctly identify an integer literal.";
-            }
+        const lexer::token_list_t tokens = lexer::lex_all("1 2 345 -6 -7");
+        std::vector<token::int_token> expected;
+        std::stringstream seen_so_far;
+        for (const std::string number : {"1", "2", "345", "-6", "-7"}) {
+            expected.push_back(token::int_token {
+                    token::token {strlen(seen_so_far.str()), number, token::token_type::INTVAL}, std::stol(number)});
+            seen_so_far << number << " ";
         }
 
-        if (std::static_pointer_cast<token::int_token>(tokens[0])->value != 1)
-            return "Lexer did not correctly get the integer value of '1'";
-        if (std::static_pointer_cast<token::int_token>(tokens[1])->value != 2)
-            return "Lexer did not correctly get the integer value of '2'";
-        if (std::static_pointer_cast<token::int_token>(tokens[2])->value
-            != 345)  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            return "Lexer did not correctly get the integer value of '345'";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+        for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
+            if (*tokens[index] != expected[index]) return "Lexer did not correctly identify an integer literal.";
+            if (std::static_pointer_cast<token::int_token>(tokens[index])->value != expected[index].value)
+                return "Lexer did not correctly get the integer value of '" + std::to_string(expected[index].value)
+                     + "'";
+        }
 
         return "";
     }
 
     /**
-     * @brief Ensures that the `lexer::lex_all` method correctly parses floating-point literals.
+     * @brief Ensures that the `lexer::lex_all` method correctly parses integer literals.
      *
      * @return The empty string if successful; an error message otherwise.
      */
     std::string lex_all_floats() {
-        const lexer::token_list_t tokens = lexer::lex_all("1. .2 3.4");
-
-        if (tokens.size() != 3) return "Lexer did not return the correct number of tokens";
-        for (const lexer::token_ptr_t& token : tokens) {
-            if (token->type != token::token_type::FLOATVAL) {
-                return "Lexer did not correctly identify a floating-point literal.";
-            }
+        const lexer::token_list_t tokens = lexer::lex_all("0.1 2. .3 -4.5 -6. -.7");
+        std::vector<token::float_token> expected;
+        std::stringstream seen_so_far;
+        for (const std::string number : {"0.1", "2.", ".3", "-4.5", "-6.", "-.7"}) {
+            expected.push_back(token::float_token {
+                    token::token {strlen(seen_so_far.str()), number, token::token_type::FLOATVAL}, std::stod(number)});
+            seen_so_far << number << " ";
         }
 
-        if (std::static_pointer_cast<token::float_token>(tokens[0])->value != 1.0)
-            return "Lexer did not correctly get the floating-point value of '1.'";
-        if (std::static_pointer_cast<token::float_token>(tokens[1])->value
-            != 0.2)  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            return "Lexer did not correctly get the floating-point value of '.2'";
-        if (std::static_pointer_cast<token::float_token>(tokens[2])->value
-            != 3.4)  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            return "Lexer did not correctly get the floating-point value of '3.4'";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+        for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
+            if (*tokens[index] != expected[index]) return "Lexer did not correctly identify a floating-point literal.";
+            if (std::static_pointer_cast<token::int_token>(tokens[index])->value != expected[index].value)
+                return "Lexer did not correctly get the floating-point value of '"
+                     + std::to_string(expected[index].value) + "'";
+        }
 
         return "";
     }
