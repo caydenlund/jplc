@@ -83,7 +83,7 @@ namespace lexer {
      *
      */
     class lexer {
-    private:
+    protected:
         /**
          * @brief The regular expression used to match input.
          *
@@ -98,11 +98,46 @@ namespace lexer {
 
     public:
         /**
-         * @brief Constructor.
+         * @brief Class constructor.
          *
          * @param pattern The regular expression used to match input.
+         * @param type The token type that the lexer matches.
          */
         lexer(const std::string& pattern, token::token_type type);
+
+        /**
+         * @brief Class destructor.
+         *
+         */
+        virtual ~lexer() = default;
+
+        /**
+         * @brief Copy constructor.
+         *
+         * @param other The other lexer to copy.
+         */
+        lexer(const lexer& other) = default;
+
+        /**
+         * @brief Move constructor.
+         *
+         * @param other The other lexer to move.
+         */
+        lexer(lexer&& other) = default;
+
+        /**
+         * @brief Assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        lexer& operator=(const lexer& other) = delete;
+
+        /**
+         * @brief Move assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        lexer& operator=(lexer&& other) = delete;
 
         /**
          * @brief Function call operator.
@@ -112,7 +147,121 @@ namespace lexer {
          * @param index The starting position from which to read.
          * @return A pair of the lexed token and the new starting position.
          */
-        result_t operator()(const std::string& input, unsigned int index) const;
+        virtual result_t operator()(const std::string& input, unsigned int index) const;
+    };
+
+    /**
+     * @brief A lexer that can parse integer literals.
+     *
+     */
+    class int_lexer : public lexer {
+    public:
+        /**
+         * @brief Class constructor.
+         *
+         */
+        int_lexer();
+
+        /**
+         * @brief Class destructor.
+         *
+         */
+        ~int_lexer() override = default;
+
+        /**
+         * @brief Copy constructor.
+         *
+         * @param other The other lexer to copy.
+         */
+        int_lexer(const int_lexer& other) = default;
+
+        /**
+         * @brief Move constructor.
+         *
+         * @param other The other lexer to move.
+         */
+        int_lexer(int_lexer&& other) = default;
+
+        /**
+         * @brief Assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        int_lexer& operator=(const int_lexer& other) = delete;
+
+        /**
+         * @brief Move assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        int_lexer& operator=(int_lexer&& other) = delete;
+
+        /**
+         * @brief Function call operator.
+         * @details Call the instance as a function.
+         *
+         * @param input The input string to read.
+         * @param index The starting position from which to read.
+         * @return A pair of the lexed token and the new starting position.
+         */
+            result_t operator()(const std::string& input, unsigned int index) const override;
+        };
+
+    /**
+     * @brief A lexer that can parse floating-point literals.
+     *
+     */
+    class float_lexer : public lexer {
+    public:
+        /**
+         * @brief Class constructor.
+         *
+         */
+        float_lexer();
+
+        /**
+         * @brief Class destructor.
+         *
+         */
+        ~float_lexer() override = default;
+
+        /**
+         * @brief Copy constructor.
+         *
+         * @param other The other lexer to copy.
+         */
+        float_lexer(const float_lexer& other) = default;
+
+        /**
+         * @brief Move constructor.
+         *
+         * @param other The other lexer to move.
+         */
+        float_lexer(float_lexer&& other) = default;
+
+        /**
+         * @brief Assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        float_lexer& operator=(const float_lexer& other) = delete;
+
+        /**
+         * @brief Move assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        float_lexer& operator=(float_lexer&& other) = delete;
+
+        /**
+         * @brief Function call operator.
+         * @details Call the instance as a function.
+         *
+         * @param input The input string to read.
+         * @param index The starting position from which to read.
+         * @return A pair of the lexed token and the new starting position.
+         */
+        result_t operator()(const std::string& input, unsigned int index) const override;
     };
 
     /**

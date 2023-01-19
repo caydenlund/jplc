@@ -5,6 +5,7 @@ Checks: '
     -altera-struct-pack-align,
     -cppcoreguidelines-avoid-const-or-ref-data-members,
     -cppcoreguidelines-init-variables,
+    -cppcoreguidelines-non-private-member-variables-in-classes,
     -fuchsia-default-arguments-calls,
     -fuchsia-overloaded-operator,
     -google-readability-braces-around-statements,

@@ -6,6 +6,8 @@
  *
  */
 
+//  TODO: Test for negative numbers.
+
 #include "lexer.hpp"
 #include "tests/tests.hpp"
 
