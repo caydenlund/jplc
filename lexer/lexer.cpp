@@ -13,6 +13,13 @@
 #include <iostream>
 
 namespace lexer {
+    lexing_exception::lexing_exception(const std::string& invalid_token, unsigned int line, unsigned int column)
+        : runtime_error("There was an invalid character sequence."),
+          message("There was invalid character sequence: \"" + invalid_token + "\" at " + std::to_string(line) + ":"
+                  + std::to_string(column) + ".") {}
+
+    const char* lexing_exception::what() const noexcept { return this->message.c_str(); }
+
     lexer::lexer(const std::string& pattern, token::token_type type) : pattern(pattern), type(type) {}
 
     result_t lexer::operator()(const std::string& input, unsigned int index) const {
@@ -87,11 +94,15 @@ namespace lexer {
                 //  Otherwise, try the next lexer.
             }
             //  If we tried every lexer and weren't able to move on, then we need to throw an exception.
-            if (!valid_token) {
-                //  TODO: Throw exception.
-                std::cerr << "Invalid token. Quitting." << std::endl;
-                return tokens;
+            const unsigned int token_length = input.length() - start;
+            std::string invalid_token;
+            if (token_length > lexing_exception::max_token_snippet_length) {
+                invalid_token = input.substr(start, lexing_exception::max_token_snippet_length) + "...";
+            } else {
+                invalid_token = input.substr(start, token_length);
             }
+            //  TODO: Extract the actual line and column.
+            if (!valid_token) { throw lexing_exception(invalid_token, 0, 0); }
         }
 
         return tokens;

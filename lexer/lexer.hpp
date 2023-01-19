@@ -9,6 +9,7 @@
 #ifndef LEXER_HPP
 #define LEXER_HPP
 
+#include <exception>
 #include <functional>
 #include <regex>
 #include <tuple>
@@ -37,6 +38,44 @@ namespace lexer {
      *
      */
     using token_list_t = std::vector<token_ptr_t>;
+
+    /**
+     * @brief This exception is thrown when there is not a lexer that can lex the input string.
+     * @details This happens when there's an invalid character in the file, or a series of characters that doesn't form
+     *     a valid token.
+     *
+     */
+    class lexing_exception : public std::runtime_error {
+    private:
+        /**
+         * @brief The error message to print.
+         *
+         */
+        const std::string message;
+
+    public:
+        /**
+         * @brief The maximum length of a token snippet.
+         *
+         */
+        constexpr static unsigned int max_token_snippet_length = 7;
+
+        /**
+         * @brief Constructor.
+         *
+         * @param invalid_token The invalid character sequence causing the exception.
+         * @param line The line number of the invalid character sequence.
+         * @param column The column number of the invalid character sequence.
+         */
+        lexing_exception(const std::string& invalid_token, unsigned int line, unsigned int column);
+
+        /**
+         * @brief Returns a C-style string describing the exception cause.
+         *
+         * @return A C-style string describing the exception cause.
+         */
+        [[nodiscard]] const char* what() const noexcept override;
+    };
 
     /**
      * @brief Defines the `lexer` functor class.
