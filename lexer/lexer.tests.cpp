@@ -149,8 +149,62 @@ namespace tests::lexer_tests {
         if (std::static_pointer_cast<token::int_token>(tokens[1])->value != 2)
             return "Lexer did not correctly get the integer value of '2'";
         if (std::static_pointer_cast<token::int_token>(tokens[2])->value
-            != 345)  // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            != 345)  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             return "Lexer did not correctly get the integer value of '345'";
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly parses floating-point literals.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_floats() {
+        const lexer::token_list_t tokens = lexer::lex_all("1. .2 3.4");
+
+        if (tokens.size() != 3) return "Lexer did not return the correct number of tokens";
+        for (const lexer::token_ptr_t& token : tokens) {
+            if (token->type != token::token_type::FLOATVAL) {
+                return "Lexer did not correctly identify a floating-point literal.";
+            }
+        }
+
+        if (std::static_pointer_cast<token::float_token>(tokens[0])->value != 1.0)
+            return "Lexer did not correctly get the floating-point value of '1.'";
+        if (std::static_pointer_cast<token::float_token>(tokens[1])->value
+            != 0.2)  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            return "Lexer did not correctly get the floating-point value of '.2'";
+        if (std::static_pointer_cast<token::float_token>(tokens[2])->value
+            != 3.4)  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            return "Lexer did not correctly get the floating-point value of '3.4'";
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly parses string literals.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_strings() {
+        const lexer::token_list_t tokens = lexer::lex_all("read image \"sample.png\" to img");
+
+        if (tokens.size() != 5) {  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            return "Lexer did not return the correct number of tokens";
+        }
+
+        if (*tokens[0] != token::token {0, "read", token::token_type::READ})
+            return "Lexer did not correctly lex the token 'read.'";
+        if (*tokens[1] != token::token {strlen("read "), "image", token::token_type::IMAGE})
+            return "Lexer did not correctly lex the token 'image.'";
+        if ((*tokens[2] != token::token {strlen("read image "), "\"sample.png\"", token::token_type::STRING})
+            || (std::static_pointer_cast<token::string_token>(tokens[2])->value != "sample.png"))
+            return "Lexer did not correctly lex the token 'sample.png'";
+        if (*tokens[3] != token::token {strlen("read image \"sample.png\" "), "to", token::token_type::TO})
+            return "Lexer did not correctly lex the token 'to.'";
+        if (*tokens[4] != token::token {strlen("read image \"sample.png\" to "), "img", token::token_type::VARIABLE})
+            return "Lexer did not correctly lex the token 'img.'";
 
         return "";
     }
@@ -203,6 +257,8 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_keywords, "Lexer `lex_all`: keywords");
         tests.emplace_back(lex_all_punctuation, "Lexer `lex_all`: punctuation");
         tests.emplace_back(lex_all_integers, "Lexer `lex_all`: integers");
+        tests.emplace_back(lex_all_floats, "Lexer `lex_all`: floats");
+        tests.emplace_back(lex_all_strings, "Lexer `lex_all`: strings");
         tests.emplace_back(lex_all_variables_with_keywords, "Lexer `lex_all`: variables with keywords");
         tests.emplace_back(lex_all_exception, "Lexer `lex_all`: throwing an exception");
         return tests;
