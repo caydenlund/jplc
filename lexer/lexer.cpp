@@ -9,9 +9,6 @@
 
 #include "lexer.hpp"
 
-//  TODO: Remove.
-#include <iostream>
-
 namespace lexer {
     lexing_exception::lexing_exception(const std::string& invalid_token, unsigned int line, unsigned int column)
         : runtime_error("There was an invalid character sequence."),
