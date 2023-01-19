@@ -26,18 +26,18 @@ namespace lexer {
     using token_ptr_t = std::shared_ptr<token::token>;
 
     /**
-     * @brief Defines the result of a lexer call.
-     * @details A tuple of the lexed token and the new starting position.
-     *
-     */
-    using result_t = std::tuple<token_ptr_t, unsigned int>;
-
-    /**
      * @brief Defines the type of a list of tokens.
      * @details The list of tokens is a vector of smart pointers, to allow for subclasses in the list.
      *
      */
     using token_list_t = std::vector<token_ptr_t>;
+
+    /**
+     * @brief Defines the result of a lexer call.
+     * @details A tuple of the lexed token and the new starting position.
+     *
+     */
+    using result_t = std::tuple<token_ptr_t, unsigned int>;
 
     /**
      * @brief This exception is thrown when there is not a lexer that can lex the input string.
@@ -116,11 +116,29 @@ namespace lexer {
     };
 
     /**
+     * @brief Defines the type of a pointer to a lexer.
+     * @details Uses a reference-counting smart pointer.
+     *
+     */
+    using lexer_ptr_t = std::shared_ptr<lexer>;
+
+    /**
      * @brief Assembles the set of lexers in the correct order.
      *
      * @return The set of lexers to use, in the correct order.
      */
-    std::vector<lexer> assemble_lexers();
+    std::vector<lexer_ptr_t> assemble_lexers();
+
+    /**
+     * @brief Given a regular expression and a token type, returns a smart pointer to a new `lexer` object.
+     *
+     * @param expression The regular expression to use.
+     * @param type The token type to use.
+     * @return A smart pointer to a new lexer.
+     */
+    inline lexer_ptr_t construct_lexer(const std::string& expression, const token::token_type& type) {
+        return std::make_shared<lexer>(expression, type);
+    }
 
     /**
      * @brief Given the input string, lexes it in its entirety.

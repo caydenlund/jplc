@@ -31,47 +31,47 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
-    std::vector<lexer> assemble_lexers() {
-        std::vector<lexer> lexers;
+    std::vector<lexer_ptr_t> assemble_lexers() {
+        std::vector<lexer_ptr_t> lexers;
 
         //  Characters:
         //  -----------
-        lexers.emplace_back("^ ", token::token_type::SPACE);      //  The character ' '.
-        lexers.emplace_back("^\n", token::token_type::NEWLINE);   //  The character '\n'.
-        lexers.emplace_back("^:", token::token_type::COLON);      //  The character ':'.
-        lexers.emplace_back("^,", token::token_type::COMMA);      //  The character ','.
-        lexers.emplace_back("^=", token::token_type::EQUALS);     //  The character '='.
-        lexers.emplace_back("^\\{", token::token_type::LCURLY);   //  The character '{'.
-        lexers.emplace_back("^\\}", token::token_type::RCURLY);   //  The character '}'.
-        lexers.emplace_back("^\\(", token::token_type::LPAREN);   //  The character '('.
-        lexers.emplace_back("^\\)", token::token_type::RPAREN);   //  The character ')'.
-        lexers.emplace_back("^\\[", token::token_type::LSQUARE);  //  The character '['.
-        lexers.emplace_back("^\\]", token::token_type::RSQUARE);  //  The character ']'.
+        lexers.emplace_back(construct_lexer("^ ", token::token_type::SPACE));      //  The character ' '.
+        lexers.emplace_back(construct_lexer("^\n", token::token_type::NEWLINE));   //  The character '\n'.
+        lexers.emplace_back(construct_lexer("^:", token::token_type::COLON));      //  The character ':'.
+        lexers.emplace_back(construct_lexer("^,", token::token_type::COMMA));      //  The character ','.
+        lexers.emplace_back(construct_lexer("^=", token::token_type::EQUALS));     //  The character '='.
+        lexers.emplace_back(construct_lexer("^\\{", token::token_type::LCURLY));   //  The character '{'.
+        lexers.emplace_back(construct_lexer("^\\}", token::token_type::RCURLY));   //  The character '}'.
+        lexers.emplace_back(construct_lexer("^\\(", token::token_type::LPAREN));   //  The character '('.
+        lexers.emplace_back(construct_lexer("^\\)", token::token_type::RPAREN));   //  The character ')'.
+        lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
+        lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
 
         //  Keywords:
         //  ---------
-        lexers.emplace_back("^array", token::token_type::ARRAY);    //  The keyword "array".
-        lexers.emplace_back("^assert", token::token_type::ASSERT);  //  The keyword "assert".
-        lexers.emplace_back("^bool", token::token_type::BOOL);      //  The keyword "bool".
-        lexers.emplace_back("^else", token::token_type::ELSE);      //  The keyword "else".
-        lexers.emplace_back("^false", token::token_type::FALSE);    //  The keyword "false".
-        lexers.emplace_back("^float", token::token_type::FLOAT);    //  The keyword "float".
-        lexers.emplace_back("^fn", token::token_type::FN);          //  The keyword "fn".
-        lexers.emplace_back("^if", token::token_type::IF);          //  The keyword "if".
-        lexers.emplace_back("^image", token::token_type::IMAGE);    //  The keyword "image".
-        lexers.emplace_back("^int", token::token_type::INT);        //  The keyword "int".
-        lexers.emplace_back("^let", token::token_type::LET);        //  The keyword "let".
-        lexers.emplace_back("^print", token::token_type::PRINT);    //  The keyword "print".
-        lexers.emplace_back("^read", token::token_type::READ);      //  The keyword "read".
-        lexers.emplace_back("^return", token::token_type::RETURN);  //  The keyword "return".
-        lexers.emplace_back("^show", token::token_type::SHOW);      //  The keyword "show".
-        lexers.emplace_back("^sum", token::token_type::SUM);        //  The keyword "sum".
-        lexers.emplace_back("^then", token::token_type::THEN);      //  The keyword "then".
-        lexers.emplace_back("^time", token::token_type::TIME);      //  The keyword "time".
-        lexers.emplace_back("^to", token::token_type::TO);          //  The keyword "to".
-        lexers.emplace_back("^true", token::token_type::TRUE);      //  The keyword "true".
-        lexers.emplace_back("^type", token::token_type::TYPE);      //  The keyword "type".
-        lexers.emplace_back("^write", token::token_type::WRITE);    //  The keyword "write".
+        lexers.emplace_back(construct_lexer("^array", token::token_type::ARRAY));    //  The keyword "array".
+        lexers.emplace_back(construct_lexer("^assert", token::token_type::ASSERT));  //  The keyword "assert".
+        lexers.emplace_back(construct_lexer("^bool", token::token_type::BOOL));      //  The keyword "bool".
+        lexers.emplace_back(construct_lexer("^else", token::token_type::ELSE));      //  The keyword "else".
+        lexers.emplace_back(construct_lexer("^false", token::token_type::FALSE));    //  The keyword "false".
+        lexers.emplace_back(construct_lexer("^float", token::token_type::FLOAT));    //  The keyword "float".
+        lexers.emplace_back(construct_lexer("^fn", token::token_type::FN));          //  The keyword "fn".
+        lexers.emplace_back(construct_lexer("^if", token::token_type::IF));          //  The keyword "if".
+        lexers.emplace_back(construct_lexer("^image", token::token_type::IMAGE));    //  The keyword "image".
+        lexers.emplace_back(construct_lexer("^int", token::token_type::INT));        //  The keyword "int".
+        lexers.emplace_back(construct_lexer("^let", token::token_type::LET));        //  The keyword "let".
+        lexers.emplace_back(construct_lexer("^print", token::token_type::PRINT));    //  The keyword "print".
+        lexers.emplace_back(construct_lexer("^read", token::token_type::READ));      //  The keyword "read".
+        lexers.emplace_back(construct_lexer("^return", token::token_type::RETURN));  //  The keyword "return".
+        lexers.emplace_back(construct_lexer("^show", token::token_type::SHOW));      //  The keyword "show".
+        lexers.emplace_back(construct_lexer("^sum", token::token_type::SUM));        //  The keyword "sum".
+        lexers.emplace_back(construct_lexer("^then", token::token_type::THEN));      //  The keyword "then".
+        lexers.emplace_back(construct_lexer("^time", token::token_type::TIME));      //  The keyword "time".
+        lexers.emplace_back(construct_lexer("^to", token::token_type::TO));          //  The keyword "to".
+        lexers.emplace_back(construct_lexer("^true", token::token_type::TRUE));      //  The keyword "true".
+        lexers.emplace_back(construct_lexer("^type", token::token_type::TYPE));      //  The keyword "type".
+        lexers.emplace_back(construct_lexer("^write", token::token_type::WRITE));    //  The keyword "write".
 
         return lexers;
     }
@@ -79,7 +79,7 @@ namespace lexer {
     token_list_t lex_all(const std::string& input) {
         //  First, assemble the set of lexers in the correct order.
         //  These will be used one by one.
-        const std::vector<lexer> lexers = assemble_lexers();
+        const std::vector<lexer_ptr_t> lexers = assemble_lexers();
 
         token_list_t tokens;
 
@@ -87,8 +87,8 @@ namespace lexer {
         bool valid_token;
         while (start < input.size()) {
             valid_token = false;
-            for (const lexer& one_lexer : lexers) {
-                result_t result = one_lexer(input, start);
+            for (const lexer_ptr_t& one_lexer : lexers) {
+                result_t result = (*one_lexer)(input, start);
                 const unsigned int new_start = std::get<1>(result);
                 if (new_start != start) {
                     //  The lexer succeeded.
