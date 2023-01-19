@@ -63,13 +63,30 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
+    string_lexer::string_lexer() : lexer(R"(^"((\\")|([^"]))*")", token::token_type::STRING) {}
+
+    result_t string_lexer::operator()(const std::string& input, unsigned int index) const {
+        std::smatch match;
+
+        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
+            const std::string value = std::string(match[0]).substr(1, match[0].length() - 2);
+            //  This creates a smart pointer to a new `string_token` object.
+            const token_ptr_t new_token = std::make_shared<token::string_token>(
+                    token::string_token {{index, match[0], this->type}, value});
+            return {new_token, index + (unsigned int)match[0].length()};
+        }
+
+        return {std::make_shared<token::token>(), index};
+    }
+
     std::vector<lexer_ptr_t> assemble_lexers() {
         std::vector<lexer_ptr_t> lexers;
 
-        //  Special values:
-        //  ---------------
-        lexers.emplace_back(std::make_shared<float_lexer>(float_lexer()));  //  Floating-point literals.
-        lexers.emplace_back(std::make_shared<int_lexer>(int_lexer()));      //  Integer literals.
+        //  Literals:
+        //  ---------
+        lexers.emplace_back(std::make_shared<float_lexer>(float_lexer()));    //  Floating-point literals.
+        lexers.emplace_back(std::make_shared<int_lexer>(int_lexer()));        //  Integer literals.
+        lexers.emplace_back(std::make_shared<string_lexer>(string_lexer()));  //  String literals.
 
         //  Characters:
         //  -----------

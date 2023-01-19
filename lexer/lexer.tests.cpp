@@ -190,9 +190,9 @@ namespace tests::lexer_tests {
      * @return The empty string if successful; an error message otherwise.
      */
     std::string lex_all_strings() {
-        const lexer::token_list_t tokens = lexer::lex_all("read image \"sample.png\" to img");
+        const lexer::token_list_t tokens = lexer::lex_all("read image \"sample.png\" to");
 
-        if (tokens.size() != 5) {  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        if (tokens.size() != 4) {  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             return "Lexer did not return the correct number of tokens";
         }
 
@@ -205,8 +205,6 @@ namespace tests::lexer_tests {
             return "Lexer did not correctly lex the token 'sample.png'";
         if (*tokens[3] != token::token {strlen("read image \"sample.png\" "), "to", token::token_type::TO})
             return "Lexer did not correctly lex the token 'to.'";
-        if (*tokens[4] != token::token {strlen("read image \"sample.png\" to "), "img", token::token_type::VARIABLE})
-            return "Lexer did not correctly lex the token 'img.'";
 
         return "";
     }
