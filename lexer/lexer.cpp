@@ -31,22 +31,6 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
-    int_lexer::int_lexer() : lexer("^\\d+", token::token_type::INTVAL) {}
-
-    result_t int_lexer::operator()(const std::string& input, unsigned int index) const {
-        std::smatch match;
-
-        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            const long value = std::stol(match[0]);
-            //  This creates a smart pointer to a new `int_token` object.
-            const token_ptr_t new_token = std::make_shared<token::int_token>(
-                    token::int_token {{index, match[0], this->type}, value});
-            return {new_token, index + (unsigned int)match[0].length()};
-        }
-
-        return {std::make_shared<token::token>(), index};
-    }
-
     float_lexer::float_lexer() : lexer(R"((^\d+\.\d*)|(^\d*\.\d+))", token::token_type::FLOATVAL) {}
 
     result_t float_lexer::operator()(const std::string& input, unsigned int index) const {
@@ -57,6 +41,22 @@ namespace lexer {
             //  This creates a smart pointer to a new `float_token` object.
             const token_ptr_t new_token = std::make_shared<token::float_token>(
                     token::float_token {{index, match[0], this->type}, value});
+            return {new_token, index + (unsigned int)match[0].length()};
+        }
+
+        return {std::make_shared<token::token>(), index};
+    }
+
+    int_lexer::int_lexer() : lexer("^\\d+", token::token_type::INTVAL) {}
+
+    result_t int_lexer::operator()(const std::string& input, unsigned int index) const {
+        std::smatch match;
+
+        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
+            const long value = std::stol(match[0]);
+            //  This creates a smart pointer to a new `int_token` object.
+            const token_ptr_t new_token = std::make_shared<token::int_token>(
+                    token::int_token {{index, match[0], this->type}, value});
             return {new_token, index + (unsigned int)match[0].length()};
         }
 
