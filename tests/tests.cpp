@@ -20,7 +20,7 @@ namespace tests {
             std::string result;
             try {
                 result = std::get<0>(test)();
-            } catch (std::exception& e) { result = "Test threw an exception: '" + std::string(e.what()) + "'"; }
+            } catch (const std::exception& e) { result = "Test threw an exception: '" + std::string(e.what()) + "'"; }
 
             if (result.empty()) {
                 num_passed++;
