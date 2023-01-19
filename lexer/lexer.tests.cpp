@@ -176,6 +176,20 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Ensures that the `lexer::lex_all` method correctly throws an exception when it encounters an illegal
+     *     character.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_exception() {
+        try {
+            lexer::lex_all("bool \r bool");
+        } catch (const lexer::lexing_exception& e) { return ""; }
+
+        return "Lexer did not throw an exception upon an illegal character";
+    }
+
+    /**
      * @brief Assembles the set of all lexer unit tests.
      *
      * @return The set of all lexer unit tests.
@@ -190,6 +204,7 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_punctuation, "Lexer `lex_all`: punctuation");
         tests.emplace_back(lex_all_integers, "Lexer `lex_all`: integers");
         tests.emplace_back(lex_all_variables_with_keywords, "Lexer `lex_all`: variables with keywords");
+        tests.emplace_back(lex_all_exception, "Lexer `lex_all`: throwing an exception");
         return tests;
     }
 }  //  namespace tests::lexer_tests
