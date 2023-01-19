@@ -33,8 +33,20 @@ namespace lexer {
 
     std::vector<lexer> assemble_lexers() {
         std::vector<lexer> lexers;
-        lexers.emplace_back("^ ", token::token_type::SPACE);     //  The character ' '.
-        lexers.emplace_back("^\n", token::token_type::NEWLINE);  //  The character '\n'.
+
+        //  Characters:
+        //  -----------
+        lexers.emplace_back("^ ", token::token_type::SPACE);      //  The character ' '.
+        lexers.emplace_back("^\n", token::token_type::NEWLINE);   //  The character '\n'.
+        lexers.emplace_back("^:", token::token_type::COLON);      //  The character ':'.
+        lexers.emplace_back("^,", token::token_type::COMMA);      //  The character ','.
+        lexers.emplace_back("^=", token::token_type::EQUALS);     //  The character '='.
+        lexers.emplace_back("^\\{", token::token_type::LCURLY);   //  The character '{'.
+        lexers.emplace_back("^\\}", token::token_type::RCURLY);   //  The character '}'.
+        lexers.emplace_back("^\\(", token::token_type::LPAREN);   //  The character '('.
+        lexers.emplace_back("^\\)", token::token_type::RPAREN);   //  The character ')'.
+        lexers.emplace_back("^\\[", token::token_type::LSQUARE);  //  The character '['.
+        lexers.emplace_back("^\\]", token::token_type::RSQUARE);  //  The character ']'.
 
         //  Keywords:
         //  ---------
