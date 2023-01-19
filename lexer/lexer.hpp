@@ -151,7 +151,7 @@ namespace lexer {
     };
 
     /**
-     * @brief A lexer that can parse floating-point literals.
+     * @brief A lexer that can lex floating-point literals.
      *
      */
     class float_lexer : public lexer {
@@ -208,7 +208,7 @@ namespace lexer {
     };
 
     /**
-     * @brief A lexer that can parse integer literals.
+     * @brief A lexer that can lex integer literals.
      *
      */
     class int_lexer : public lexer {
@@ -265,7 +265,7 @@ namespace lexer {
     };
 
     /**
-     * @brief A lexer that can parse string literals.
+     * @brief A lexer that can lex string literals.
      *
      */
     class string_lexer : public lexer {
