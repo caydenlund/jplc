@@ -130,6 +130,32 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Ensures that the `lexer::lex_all` method correctly parses integer literals.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_integers() {
+        const lexer::token_list_t tokens = lexer::lex_all("1 2 345");
+
+        if (tokens.size() != 3) return "Lexer did not return the correct number of tokens";
+        for (const lexer::token_ptr_t& token : tokens) {
+            if (token->type != token::token_type::INTVAL) {
+                return "Lexer did not correctly identify an integer literal.";
+            }
+        }
+
+        if (std::static_pointer_cast<token::int_token>(tokens[0])->value != 1)
+            return "Lexer did not correctly get the integer value of '1'";
+        if (std::static_pointer_cast<token::int_token>(tokens[1])->value != 2)
+            return "Lexer did not correctly get the integer value of '2'";
+        if (std::static_pointer_cast<token::int_token>(tokens[2])->value
+            != 345)  // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            return "Lexer did not correctly get the integer value of '345'";
+
+        return "";
+    }
+
+    /**
      * @brief Assembles the set of all lexer unit tests.
      *
      * @return The set of all lexer unit tests.
@@ -142,6 +168,7 @@ namespace tests::lexer_tests {
         tests.emplace_back(assemble_lexers_no_fail, "Lexer `assemble_lexers`: no-fail");
         tests.emplace_back(lex_all_keywords, "Lexer `lex_all`: keywords");
         tests.emplace_back(lex_all_punctuation, "Lexer `lex_all`: punctuation");
+        tests.emplace_back(lex_all_integers, "Lexer `lex_all`: integers");
         return tests;
     }
 }  //  namespace tests::lexer_tests
