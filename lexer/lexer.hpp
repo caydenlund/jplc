@@ -265,6 +265,63 @@ namespace lexer {
     };
 
     /**
+     * @brief A lexer that can parse string literals.
+     *
+     */
+    class string_lexer : public lexer {
+    public:
+        /**
+         * @brief Class constructor.
+         *
+         */
+        string_lexer();
+
+        /**
+         * @brief Class destructor.
+         *
+         */
+        ~string_lexer() override = default;
+
+        /**
+         * @brief Copy constructor.
+         *
+         * @param other The other lexer to copy.
+         */
+        string_lexer(const string_lexer& other) = default;
+
+        /**
+         * @brief Move constructor.
+         *
+         * @param other The other lexer to move.
+         */
+        string_lexer(string_lexer&& other) = default;
+
+        /**
+         * @brief Assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        string_lexer& operator=(const string_lexer& other) = delete;
+
+        /**
+         * @brief Move assignment operator.
+         *
+         * @param other The other lexer to move.
+         */
+        string_lexer& operator=(string_lexer&& other) = delete;
+
+        /**
+         * @brief Function call operator.
+         * @details Call the instance as a function.
+         *
+         * @param input The input string to read.
+         * @param index The starting position from which to read.
+         * @return A pair of the lexed token and the new starting position.
+         */
+        result_t operator()(const std::string& input, unsigned int index) const override;
+    };
+
+    /**
      * @brief Defines the type of a pointer to a lexer.
      * @details Uses a reference-counting smart pointer.
      *
