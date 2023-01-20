@@ -6,10 +6,6 @@
  *
  */
 
-//  TODO: Add test for single-line comments.
-//  TODO: Add test for multi-line comments.
-//  TODO: Add test for lines ending with '\'.
-
 #include "lexer.hpp"
 #include "tests/tests.hpp"
 
@@ -177,7 +173,7 @@ namespace tests::lexer_tests {
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
             if (*tokens[index] != expected[index]) return "Lexer did not correctly identify a floating-point literal.";
-            if (std::static_pointer_cast<token::int_token>(tokens[index])->value != expected[index].value)
+            if (std::static_pointer_cast<token::float_token>(tokens[index])->value != expected[index].value)
                 return "Lexer did not correctly get the floating-point value of '"
                      + std::to_string(expected[index].value) + "'";
         }
@@ -275,6 +271,134 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Ensures that the `lexer::lex_all` method correctly ignores single-line comments.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_single_line_comments() {
+        const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \n int");
+        const std::vector<token::token> expected {
+                token::token {0, "float", token::token_type::FLOAT},
+                token::token {strlen("float  //  comment "), "\n", token::token_type::NEWLINE},
+                token::token {strlen("float  //  comment \n "), "int", token::token_type::INT}};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        }
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly ignores a newline at the end of a single-line comment
+     *     when the single-line comment ends with a backslash.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_single_line_comments_escaped_line() {
+        const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \\\n int");
+        const std::vector<token::token> expected {
+                token::token {0, "float", token::token_type::FLOAT},
+                token::token {strlen("float  //  comment \\\n "), "int", token::token_type::INT}};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        }
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly ignores a backtick in the middle of a single-line
+     *     comment.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_single_line_comments_backslash() {
+        const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \\ comment \n int");
+        const std::vector<token::token> expected {
+                token::token {0, "float", token::token_type::FLOAT},
+                token::token {strlen("float  //  comment \\\n "), "int", token::token_type::NEWLINE},
+                token::token {strlen("float  //  comment \\ comment \n "), "int", token::token_type::INT}};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        }
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly ignores multi-line comments.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_multi_line_comments() {
+        const lexer::token_list_t tokens = lexer::lex_all("float /* \n */ int");
+        const std::vector<token::token> expected {
+                token::token {0, "float", token::token_type::FLOAT},
+                token::token {strlen("float /* \n */ "), "int", token::token_type::INT}};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        }
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly doesn't ignore fake "comments" inside strings.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_string_comments() {
+        const lexer::token_list_t tokens = lexer::lex_all(R"(" //  not a comment " " /* not a comment */ ")");
+        const std::vector<token::string_token> expected {
+                token::string_token {{0, R"(" //  not a comment ")", token::token_type::STRING}, " //  not a comment "},
+                token::string_token {
+                        {strlen(R"(" //  not a comment " )"), R"(" /* not a comment */ ")", token::token_type::STRING},
+                        " //  not a comment "}};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
+            if (*tokens[index] != expected[index]) return "Token " + std::to_string(index) + " was not correct";
+            if (std::static_pointer_cast<token::string_token>(tokens[index])->value != expected[index].value)
+                return "Lexer did not correctly lex the string " + expected[index].text;
+        }
+
+        return "";
+    }
+
+    /**
+     * @brief Ensures that the `lexer::lex_all` method correctly ignores escaped newlines.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string lex_all_escaped_newline() {
+        const lexer::token_list_t tokens = lexer::lex_all("int \\\n float");
+        const std::vector<token::token> expected {
+                token::token {0, "int", token::token_type::INT},
+                token::token {strlen("int \\\n "), "float", token::token_type::FLOAT}};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
+            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        }
+
+        return "";
+    }
+
+    /**
      * @brief Ensures that the `lexer::lex_all` method correctly throws an exception when it encounters an illegal
      *     character.
      *
@@ -305,8 +429,16 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_floats, "Lexer `lex_all`: floats");
         tests.emplace_back(lex_all_strings, "Lexer `lex_all`: strings");
         tests.emplace_back(lex_all_strings_multi, "Lexer `lex_all`: multiple strings");
-        tests.emplace_back(lex_all_strings_multi_line, "Lexer `lex_all`: multiline strings");
+        tests.emplace_back(lex_all_strings_multi_line, "Lexer `lex_all`: multi-line strings");
         tests.emplace_back(lex_all_variables_with_keywords, "Lexer `lex_all`: variables with keywords");
+        tests.emplace_back(lex_all_single_line_comments, "Lexer `lex_all`: single-line comments");
+        tests.emplace_back(lex_all_single_line_comments_escaped_line,
+                           "Lexer `lex_all`: single-line comments with escaped newline");
+        tests.emplace_back(lex_all_single_line_comments_backslash,
+                           "Lexer `lex_all`: single-line comments with an interior backslash");
+        tests.emplace_back(lex_all_multi_line_comments, "Lexer `lex_all`: multi-line comments");
+        tests.emplace_back(lex_all_string_comments, "Lexer `lex_all`: comments inside strings");
+        tests.emplace_back(lex_all_escaped_newline, "Lexer `lex_all`: escaped newline");
         tests.emplace_back(lex_all_exception, "Lexer `lex_all`: throwing an exception");
         return tests;
     }
