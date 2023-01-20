@@ -365,7 +365,7 @@ namespace tests::lexer_tests {
                 token::string_token {{0, R"(" //  not a comment ")", token::token_type::STRING}, " //  not a comment "},
                 token::string_token {
                         {strlen(R"(" //  not a comment " )"), R"(" /* not a comment */ ")", token::token_type::STRING},
-                        " //  not a comment "}};
+                        " /* not a comment */ "}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
