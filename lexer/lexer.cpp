@@ -104,21 +104,21 @@ namespace lexer {
         //  Misc. expressions:
         //  ------------------
         //  Variables:
-        std::stringstream variable_expression;
+        std::stringstream expression;
         //      First off, it must not be a keyword:
-        variable_expression << "(?!^(";
+        expression << "(?!^(";
         for (const std::string keyword :
              {"array", "assert", "bool",   "else", "false", "float", "fn",   "if", "image", "int", "let",
               "print", "read",   "return", "show", "sum",   "then",  "time", "to", "true",  "type"}) {
-            variable_expression << keyword << "|";
+            expression << keyword << "|";
         }
-        variable_expression << "write)"
-                            << R"(([^\w\.]|$)))";
+        expression << "write)"
+                   << R"(([^\w\.]|$)))";
         //      Next, the first character must be a letter:
-        variable_expression << "^[a-zA-Z]";
+        expression << "^[a-zA-Z]";
         //      After that, any sequence of letters, numbers, underscores, and periods:
-        variable_expression << R"([\w\.]*)";
-        lexers.emplace_back(construct_lexer(variable_expression.str(), token::token_type::VARIABLE));  //  Variables.
+        expression << R"([\w\.]*)";
+        lexers.emplace_back(construct_lexer(expression.str(), token::token_type::VARIABLE));  //  Variables.
 
         //  Newlines:
         //      If the newline is preceded by a backslash, then escape it:
@@ -133,6 +133,16 @@ namespace lexer {
         //  Multi-line comments:
         lexers.emplace_back(
                 construct_lexer(R"(^\/\*[\S \n]*?\*\/)", token::token_type::SPACE));  //  A multi-line comment.
+
+        //  Operators:
+        expression.str("");
+        expression << "^(";
+        for (const std::string ope :
+             {"&&", "\\|\\|", "<", ">", "<=", ">=", "==", "!=", "\\+", "-", "\\*", "\\/", "%"}) {
+            expression << ope << "|";
+        }
+        expression << "!)";
+        lexers.emplace_back(construct_lexer(expression.str(), token::token_type::OP));
 
         //  Keywords:
         //  ---------
