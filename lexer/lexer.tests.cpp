@@ -322,7 +322,7 @@ namespace tests::lexer_tests {
         const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \\ comment \n int");
         const std::vector<token::token> expected {
                 token::token {0, "float", token::token_type::FLOAT},
-                token::token {strlen("float  //  comment \\\n "), "int", token::token_type::NEWLINE},
+                token::token {strlen("float  //  comment \\ comment "), "\n", token::token_type::NEWLINE},
                 token::token {strlen("float  //  comment \\ comment \n "), "int", token::token_type::INT}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
