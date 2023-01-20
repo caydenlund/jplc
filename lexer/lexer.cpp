@@ -91,7 +91,6 @@ namespace lexer {
         //  Characters:
         //  -----------
         lexers.emplace_back(construct_lexer("^ ", token::token_type::SPACE));      //  The character ' '.
-        lexers.emplace_back(construct_lexer("^\n", token::token_type::NEWLINE));   //  The character '\n'.
         lexers.emplace_back(construct_lexer("^:", token::token_type::COLON));      //  The character ':'.
         lexers.emplace_back(construct_lexer("^,", token::token_type::COMMA));      //  The character ','.
         lexers.emplace_back(construct_lexer("^=", token::token_type::EQUALS));     //  The character '='.
@@ -102,24 +101,35 @@ namespace lexer {
         lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
         lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
 
+        //  Misc. expressions:
+        //  ------------------
         //  Variables:
-        //  ----------
-        //  The regular expression for this one is a little involved.
-        std::stringstream variable_regex;
-        //  First off, it must not be a keyword:
-        variable_regex << "(?!^(";
+        std::stringstream expression;
+        //      First off, it must not be a keyword:
+        expression << "(?!^(";
         for (const std::string keyword :
              {"array", "assert", "bool",   "else", "false", "float", "fn",   "if", "image", "int", "let",
               "print", "read",   "return", "show", "sum",   "then",  "time", "to", "true",  "type"}) {
-            variable_regex << keyword << "|";
+            expression << keyword << "|";
         }
-        variable_regex << "write)"
-                       << R"(([^\w\.]|$)))";
-        //  Next, the first character must be a letter:
-        variable_regex << "^[a-zA-Z]";
-        //  After that, any sequence of letters, numbers, underscores, and periods:
-        variable_regex << R"([\w\.]*)";
-        lexers.emplace_back(construct_lexer(variable_regex.str(), token::token_type::VARIABLE));  //  Variables.
+        expression << "write)"
+                   << R"(([^\w\.]|$)))";
+        //      Next, the first character must be a letter:
+        expression << "^[a-zA-Z]";
+        //      After that, any sequence of letters, numbers, underscores, and periods:
+        expression << R"([\w\.]*)";
+        lexers.emplace_back(construct_lexer(expression.str(), token::token_type::VARIABLE));  //  Variables.
+
+        //  Newlines:
+        expression.str("");
+        //      If the newline is preceded by a backslash, then escape it:
+        lexers.emplace_back(construct_lexer("^\\\\\n", token::token_type::SPACE));  //  An escaped newline.
+        //      Otherwise, it's a newline token:
+        lexers.emplace_back(construct_lexer("^\n", token::token_type::NEWLINE));  //  A non-escaped newline.
+
+        //  Single-line comments:
+        lexers.emplace_back(
+                construct_lexer(R"(^\/\/.*?(?=(\\\n|\n|$)))", token::token_type::SPACE));  //  A single-line comment.
 
         //  Keywords:
         //  ---------
