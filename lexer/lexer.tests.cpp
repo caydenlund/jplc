@@ -20,6 +20,55 @@ namespace tests::lexer_tests {
     inline unsigned int strlen(const std::string& input) { return (unsigned int)input.length(); }
 
     /**
+     * @brief Returns a smart pointer to a new token.
+     *
+     * @param start The start index of the token.
+     * @param text The text of the token.
+     * @param type The type of the token.
+     * @return A smart pointer to the new token.
+     */
+    inline std::shared_ptr<token::token> tok(unsigned int start, const std::string& text, token::token_type type) {
+        return std::make_shared<token::token>(token::token {start, text, type});
+    }
+
+    /**
+     * @brief Returns a smart pointer to a new floating-point token.
+     *
+     * @param start The start index of the token.
+     * @param text The text of the token.
+     * @param value The value of the token.
+     * @return A smart pointer to the new token.
+     */
+    inline std::shared_ptr<token::float_token> float_tok(unsigned int start, const std::string& text, double value) {
+        return std::make_shared<token::float_token>(
+                token::float_token {{start, text, token::token_type::FLOATVAL}, value});
+    }
+
+    /**
+     * @brief Returns a smart pointer to a new integer token.
+     *
+     * @param start The start index of the token.
+     * @param value The value of the token.
+     * @return A smart pointer to the new token.
+     */
+    std::shared_ptr<token::int_token> int_tok(unsigned int start, long value) {
+        return std::make_shared<token::int_token>(
+                token::int_token {{start, std::to_string(value), token::token_type::INTVAL}, value});
+    }
+
+    /**
+     * @brief Returns a smart pointer to a new string token.
+     *
+     * @param start The start index of the token.
+     * @param value The value of the token.
+     * @return A smart pointer to the new token.
+     */
+    std::shared_ptr<token::string_token> str_tok(unsigned int start, const std::string& value) {
+        return std::make_shared<token::string_token>(
+                token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
+    }
+
+    /**
      * @brief Ensures that the `lexer` constructor does not throw an exception.
      *
      * @return The empty string if successful; an exception is thrown otherwise.
@@ -83,10 +132,12 @@ namespace tests::lexer_tests {
     std::string lex_all_keywords() {
         lexer::token_list_t tokens = lexer::lex_all("array bool assert else");
 
-        const std::vector<token::token> expected {{0, "array", token::token_type::ARRAY},
-                                                  {strlen("array "), "bool", token::token_type::BOOL},
-                                                  {strlen("array bool "), "assert", token::token_type::ASSERT},
-                                                  {strlen("array bool assert "), "else", token::token_type::ELSE}};
+        const std::vector<token::token> expected {
+                {0, "array", token::token_type::ARRAY},
+                {strlen("array "), "bool", token::token_type::BOOL},
+                {strlen("array bool "), "assert", token::token_type::ASSERT},
+                {strlen("array bool assert "), "else", token::token_type::ELSE},
+                {strlen("array bool assert else"), "", token::token_type::END_OF_FILE}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
@@ -105,11 +156,13 @@ namespace tests::lexer_tests {
     std::string lex_all_punctuation() {
         lexer::token_list_t tokens = lexer::lex_all(": , ( {{");
 
-        const std::vector<token::token> expected {token::token {0, ":", token::token_type::COLON},
-                                                  token::token {strlen(": "), ",", token::token_type::COMMA},
-                                                  token::token {strlen(": , "), "(", token::token_type::LPAREN},
-                                                  token::token {strlen(": , ( "), "{", token::token_type::LCURLY},
-                                                  token::token {strlen(": , ( {"), "{", token::token_type::LCURLY}};
+        const std::vector<token::token> expected {
+                token::token {0, ":", token::token_type::COLON},
+                token::token {strlen(": "), ",", token::token_type::COMMA},
+                token::token {strlen(": , "), "(", token::token_type::LPAREN},
+                token::token {strlen(": , ( "), "{", token::token_type::LCURLY},
+                token::token {strlen(": , ( {"), "{", token::token_type::LCURLY},
+                token::token {strlen(": , ( {{"), "", token::token_type::END_OF_FILE}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
@@ -128,49 +181,68 @@ namespace tests::lexer_tests {
     std::string lex_all_integers() {
         const lexer::token_list_t tokens = lexer::lex_all("1 2 345 -6 -7");
 
-        std::vector<token::int_token> expected;
-        std::stringstream seen_so_far;
-        for (const std::string number : {"1", "2", "345", "-6", "-7"}) {
-            expected.push_back(token::int_token {
-                    token::token {strlen(seen_so_far.str()), number, token::token_type::INTVAL}, std::stol(number)});
-            seen_so_far << number << " ";
-        }
+        const lexer::token_list_t expected {int_tok(0, 1),
+                                            int_tok(strlen("1 "), 2),
+                                            int_tok(strlen("1 2 "), 345),
+                                            int_tok(strlen("1 2 345 "), -6),
+                                            int_tok(strlen("1 2 345 -6 "), -7),
+                                            tok(strlen("1 2 345 -6 -7"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            if (*tokens[index] != expected[index]) return "Lexer did not correctly identify an integer literal";
-            if (std::static_pointer_cast<token::int_token>(tokens[index])->value != expected[index].value)
-                return "Lexer did not correctly get the integer value of '" + std::to_string(expected[index].value)
-                     + "'";
+            if (*tokens[index] != *expected[index]) return "Lexer did not correctly identify an integer literal";
+
+            if (expected[index]->type == token::token_type::INTVAL) {
+                const long actual_value = std::static_pointer_cast<token::int_token>(tokens[index])->value;
+                const long expected_value = std::static_pointer_cast<token::int_token>(expected[index])->value;
+                if (actual_value != expected_value)
+                    return "Lexer did not correctly identify the integer value of " + std::to_string(expected_value);
+            }
         }
 
         return "";
     }
 
     /**
-     * @brief Ensures that the `lexer::lex_all` method correctly parses integer literals.
+     * @brief Ensures that the `lexer::lex_all` method correctly parses floating-point literals.
      *
      * @return The empty string if successful; an error message otherwise.
      */
     std::string lex_all_floats() {
         const lexer::token_list_t tokens = lexer::lex_all("0.1 2. .3 -4.5 -6. -.7");
 
-        std::vector<token::float_token> expected;
-        std::stringstream seen_so_far;
-        for (const std::string number : {"0.1", "2.", ".3", "-4.5", "-6.", "-.7"}) {
-            expected.push_back(token::float_token {
-                    token::token {strlen(seen_so_far.str()), number, token::token_type::FLOATVAL}, std::stod(number)});
-            seen_so_far << number << " ";
-        }
+        const lexer::token_list_t expected {float_tok(0, "0.1", 0.1),
+                                            float_tok(strlen("0.1 "), "2.", 2.0),
+                                            float_tok(strlen("0.1 2. "), ".3", 0.3),
+                                            float_tok(strlen("0.1 2. .3 "), "-4.5", -4.5),
+                                            float_tok(strlen("0.1 2. .3 -4.5 "), "-6.", -6.0),
+                                            float_tok(strlen("0.1 2. .3 -4.5 -6. "), "-.7", -0.7),
+                                            tok(strlen("0.1 2. .3 -4.5 -6. -.7"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            if (*tokens[index] != expected[index]) return "Lexer did not correctly identify a floating-point literal.";
-            if (std::static_pointer_cast<token::float_token>(tokens[index])->value != expected[index].value)
-                return "Lexer did not correctly get the floating-point value of '"
-                     + std::to_string(expected[index].value) + "'";
+            ///////////////////////////////////////////
+            if (tokens[index]->text != expected[index]->text)
+                return "Token " + std::to_string(index) + " had the wrong text: '" + tokens[index]->text
+                     + "' instead of '" + expected[index]->text + "'";
+
+            if (tokens[index]->type != expected[index]->type)
+                return "Token " + std::to_string(index)
+                     + " had the wrong type: " + token::token_type_to_string(tokens[index]->type) + " instead of "
+                     + token::token_type_to_string(expected[index]->type);
+            ///////////////////////////////////////////
+
+            if (*tokens[index] != *expected[index]) return "Lexer did not correctly identify a floating-point literal.";
+
+            if (expected[index]->type == token::token_type::FLOATVAL) {
+                const double actual_value = std::static_pointer_cast<token::float_token>(tokens[index])->value;
+                const double expected_value = std::static_pointer_cast<token::float_token>(expected[index])->value;
+                if (actual_value != expected_value)
+                    return "Lexer did not correctly identify the double value of '" + std::to_string(expected_value)
+                         + "'";
+            }
         }
 
         return "";
@@ -184,24 +256,17 @@ namespace tests::lexer_tests {
     std::string lex_all_strings() {
         const lexer::token_list_t tokens = lexer::lex_all("read image \"sample.png\" to");
 
-        //  This lambda defines a shorthand for making a token from an index, a string, and a type.
-        auto tok = [](unsigned int start, const std::string& text, token::token_type type) {
-            return std::make_shared<token::token>(token::token {start, text, type});
-        };
-        //  This lambda is the same as above, for a string token.
-        auto str_tok = [](unsigned int start, const std::string& value) {
-            return std::make_shared<token::string_token>(
-                    token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
-        };
-        const lexer::token_list_t expected {tok(0, "read", token::token_type::READ),
-                                            tok(strlen("read "), "image", token::token_type::IMAGE),
-                                            str_tok(strlen("read image "), "sample.png"),
-                                            tok(strlen("read image \"sample.png\" "), "to", token::token_type::TO)};
+        const lexer::token_list_t expected {
+                tok(0, "read", token::token_type::READ), tok(strlen("read "), "image", token::token_type::IMAGE),
+                str_tok(strlen("read image "), "sample.png"),
+                tok(strlen("read image \"sample.png\" "), "to", token::token_type::TO),
+                tok(strlen("read image \"sample.png\" to"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int i = 0; i < tokens.size(); i++) {
             if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
+
             if (expected[i]->type == token::token_type::STRING) {
                 const std::string actual_value = std::static_pointer_cast<token::string_token>(tokens[i])->value;
                 const std::string expected_value = std::static_pointer_cast<token::string_token>(expected[i])->value;
@@ -222,15 +287,9 @@ namespace tests::lexer_tests {
     std::string lex_all_strings_multi() {
         const lexer::token_list_t tokens = lexer::lex_all(R"("string 1" "string 2")");
 
-        //  This lambda defines a shorthand for making a string token from an index and a value.
-        auto str_tok = [](unsigned int start, const std::string& value) {
-            return std::make_shared<token::string_token>(
-                    token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
-        };
         const lexer::token_list_t expected {
-                str_tok(0, "string 1"),
-                str_tok(strlen("\"string 1\" "), "string 2"),
-        };
+                str_tok(0, "string 1"), str_tok(strlen("\"string 1\" "), "string 2"),
+                tok(strlen(R"("string 1" "string 2")"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
@@ -256,23 +315,16 @@ namespace tests::lexer_tests {
     std::string lex_all_strings_multi_line() {
         const lexer::token_list_t tokens = lexer::lex_all("\"string 1\"\n\"string 2\"");
 
-        //  This lambda defines a shorthand for making a token from an index, a string, and a type.
-        auto tok = [](unsigned int start, const std::string& text, token::token_type type) {
-            return std::make_shared<token::token>(token::token {start, text, type});
-        };
-        //  This lambda is the same as above, for a string token.
-        auto str_tok = [](unsigned int start, const std::string& value) {
-            return std::make_shared<token::string_token>(
-                    token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
-        };
-        const lexer::token_list_t expected {str_tok(0, "string 1"),
-                                            tok(strlen("\"string 1\""), "\n", token::token_type::NEWLINE),
-                                            str_tok(strlen("\"string 1\"\n"), "string 2")};
+        const lexer::token_list_t expected {
+                str_tok(0, "string 1"), tok(strlen("\"string 1\""), "\n", token::token_type::NEWLINE),
+                str_tok(strlen("\"string 1\"\n"), "string 2"),
+                tok(strlen("\"string 1\"\n\"string 2\""), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int i = 0; i < tokens.size(); i++) {
             if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
+
             if (expected[i]->type == token::token_type::STRING) {
                 const std::string actual_value = std::static_pointer_cast<token::string_token>(tokens[i])->value;
                 const std::string expected_value = std::static_pointer_cast<token::string_token>(expected[i])->value;
@@ -292,12 +344,9 @@ namespace tests::lexer_tests {
     std::string lex_all_variables_with_keywords() {
         const lexer::token_list_t tokens = lexer::lex_all("float float_variable");
 
-        //  This lambda defines a shorthand for making a token from an index, a string, and a type.
-        auto tok = [](unsigned int start, const std::string& text, token::token_type type) {
-            return std::make_shared<token::token>(token::token {start, text, type});
-        };
         const lexer::token_list_t expected {tok(0, "float", token::token_type::FLOAT),
-                                            tok(strlen("float "), "float_variable", token::token_type::VARIABLE)};
+                                            tok(strlen("float "), "float_variable", token::token_type::VARIABLE),
+                                            tok(strlen("float float_variable"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
@@ -315,15 +364,16 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_single_line_comments() {
         const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \n int");
-        const std::vector<token::token> expected {
-                token::token {0, "float", token::token_type::FLOAT},
-                token::token {strlen("float  //  comment "), "\n", token::token_type::NEWLINE},
-                token::token {strlen("float  //  comment \n "), "int", token::token_type::INT}};
+        const lexer::token_list_t expected {
+                tok(0, "float", token::token_type::FLOAT),
+                tok(strlen("float  //  comment "), "\n", token::token_type::NEWLINE),
+                tok(strlen("float  //  comment \n "), "int", token::token_type::INT),
+                tok(strlen("float  //  comment \n int"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
-            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
 
         return "";
@@ -337,14 +387,15 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_single_line_comments_escaped_line() {
         const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \\\n int");
-        const std::vector<token::token> expected {
-                token::token {0, "float", token::token_type::FLOAT},
-                token::token {strlen("float  //  comment \\\n "), "int", token::token_type::INT}};
+        const lexer::token_list_t expected {
+                tok(0, "float", token::token_type::FLOAT),
+                tok(strlen("float  //  comment \\\n "), "int", token::token_type::INT),
+                tok(strlen("float  //  comment \\\n int"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
-            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
 
         return "";
@@ -358,15 +409,16 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_single_line_comments_backslash() {
         const lexer::token_list_t tokens = lexer::lex_all("float  //  comment \\ comment \n int");
-        const std::vector<token::token> expected {
-                token::token {0, "float", token::token_type::FLOAT},
-                token::token {strlen("float  //  comment \\ comment "), "\n", token::token_type::NEWLINE},
-                token::token {strlen("float  //  comment \\ comment \n "), "int", token::token_type::INT}};
+        const lexer::token_list_t expected {
+                tok(0, "float", token::token_type::FLOAT),
+                tok(strlen("float  //  comment \\ comment "), "\n", token::token_type::NEWLINE),
+                tok(strlen("float  //  comment \\ comment \n "), "int", token::token_type::INT),
+                tok(strlen("float  //  comment \\ comment \n int"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
-            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
 
         return "";
@@ -379,14 +431,14 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_multi_line_comments() {
         const lexer::token_list_t tokens = lexer::lex_all("float /* \n */ int");
-        const std::vector<token::token> expected {
-                token::token {0, "float", token::token_type::FLOAT},
-                token::token {strlen("float /* \n */ "), "int", token::token_type::INT}};
+        const lexer::token_list_t expected {tok(0, "float", token::token_type::FLOAT),
+                                            tok(strlen("float /* \n */ "), "int", token::token_type::INT),
+                                            tok(strlen("float /* \n */ int"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int i = 0; i < (unsigned int)tokens.size(); i++) {
-            if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
 
         return "";
@@ -399,18 +451,23 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_string_comments() {
         const lexer::token_list_t tokens = lexer::lex_all(R"(" //  not a comment " " /* not a comment */ ")");
-        const std::vector<token::string_token> expected {
-                token::string_token {{0, R"(" //  not a comment ")", token::token_type::STRING}, " //  not a comment "},
-                token::string_token {
-                        {strlen(R"(" //  not a comment " )"), R"(" /* not a comment */ ")", token::token_type::STRING},
-                        " /* not a comment */ "}};
+        lexer::token_list_t expected {
+                str_tok(0, " //  not a comment "),
+                str_tok(strlen(R"(" //  not a comment " )"), " /* not a comment */ "),
+                tok(strlen(R"(" //  not a comment " " /* not a comment */ ")"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            if (*tokens[index] != expected[index]) return "Token " + std::to_string(index) + " was not correct";
-            if (std::static_pointer_cast<token::string_token>(tokens[index])->value != expected[index].value)
-                return "Lexer did not correctly lex the string " + expected[index].text;
+            if (*tokens[index] != *expected[index]) return "Token " + std::to_string(index) + " was not correct";
+
+            if (expected[index]->type == token::token_type::STRING) {
+                const std::string actual_value = std::static_pointer_cast<token::string_token>(tokens[index])->value;
+                const std::string expected_value
+                        = std::static_pointer_cast<token::string_token>(expected[index])->value;
+                if (actual_value != expected_value)
+                    return "Lexer did not correctly identify the string value of '" + expected_value + "'";
+            }
         }
 
         return "";
@@ -425,7 +482,8 @@ namespace tests::lexer_tests {
         const lexer::token_list_t tokens = lexer::lex_all("int \\\n float");
         const std::vector<token::token> expected {
                 token::token {0, "int", token::token_type::INT},
-                token::token {strlen("int \\\n "), "float", token::token_type::FLOAT}};
+                token::token {strlen("int \\\n "), "float", token::token_type::FLOAT},
+                token::token {strlen("int \\\n float"), "", token::token_type::END_OF_FILE}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
@@ -474,78 +532,69 @@ namespace tests::lexer_tests {
               << "}" << std::endl;
 
         const lexer::token_list_t tokens = lexer::lex_all(input.str());
-        //  This lambda defines a shorthand for making a token from just a string and type.
-        auto tok = [](const std::string& text, token::token_type type) {
-            return std::make_shared<token::token>(token::token {0, text, type});
-        };
-        //  This lambda is the same as above, for an integer token.
-        auto int_tok = [](unsigned int value) {
-            return std::make_shared<token::int_token>(
-                    token::int_token {{0, std::to_string(value), token::token_type::INTVAL}, value});
-        };
-        const std::vector<lexer::token_ptr_t> expected {
-                tok("\n", token::NEWLINE),
-                tok("fn", token::FN),
-                tok("add", token::VARIABLE),
-                tok("(", token::LPAREN),
-                tok("pixel_one", token::VARIABLE),
-                tok(":", token::COLON),
-                tok("color", token::VARIABLE),
-                tok(",", token::COMMA),
-                tok("pixel_two", token::VARIABLE),
-                tok(":", token::COLON),
-                tok("color", token::VARIABLE),
-                tok(")", token::RPAREN),
-                tok(":", token::COLON),
-                tok("color", token::VARIABLE),
-                tok("{", token::LCURLY),
-                tok("\n", token::NEWLINE),
-                tok("return", token::RETURN),
-                tok("{", token::LCURLY),
-                tok("pixel_one", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(0),
-                tok("}", token::RCURLY),
-                tok("+", token::OP),
-                tok("pixel_two", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(0),
-                tok("}", token::RCURLY),
-                tok(",", token::COMMA),
-                tok("pixel_one", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(1),
-                tok("}", token::RCURLY),
-                tok("+", token::OP),
-                tok("pixel_two", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(1),
-                tok("}", token::RCURLY),
-                tok(",", token::COMMA),
-                tok("pixel_one", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(2),
-                tok("}", token::RCURLY),
-                tok("+", token::OP),
-                tok("pixel_two", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(2),
-                tok("}", token::RCURLY),
-                tok(",", token::COMMA),
-                tok("pixel_one", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(3),
-                tok("}", token::RCURLY),
-                tok("+", token::OP),
-                tok("pixel_two", token::VARIABLE),
-                tok("{", token::LCURLY),
-                int_tok(3),
-                tok("}", token::RCURLY),
-                tok("}", token::RCURLY),
-                tok("\n", token::NEWLINE),
-                tok("}", token::RCURLY),
-                tok("\n", token::NEWLINE),
-        };
+
+        const std::vector<lexer::token_ptr_t> expected {tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "fn", token::token_type::FN),
+                                                        tok(0, "add", token::token_type::VARIABLE),
+                                                        tok(0, "(", token::token_type::LPAREN),
+                                                        tok(0, "pixel_one", token::token_type::VARIABLE),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "color", token::token_type::VARIABLE),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "pixel_two", token::token_type::VARIABLE),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "color", token::token_type::VARIABLE),
+                                                        tok(0, ")", token::token_type::RPAREN),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "color", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "return", token::token_type::RETURN),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        tok(0, "pixel_one", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 0),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "+", token::token_type::OP),
+                                                        tok(0, "pixel_two", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 0),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "pixel_one", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 1),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "+", token::token_type::OP),
+                                                        tok(0, "pixel_two", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 1),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "pixel_one", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 2),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "+", token::token_type::OP),
+                                                        tok(0, "pixel_two", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 2),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "pixel_one", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 3),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "+", token::token_type::OP),
+                                                        tok(0, "pixel_two", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        int_tok(0, 3),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
@@ -592,70 +641,63 @@ namespace tests::lexer_tests {
               << "write image blur(img) to \"sample-blurry.png\"" << std::endl;
 
         const lexer::token_list_t tokens = lexer::lex_all(input.str());
-        //  This lambda defines a shorthand for making a token from just a string and type.
-        auto tok = [](const std::string& text, token::token_type type) {
-            return std::make_shared<token::token>(token::token {0, text, type});
-        };
-        //  This lambda is the same as above, for a string token.
-        auto str_tok = [](const std::string& value) {
-            return std::make_shared<token::string_token>(
-                    token::string_token {{0, "\"" + value + "\"", token::token_type::STRING}, value});
-        };
-        const std::vector<lexer::token_ptr_t> expected {tok("\n", token::NEWLINE),
-                                                        tok("fn", token::FN),
-                                                        tok("blur", token::VARIABLE),
-                                                        tok("(", token::LPAREN),
-                                                        tok("img", token::VARIABLE),
-                                                        tok("[", token::LSQUARE),
-                                                        tok("H", token::VARIABLE),
-                                                        tok(",", token::COMMA),
-                                                        tok("W", token::VARIABLE),
-                                                        tok("]", token::RSQUARE),
-                                                        tok(":", token::COLON),
-                                                        tok("pict", token::VARIABLE),
-                                                        tok(")", token::RPAREN),
-                                                        tok(":", token::COLON),
-                                                        tok("pict", token::VARIABLE),
-                                                        tok("{", token::LCURLY),
-                                                        tok("\n", token::NEWLINE),
-                                                        tok("return", token::RETURN),
-                                                        tok("array", token::ARRAY),
-                                                        tok("[", token::LSQUARE),
-                                                        tok("y", token::VARIABLE),
-                                                        tok(":", token::COLON),
-                                                        tok("H", token::VARIABLE),
-                                                        tok(",", token::COMMA),
-                                                        tok("x", token::VARIABLE),
-                                                        tok(":", token::COLON),
-                                                        tok("W", token::VARIABLE),
-                                                        tok("]", token::RSQUARE),
-                                                        tok("blur_one", token::VARIABLE),
-                                                        tok("(", token::LPAREN),
-                                                        tok("img", token::VARIABLE),
-                                                        tok(",", token::COMMA),
-                                                        tok("x", token::VARIABLE),
-                                                        tok(",", token::COMMA),
-                                                        tok("y", token::VARIABLE),
-                                                        tok(")", token::RPAREN),
-                                                        tok("\n", token::NEWLINE),
-                                                        tok("}", token::RCURLY),
-                                                        tok("\n", token::NEWLINE),
-                                                        tok("\n", token::NEWLINE),
-                                                        tok("read", token::READ),
-                                                        tok("image", token::IMAGE),
-                                                        str_tok("sample.png"),
-                                                        tok("to", token::TO),
-                                                        tok("img", token::VARIABLE),
-                                                        tok("\n", token::NEWLINE),
-                                                        tok("write", token::WRITE),
-                                                        tok("image", token::IMAGE),
-                                                        tok("blur", token::VARIABLE),
-                                                        tok("(", token::LPAREN),
-                                                        tok("img", token::VARIABLE),
-                                                        tok(")", token::RPAREN),
-                                                        tok("to", token::TO),
-                                                        str_tok("sample-blurry.png"),
-                                                        tok("\n", token::NEWLINE)};
+
+        const std::vector<lexer::token_ptr_t> expected {tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "fn", token::token_type::FN),
+                                                        tok(0, "blur", token::token_type::VARIABLE),
+                                                        tok(0, "(", token::token_type::LPAREN),
+                                                        tok(0, "img", token::token_type::VARIABLE),
+                                                        tok(0, "[", token::token_type::LSQUARE),
+                                                        tok(0, "H", token::token_type::VARIABLE),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "W", token::token_type::VARIABLE),
+                                                        tok(0, "]", token::token_type::RSQUARE),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "pict", token::token_type::VARIABLE),
+                                                        tok(0, ")", token::token_type::RPAREN),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "pict", token::token_type::VARIABLE),
+                                                        tok(0, "{", token::token_type::LCURLY),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "return", token::token_type::RETURN),
+                                                        tok(0, "array", token::token_type::ARRAY),
+                                                        tok(0, "[", token::token_type::LSQUARE),
+                                                        tok(0, "y", token::token_type::VARIABLE),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "H", token::token_type::VARIABLE),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "x", token::token_type::VARIABLE),
+                                                        tok(0, ":", token::token_type::COLON),
+                                                        tok(0, "W", token::token_type::VARIABLE),
+                                                        tok(0, "]", token::token_type::RSQUARE),
+                                                        tok(0, "blur_one", token::token_type::VARIABLE),
+                                                        tok(0, "(", token::token_type::LPAREN),
+                                                        tok(0, "img", token::token_type::VARIABLE),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "x", token::token_type::VARIABLE),
+                                                        tok(0, ",", token::token_type::COMMA),
+                                                        tok(0, "y", token::token_type::VARIABLE),
+                                                        tok(0, ")", token::token_type::RPAREN),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "}", token::token_type::RCURLY),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "read", token::token_type::READ),
+                                                        tok(0, "image", token::token_type::IMAGE),
+                                                        str_tok(0, "sample.png"),
+                                                        tok(0, "to", token::token_type::TO),
+                                                        tok(0, "img", token::token_type::VARIABLE),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "write", token::token_type::WRITE),
+                                                        tok(0, "image", token::token_type::IMAGE),
+                                                        tok(0, "blur", token::token_type::VARIABLE),
+                                                        tok(0, "(", token::token_type::LPAREN),
+                                                        tok(0, "img", token::token_type::VARIABLE),
+                                                        tok(0, ")", token::token_type::RPAREN),
+                                                        tok(0, "to", token::token_type::TO),
+                                                        str_tok(0, "sample-blurry.png"),
+                                                        tok(0, "\n", token::token_type::NEWLINE),
+                                                        tok(0, "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 

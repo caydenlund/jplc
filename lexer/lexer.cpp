@@ -218,6 +218,9 @@ namespace lexer {
             }
         }
 
+        //  Add the final token:
+        tokens.push_back(std::make_shared<token::token>(token::token {start, "", token::token_type::END_OF_FILE}));
+
         return tokens;
     }
 }  //  namespace lexer
