@@ -1,5 +1,5 @@
 /**
- * @file lexer.hpp
+ * @file lexer.cpp
  * @package Assignment 2
  * @author Cayden Lund (u1182408)
  * @brief Implements the lexing functions.
