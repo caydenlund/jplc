@@ -104,24 +104,23 @@ namespace lexer {
         //  Misc. expressions:
         //  ------------------
         //  Variables:
-        std::stringstream expression;
+        std::stringstream variable_expression;
         //      First off, it must not be a keyword:
-        expression << "(?!^(";
+        variable_expression << "(?!^(";
         for (const std::string keyword :
              {"array", "assert", "bool",   "else", "false", "float", "fn",   "if", "image", "int", "let",
               "print", "read",   "return", "show", "sum",   "then",  "time", "to", "true",  "type"}) {
-            expression << keyword << "|";
+            variable_expression << keyword << "|";
         }
-        expression << "write)"
-                   << R"(([^\w\.]|$)))";
+        variable_expression << "write)"
+                            << R"(([^\w\.]|$)))";
         //      Next, the first character must be a letter:
-        expression << "^[a-zA-Z]";
+        variable_expression << "^[a-zA-Z]";
         //      After that, any sequence of letters, numbers, underscores, and periods:
-        expression << R"([\w\.]*)";
-        lexers.emplace_back(construct_lexer(expression.str(), token::token_type::VARIABLE));  //  Variables.
+        variable_expression << R"([\w\.]*)";
+        lexers.emplace_back(construct_lexer(variable_expression.str(), token::token_type::VARIABLE));  //  Variables.
 
         //  Newlines:
-        expression.str("");
         //      If the newline is preceded by a backslash, then escape it:
         lexers.emplace_back(construct_lexer("^\\\\\n", token::token_type::SPACE));  //  An escaped newline.
         //      Otherwise, it's a newline token:
@@ -130,6 +129,10 @@ namespace lexer {
         //  Single-line comments:
         lexers.emplace_back(
                 construct_lexer(R"(^\/\/.*?(?=(\\\n|\n|$)))", token::token_type::SPACE));  //  A single-line comment.
+
+        //  Multi-line comments:
+        lexers.emplace_back(
+                construct_lexer(R"(^\/\*[\S \n]*?\*\/)", token::token_type::SPACE));  //  A multi-line comment.
 
         //  Keywords:
         //  ---------
