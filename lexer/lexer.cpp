@@ -188,6 +188,8 @@ namespace lexer {
         bool valid_token;
         while (start < input.size()) {
             valid_token = false;
+
+            //  Try every lexer, one after the other, in order, until we find one that finds a match.
             for (const lexer_ptr_t& one_lexer : lexers) {
                 result_t result = (*one_lexer)(input, start);
                 const unsigned int new_start = std::get<1>(result);
@@ -203,16 +205,17 @@ namespace lexer {
                 }
                 //  Otherwise, try the next lexer.
             }
+
             //  If we tried every lexer and weren't able to move on, then we need to throw an exception.
-            const unsigned int token_length = input.length() - start;
-            std::string invalid_token;
-            if (token_length > lexing_exception::max_token_snippet_length) {
-                invalid_token = input.substr(start, lexing_exception::max_token_snippet_length) + "...";
-            } else {
-                invalid_token = input.substr(start, token_length);
-            }
             //  TODO: Extract the actual line and column.
-            if (!valid_token) { throw lexing_exception(invalid_token, 0, 0); }
+            if (!valid_token) {
+                const unsigned int token_length = input.length() - start;
+                const std::string invalid_token
+                        = (token_length > lexing_exception::max_token_snippet_length)
+                                ? (input.substr(start, lexing_exception::max_token_snippet_length) + "...")
+                                : (input.substr(start, token_length));
+                throw lexing_exception(invalid_token, 0, 0);
+            }
         }
 
         return tokens;
