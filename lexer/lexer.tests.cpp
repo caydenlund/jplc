@@ -534,6 +534,116 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Comprehensive test for the lexer.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string comprehensive2() {
+        std::stringstream input;
+        input << "/**" << std::endl
+              << " * @brief Blurs the given image." << std::endl
+              << " *" << std::endl
+              << " * @param img The image to blur." << std::endl
+              << " * @return The blurred image." << std::endl
+              << " */" << std::endl
+              << "fn blur(img[H, W] : pict) : pict {" << std::endl
+              << "    return array[y : H, x : W] blur_one(img, x, y)" << std::endl
+              << "}" << std::endl
+              << std::endl
+              << "read image \"sample.png\" to img" << std::endl
+              << "write image blur(img) to \"sample-blurry.png\"" << std::endl;
+
+        const lexer::token_list_t tokens = lexer::lex_all(input.str());
+        //  This lambda defines a shorthand for making a token from just a string and type.
+        auto tok = [](const std::string& text, token::token_type type) {
+            return std::make_shared<token::token>(token::token {0, text, type});
+        };
+        //  This lambda is the same as above, for a string token.
+        auto str_tok = [](const std::string& value) {
+            return std::make_shared<token::string_token>(
+                    token::string_token {{0, "\"" + value + "\"", token::token_type::STRING}, value});
+        };
+        const std::vector<lexer::token_ptr_t> expected {tok("\n", token::NEWLINE),
+                                                        tok("fn", token::FN),
+                                                        tok("blur", token::VARIABLE),
+                                                        tok("(", token::LPAREN),
+                                                        tok("img", token::VARIABLE),
+                                                        tok("[", token::LSQUARE),
+                                                        tok("H", token::VARIABLE),
+                                                        tok(",", token::COMMA),
+                                                        tok("W", token::VARIABLE),
+                                                        tok("]", token::RSQUARE),
+                                                        tok(":", token::COLON),
+                                                        tok("pict", token::VARIABLE),
+                                                        tok(")", token::RPAREN),
+                                                        tok(":", token::COLON),
+                                                        tok("pict", token::VARIABLE),
+                                                        tok("{", token::LCURLY),
+                                                        tok("\n", token::NEWLINE),
+                                                        tok("return", token::RETURN),
+                                                        tok("array", token::ARRAY),
+                                                        tok("[", token::LSQUARE),
+                                                        tok("y", token::VARIABLE),
+                                                        tok(":", token::COLON),
+                                                        tok("H", token::VARIABLE),
+                                                        tok(",", token::COMMA),
+                                                        tok("x", token::VARIABLE),
+                                                        tok(":", token::COLON),
+                                                        tok("W", token::VARIABLE),
+                                                        tok("]", token::RSQUARE),
+                                                        tok("blur_one", token::VARIABLE),
+                                                        tok("(", token::LPAREN),
+                                                        tok("img", token::VARIABLE),
+                                                        tok(",", token::COMMA),
+                                                        tok("x", token::VARIABLE),
+                                                        tok(",", token::COMMA),
+                                                        tok("y", token::VARIABLE),
+                                                        tok(")", token::RPAREN),
+                                                        tok("\n", token::NEWLINE),
+                                                        tok("}", token::RCURLY),
+                                                        tok("\n", token::NEWLINE),
+                                                        tok("\n", token::NEWLINE),
+                                                        tok("read", token::READ),
+                                                        tok("image", token::IMAGE),
+                                                        str_tok("sample.png"),
+                                                        tok("to", token::TO),
+                                                        tok("img", token::VARIABLE),
+                                                        tok("\n", token::NEWLINE),
+                                                        tok("write", token::WRITE),
+                                                        tok("image", token::IMAGE),
+                                                        tok("blur", token::VARIABLE),
+                                                        tok("(", token::LPAREN),
+                                                        tok("img", token::VARIABLE),
+                                                        tok(")", token::RPAREN),
+                                                        tok("to", token::TO),
+                                                        str_tok("sample-blurry.png"),
+                                                        tok("\n", token::NEWLINE)};
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
+            if (tokens[index]->text != expected[index]->text)
+                return "Token " + std::to_string(index) + " had the wrong text: '" + tokens[index]->text
+                     + "' instead of '" + expected[index]->text + "'";
+
+            if (tokens[index]->type != expected[index]->type)
+                return "Token " + std::to_string(index)
+                     + " had the wrong type: " + token::token_type_to_string(tokens[index]->type) + " instead of "
+                     + token::token_type_to_string(expected[index]->type);
+
+            if (tokens[index]->type == token::token_type::INTVAL) {
+                const unsigned int actual_value = std::static_pointer_cast<token::int_token>(tokens[index])->value;
+                const unsigned int expected_value = std::static_pointer_cast<token::int_token>(expected[index])->value;
+                if (actual_value != expected_value)
+                    return "Token " + std::to_string(index) + " had the wrong value: " + std::to_string(actual_value)
+                         + " instead of " + std::to_string(expected_value);
+            }
+        }
+
+        return "";
+    }
+
+    /**
      * @brief Assembles the set of all lexer unit tests.
      *
      * @return The set of all lexer unit tests.
@@ -562,6 +672,7 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_escaped_newline, "Lexer `lex_all`: escaped newline");
         tests.emplace_back(lex_all_exception, "Lexer `lex_all`: throwing an exception");
         tests.emplace_back(comprehensive1, "Lexer: comprehensive 1");
+        tests.emplace_back(comprehensive2, "Lexer: comprehensive 2");
         return tests;
     }
 }  //  namespace tests::lexer_tests
