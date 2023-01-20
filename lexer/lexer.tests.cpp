@@ -83,17 +83,13 @@ namespace tests::lexer_tests {
     std::string lex_all_keywords() {
         lexer::token_list_t tokens = lexer::lex_all("array bool assert else");
 
-        std::vector<token::token> expected;
-        token::token tok = {0, "array", token::token_type::ARRAY};
-        expected.push_back(tok);
-        tok = {strlen("array "), "bool", token::token_type::BOOL};
-        expected.push_back(tok);
-        tok = {strlen("array bool "), "assert", token::token_type::ASSERT};
-        expected.push_back(tok);
-        tok = {strlen("array bool assert "), "else", token::token_type::ELSE};
-        expected.push_back(tok);
+        const std::vector<token::token> expected {{0, "array", token::token_type::ARRAY},
+                                                  {strlen("array "), "bool", token::token_type::BOOL},
+                                                  {strlen("array bool "), "assert", token::token_type::ASSERT},
+                                                  {strlen("array bool assert "), "else", token::token_type::ELSE}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
         for (unsigned int i = 0; i < tokens.size(); i++) {
             if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
@@ -109,19 +105,14 @@ namespace tests::lexer_tests {
     std::string lex_all_punctuation() {
         lexer::token_list_t tokens = lexer::lex_all(": , ( {{");
 
-        std::vector<token::token> expected;
-        token::token tok = {0, ":", token::token_type::COLON};
-        expected.push_back(tok);
-        tok = {strlen(": "), ",", token::token_type::COMMA};
-        expected.push_back(tok);
-        tok = {strlen(": , "), "(", token::token_type::LPAREN};
-        expected.push_back(tok);
-        tok = {strlen(": , ( "), "{", token::token_type::LCURLY};
-        expected.push_back(tok);
-        tok = {strlen(": , ( {"), "{", token::token_type::LCURLY};
-        expected.push_back(tok);
+        const std::vector<token::token> expected {token::token {0, ":", token::token_type::COLON},
+                                                  token::token {strlen(": "), ",", token::token_type::COMMA},
+                                                  token::token {strlen(": , "), "(", token::token_type::LPAREN},
+                                                  token::token {strlen(": , ( "), "{", token::token_type::LCURLY},
+                                                  token::token {strlen(": , ( {"), "{", token::token_type::LCURLY}};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
         for (unsigned int i = 0; i < tokens.size(); i++) {
             if (*tokens[i] != expected[i]) return "Token " + std::to_string(i) + " was not correct";
         }
@@ -136,6 +127,7 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_integers() {
         const lexer::token_list_t tokens = lexer::lex_all("1 2 345 -6 -7");
+
         std::vector<token::int_token> expected;
         std::stringstream seen_so_far;
         for (const std::string number : {"1", "2", "345", "-6", "-7"}) {
@@ -145,8 +137,9 @@ namespace tests::lexer_tests {
         }
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            if (*tokens[index] != expected[index]) return "Lexer did not correctly identify an integer literal.";
+            if (*tokens[index] != expected[index]) return "Lexer did not correctly identify an integer literal";
             if (std::static_pointer_cast<token::int_token>(tokens[index])->value != expected[index].value)
                 return "Lexer did not correctly get the integer value of '" + std::to_string(expected[index].value)
                      + "'";
@@ -162,6 +155,7 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_floats() {
         const lexer::token_list_t tokens = lexer::lex_all("0.1 2. .3 -4.5 -6. -.7");
+
         std::vector<token::float_token> expected;
         std::stringstream seen_so_far;
         for (const std::string number : {"0.1", "2.", ".3", "-4.5", "-6.", "-.7"}) {
@@ -171,6 +165,7 @@ namespace tests::lexer_tests {
         }
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
             if (*tokens[index] != expected[index]) return "Lexer did not correctly identify a floating-point literal.";
             if (std::static_pointer_cast<token::float_token>(tokens[index])->value != expected[index].value)
@@ -189,19 +184,31 @@ namespace tests::lexer_tests {
     std::string lex_all_strings() {
         const lexer::token_list_t tokens = lexer::lex_all("read image \"sample.png\" to");
 
-        if (tokens.size() != 4) {  //  NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            return "Lexer did not return the correct number of tokens";
-        }
+        //  This lambda defines a shorthand for making a token from an index, a string, and a type.
+        auto tok = [](unsigned int start, const std::string& text, token::token_type type) {
+            return std::make_shared<token::token>(token::token {start, text, type});
+        };
+        //  This lambda is the same as above, for a string token.
+        auto str_tok = [](unsigned int start, const std::string& value) {
+            return std::make_shared<token::string_token>(
+                    token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
+        };
+        const lexer::token_list_t expected {tok(0, "read", token::token_type::READ),
+                                            tok(strlen("read "), "image", token::token_type::IMAGE),
+                                            str_tok(strlen("read image "), "sample.png"),
+                                            tok(strlen("read image \"sample.png\" "), "to", token::token_type::TO)};
 
-        if (*tokens[0] != token::token {0, "read", token::token_type::READ})
-            return "Lexer did not correctly lex the token 'read.'";
-        if (*tokens[1] != token::token {strlen("read "), "image", token::token_type::IMAGE})
-            return "Lexer did not correctly lex the token 'image.'";
-        if ((*tokens[2] != token::token {strlen("read image "), "\"sample.png\"", token::token_type::STRING})
-            || (std::static_pointer_cast<token::string_token>(tokens[2])->value != "sample.png"))
-            return "Lexer did not correctly lex the token 'sample.png'";
-        if (*tokens[3] != token::token {strlen("read image \"sample.png\" "), "to", token::token_type::TO})
-            return "Lexer did not correctly lex the token 'to.'";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < tokens.size(); i++) {
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (expected[i]->type == token::token_type::STRING) {
+                const std::string actual_value = std::static_pointer_cast<token::string_token>(tokens[i])->value;
+                const std::string expected_value = std::static_pointer_cast<token::string_token>(expected[i])->value;
+                if (actual_value != expected_value)
+                    return "Lexer did not correctly identify the string value of '" + expected_value + "'";
+            }
+        }
 
         return "";
     }
@@ -215,14 +222,27 @@ namespace tests::lexer_tests {
     std::string lex_all_strings_multi() {
         const lexer::token_list_t tokens = lexer::lex_all(R"("string 1" "string 2")");
 
-        if (tokens.size() != 2) return "Lexer did not return the correct number of tokens";
+        //  This lambda defines a shorthand for making a string token from an index and a value.
+        auto str_tok = [](unsigned int start, const std::string& value) {
+            return std::make_shared<token::string_token>(
+                    token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
+        };
+        const lexer::token_list_t expected {
+                str_tok(0, "string 1"),
+                str_tok(strlen("\"string 1\" "), "string 2"),
+        };
 
-        if ((*tokens[0] != token::token {0, "\"string 1\"", token::token_type::STRING})
-            || (std::static_pointer_cast<token::string_token>(tokens[0])->value != "string 1"))
-            return "Lexer did not correctly lex the token 'string 1'";
-        if ((*tokens[1] != token::token {strlen("\"string 1\" "), "\"string 2\"", token::token_type::STRING})
-            || (std::static_pointer_cast<token::string_token>(tokens[1])->value != "string 2"))
-            return "Lexer did not correctly lex the token 'string 1'";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < tokens.size(); i++) {
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (expected[i]->type == token::token_type::STRING) {
+                const std::string actual_value = std::static_pointer_cast<token::string_token>(tokens[i])->value;
+                const std::string expected_value = std::static_pointer_cast<token::string_token>(expected[i])->value;
+                if (actual_value != expected_value)
+                    return "Lexer did not correctly identify the string value of '" + expected_value + "'";
+            }
+        }
 
         return "";
     }
@@ -236,16 +256,30 @@ namespace tests::lexer_tests {
     std::string lex_all_strings_multi_line() {
         const lexer::token_list_t tokens = lexer::lex_all("\"string 1\"\n\"string 2\"");
 
-        if (tokens.size() != 3) return "Lexer did not return the correct number of tokens";
+        //  This lambda defines a shorthand for making a token from an index, a string, and a type.
+        auto tok = [](unsigned int start, const std::string& text, token::token_type type) {
+            return std::make_shared<token::token>(token::token {start, text, type});
+        };
+        //  This lambda is the same as above, for a string token.
+        auto str_tok = [](unsigned int start, const std::string& value) {
+            return std::make_shared<token::string_token>(
+                    token::string_token {{start, "\"" + value + "\"", token::token_type::STRING}, value});
+        };
+        const lexer::token_list_t expected {str_tok(0, "string 1"),
+                                            tok(strlen("\"string 1\""), "\n", token::token_type::NEWLINE),
+                                            str_tok(strlen("\"string 1\"\n"), "string 2")};
 
-        if ((*tokens[0] != token::token {0, "\"string 1\"", token::token_type::STRING})
-            || (std::static_pointer_cast<token::string_token>(tokens[0])->value != "string 1"))
-            return "Lexer did not correctly lex the token 'string 1'";
-        if (*tokens[1] != token::token {strlen("\"string 1\""), "\n", token::token_type::NEWLINE})
-            return "Lexer did not correctly lex the newline";
-        if ((*tokens[2] != token::token {strlen("\"string 1\"\n"), "\"string 2\"", token::token_type::STRING})
-            || (std::static_pointer_cast<token::string_token>(tokens[2])->value != "string 2"))
-            return "Lexer did not correctly lex the token 'string 1'";
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int i = 0; i < tokens.size(); i++) {
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
+            if (expected[i]->type == token::token_type::STRING) {
+                const std::string actual_value = std::static_pointer_cast<token::string_token>(tokens[i])->value;
+                const std::string expected_value = std::static_pointer_cast<token::string_token>(expected[i])->value;
+                if (actual_value != expected_value)
+                    return "Lexer did not correctly identify the string value of '" + expected_value + "'";
+            }
+        }
 
         return "";
     }
@@ -257,15 +291,19 @@ namespace tests::lexer_tests {
      */
     std::string lex_all_variables_with_keywords() {
         const lexer::token_list_t tokens = lexer::lex_all("float float_variable");
-        std::vector<token::token> expected;
-        token::token tok {0, "float", token::token_type::FLOAT};
-        expected.emplace_back(tok);
-        tok = {strlen("float "), "float_variable", token::token_type::VARIABLE};
-        expected.emplace_back(tok);
+
+        //  This lambda defines a shorthand for making a token from an index, a string, and a type.
+        auto tok = [](unsigned int start, const std::string& text, token::token_type type) {
+            return std::make_shared<token::token>(token::token {start, text, type});
+        };
+        const lexer::token_list_t expected {tok(0, "float", token::token_type::FLOAT),
+                                            tok(strlen("float "), "float_variable", token::token_type::VARIABLE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
-        if (*tokens[0] != expected[0]) return "Keyword token was not correct";
-        if (*tokens[1] != expected[1]) return "Variable token was not correct";
+
+        for (unsigned int i = 0; i < tokens.size(); i++) {
+            if (*tokens[i] != *expected[i]) return "Token " + std::to_string(i) + " was not correct";
+        }
 
         return "";
     }
