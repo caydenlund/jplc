@@ -413,6 +413,127 @@ namespace tests::lexer_tests {
     }
 
     /**
+     * @brief Comprehensive test for the lexer.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string comprehensive1() {
+        std::stringstream input;
+        input << "/**" << std::endl
+              << " * @brief Adds two pixel values together." << std::endl
+              << " *" << std::endl
+              << " * @param left The first pixel to add." << std::endl
+              << " * @param right The second pixel to add." << std::endl
+              << " * @return The sum of the two pixels." << std::endl
+              << " */" << std::endl
+              << "fn add(pixel_one : color, pixel_two : color) : color {" << std::endl
+              << "    return {                          \\" << std::endl
+              << "        pixel_one{0} + pixel_two{0},  \\" << std::endl
+              << "                pixel_one{1} + pixel_two{1},  \\" << std::endl
+              << "                pixel_one{2} + pixel_two{2},  \\" << std::endl
+              << "                pixel_one{3} + pixel_two{3}   \\" << std::endl
+              << "    }" << std::endl
+              << "}" << std::endl;
+
+        const lexer::token_list_t tokens = lexer::lex_all(input.str());
+        //  This lambda defines a shorthand for making a token from just a string and type.
+        auto tok = [](const std::string& text, token::token_type type) {
+            return std::make_shared<token::token>(token::token {0, text, type});
+        };
+        //  This lambda is the same as above, for an integer token.
+        auto int_tok = [](unsigned int value) {
+            return std::make_shared<token::int_token>(
+                    token::int_token {{0, std::to_string(value), token::token_type::INTVAL}, value});
+        };
+        const std::vector<lexer::token_ptr_t> expected {
+                tok("\n", token::NEWLINE),
+                tok("fn", token::FN),
+                tok("add", token::VARIABLE),
+                tok("(", token::LPAREN),
+                tok("pixel_one", token::VARIABLE),
+                tok(":", token::COLON),
+                tok("color", token::VARIABLE),
+                tok(",", token::COMMA),
+                tok("pixel_two", token::VARIABLE),
+                tok(":", token::COLON),
+                tok("color", token::VARIABLE),
+                tok(")", token::RPAREN),
+                tok(":", token::COLON),
+                tok("color", token::VARIABLE),
+                tok("{", token::LCURLY),
+                tok("\n", token::NEWLINE),
+                tok("return", token::RETURN),
+                tok("{", token::LCURLY),
+                tok("pixel_one", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(0),
+                tok("}", token::RCURLY),
+                tok("+", token::OP),
+                tok("pixel_two", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(0),
+                tok("}", token::RCURLY),
+                tok(",", token::COMMA),
+                tok("pixel_one", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(1),
+                tok("}", token::RCURLY),
+                tok("+", token::OP),
+                tok("pixel_two", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(1),
+                tok("}", token::RCURLY),
+                tok(",", token::COMMA),
+                tok("pixel_one", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(2),
+                tok("}", token::RCURLY),
+                tok("+", token::OP),
+                tok("pixel_two", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(2),
+                tok("}", token::RCURLY),
+                tok(",", token::COMMA),
+                tok("pixel_one", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(3),
+                tok("}", token::RCURLY),
+                tok("+", token::OP),
+                tok("pixel_two", token::VARIABLE),
+                tok("{", token::LCURLY),
+                int_tok(3),
+                tok("}", token::RCURLY),
+                tok("}", token::RCURLY),
+                tok("\n", token::NEWLINE),
+                tok("}", token::RCURLY),
+                tok("\n", token::NEWLINE),
+        };
+
+        if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
+
+        for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
+            if (tokens[index]->text != expected[index]->text)
+                return "Token " + std::to_string(index) + " had the wrong text: '" + tokens[index]->text
+                     + "' instead of '" + expected[index]->text + "'";
+
+            if (tokens[index]->type != expected[index]->type)
+                return "Token " + std::to_string(index)
+                     + " had the wrong type: " + token::token_type_to_string(tokens[index]->type) + " instead of "
+                     + token::token_type_to_string(expected[index]->type);
+
+            if (tokens[index]->type == token::token_type::INTVAL) {
+                const unsigned int actual_value = std::static_pointer_cast<token::int_token>(tokens[index])->value;
+                const unsigned int expected_value = std::static_pointer_cast<token::int_token>(expected[index])->value;
+                if (actual_value != expected_value)
+                    return "Token " + std::to_string(index) + " had the wrong value: " + std::to_string(actual_value)
+                         + " instead of " + std::to_string(expected_value);
+            }
+        }
+
+        return "";
+    }
+
+    /**
      * @brief Assembles the set of all lexer unit tests.
      *
      * @return The set of all lexer unit tests.
@@ -440,6 +561,7 @@ namespace tests::lexer_tests {
         tests.emplace_back(lex_all_string_comments, "Lexer `lex_all`: comments inside strings");
         tests.emplace_back(lex_all_escaped_newline, "Lexer `lex_all`: escaped newline");
         tests.emplace_back(lex_all_exception, "Lexer `lex_all`: throwing an exception");
+        tests.emplace_back(comprehensive1, "Lexer: comprehensive 1");
         return tests;
     }
 }  //  namespace tests::lexer_tests
