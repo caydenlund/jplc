@@ -336,17 +336,6 @@ namespace lexer {
     std::vector<lexer_ptr_t> assemble_lexers();
 
     /**
-     * @brief Given a regular expression and a token type, returns a smart pointer to a new `lexer` object.
-     *
-     * @param expression The regular expression to use.
-     * @param type The token type to use.
-     * @return A smart pointer to a new lexer.
-     */
-    inline lexer_ptr_t construct_lexer(const std::string& expression, const token::token_type& type) {
-        return std::make_shared<lexer>(expression, type);
-    }
-
-    /**
      * @brief Given the input string, lexes it in its entirety.
      *
      * @param input The input string.

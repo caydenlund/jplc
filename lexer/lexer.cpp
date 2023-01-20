@@ -80,6 +80,11 @@ namespace lexer {
     }
 
     std::vector<lexer_ptr_t> assemble_lexers() {
+        //  This is a lambda function that constructs a smart pointer to a new lexer.
+        const auto construct_lexer = [](const std::string& expression, token::token_type type) {
+            return std::make_shared<lexer>(expression, type);
+        };
+
         std::vector<lexer_ptr_t> lexers;
 
         //  Literals:
