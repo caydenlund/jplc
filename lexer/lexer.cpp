@@ -31,7 +31,7 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
-    float_lexer::float_lexer() : lexer(R"((^\d+\.\d*)|(^\d*\.\d+))", token::token_type::FLOATVAL) {}
+    float_lexer::float_lexer() : lexer(R"(^-?((\d+\.\d*)|(\d*\.\d+)))", token::token_type::FLOATVAL) {}
 
     result_t float_lexer::operator()(const std::string& input, unsigned int index) const {
         std::smatch match;
@@ -47,7 +47,7 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
-    int_lexer::int_lexer() : lexer("^\\d+", token::token_type::INTVAL) {}
+    int_lexer::int_lexer() : lexer("^-?\\d+", token::token_type::INTVAL) {}
 
     result_t int_lexer::operator()(const std::string& input, unsigned int index) const {
         std::smatch match;
