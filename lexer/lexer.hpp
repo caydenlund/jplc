@@ -15,6 +15,7 @@
 #include <tuple>
 #include <utility>
 
+#include "file/file.hpp"
 #include "token/token.hpp"
 
 namespace lexer {

@@ -207,14 +207,13 @@ namespace lexer {
             }
 
             //  If we tried every lexer and weren't able to move on, then we need to throw an exception.
-            //  TODO: Extract the actual line and column.
             if (!valid_token) {
                 const unsigned int token_length = input.length() - start;
                 const std::string invalid_token
                         = (token_length > lexing_exception::max_token_snippet_length)
                                 ? (input.substr(start, lexing_exception::max_token_snippet_length) + "...")
                                 : (input.substr(start, token_length));
-                throw lexing_exception(invalid_token, 0, 0);
+                throw lexing_exception(invalid_token, file::get_line(start), file::get_column(start));
             }
         }
 

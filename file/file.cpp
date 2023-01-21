@@ -10,6 +10,15 @@
 #include "file.hpp"
 
 namespace file {
+    /**
+     * @brief Holds the line numbers of the read file.
+     * @details Line 0 starts at byte 0, etc.
+     *     TODO: Find a more elegant way to avoid a global variable.
+     *
+     */
+    std::vector<unsigned int>  //  NOLINT(fuchsia-statically-constructed-objects)
+            lines {0};         //  NOLINT(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp)
+
     std::string read_file(const std::string& filename) {
         lines = std::vector<unsigned int> {0};
 
@@ -19,8 +28,8 @@ namespace file {
             std::string input;
             std::stringstream output;
 
-            while (std::getline(file, input)) {
-                output << input;
+            while (std::getline(file, input, '\n')) {
+                output << input << "\n";
                 lines.push_back(lines[lines.size() - 1] + input.length());
             }
 

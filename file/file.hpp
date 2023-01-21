@@ -16,15 +16,6 @@
 
 namespace file {
     /**
-     * @brief Holds the line numbers of the read file.
-     * @details Line 0 starts at byte 0, etc.
-     *     TODO: Find a more elegant way to avoid a global variable.
-     *
-     */
-    std::vector<unsigned int>  //  NOLINT(fuchsia-statically-constructed-objects)
-            lines {0};         //  NOLINT(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp)
-
-    /**
      * @brief Given a filename, reads it into memory.
      *
      * @param filename The name of the file to read.
