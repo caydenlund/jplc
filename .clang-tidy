@@ -8,6 +8,7 @@ Checks: '
     -cppcoreguidelines-non-private-member-variables-in-classes,
     -cppcoreguidelines-pro-bounds-pointer-arithmetic,
     -fuchsia-default-arguments-calls,
+    -fuchsia-default-arguments-declarations,
     -fuchsia-overloaded-operator,
     -google-readability-braces-around-statements,
     -google-readability-casting,

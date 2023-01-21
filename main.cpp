@@ -12,7 +12,7 @@
 #include "lexer/lexer.hpp"
 #include "token/token.hpp"
 
-int lex_only(const std::string& filename) {
+int lex_only(const std::string& filename, bool debug = false) {
     try {
         const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
 
@@ -28,19 +28,19 @@ int lex_only(const std::string& filename) {
         return 0;
     } catch (const std::exception& e) {
         std::cout << "Compilation failed\n";
-        //  std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
+        if (debug) std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
         return 1;
     }
 }
 
-int lex_and_parse_only(const std::string&) {
+int lex_and_parse_only(const std::string&, bool) {
     //  TODO: Implement.
 
     std::cout << "Compilation failed\n";
     return 1;
 }
 
-int lex_parse_and_check_only(const std::string&) {
+int lex_parse_and_check_only(const std::string&, bool) {
     //  TODO: Implement.
 
     std::cout << "Compilation failed\n";
@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
     }
 
     std::string filename;
+    bool debug = false;
     bool lex_only_flag = false;
     bool lex_and_parse_only_flag = false;
     bool lex_parse_and_check_only_flag = false;
@@ -70,6 +71,8 @@ int main(int argc, char** argv) {
             lex_and_parse_only_flag = true;
         else if (arg == "-t")
             lex_parse_and_check_only_flag = true;
+        else if (arg == "--debug")
+            debug = true;
         else
             filename = arg;
     }
@@ -79,12 +82,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename);
+    if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename, debug);
 
-    if (lex_and_parse_only_flag) return lex_and_parse_only(filename);
+    if (lex_and_parse_only_flag) return lex_and_parse_only(filename, debug);
 
-    if (lex_only_flag) return lex_only(filename);
+    if (lex_only_flag) return lex_only(filename, debug);
 
     //  Temporarily always just lex the input file.
-    return lex_only(filename);
+    return lex_only(filename, debug);
 }
