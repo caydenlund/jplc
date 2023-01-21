@@ -145,6 +145,16 @@ namespace lexer {
             expression << ope << "|";
         }
         expression << "!)";
+        //      Exception: can't be a comment.
+        expression << "(?!(";
+        //          Single-line:
+        expression << R"((^\/\/))";
+        //          Multi-line:
+        expression << "|"
+                   << R"((^\/\*))"
+                   << "|"
+                   << R"((^\*\/))";
+        expression << "))";
         lexers.emplace_back(construct_lexer(expression.str(), token::token_type::OP));
 
         //  Characters:
