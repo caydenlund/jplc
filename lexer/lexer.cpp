@@ -115,8 +115,6 @@ namespace lexer {
         //  Newlines:
         //      If the newline is preceded by a backslash, then escape it:
         lexers.emplace_back(construct_lexer("^\\\\\n", token::token_type::SPACE));  //  An escaped newline.
-        //      Otherwise, it's a newline token:
-        lexers.emplace_back(construct_lexer("^\n\\s*", token::token_type::NEWLINE));  //  A non-escaped newline.
 
         //  Single-line comments:
         lexers.emplace_back(
@@ -148,6 +146,7 @@ namespace lexer {
         lexers.emplace_back(construct_lexer("^\\)", token::token_type::RPAREN));   //  The character ')'.
         lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
         lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
+        lexers.emplace_back(construct_lexer("^\n", token::token_type::NEWLINE));   //  The character '\n'.
 
         //  Keywords:
         //  ---------
@@ -196,8 +195,12 @@ namespace lexer {
                 if (new_start != start) {
                     //  The lexer succeeded.
                     //  Add the new token to the vector, unless the token is a space.
+                    //  Also, don't add a second consecutive newline.
                     const token_ptr_t new_token = std::get<0>(result);
-                    if (new_token->type != token::token_type::SPACE) tokens.push_back(new_token);
+                    if (new_token->type != token::token_type::SPACE
+                        && (new_token->type != token::token_type::NEWLINE || tokens.empty()
+                            || tokens[tokens.size() - 1]->type != token::token_type::NEWLINE))
+                        tokens.push_back(new_token);
 
                     valid_token = true;
                     start = new_start;
