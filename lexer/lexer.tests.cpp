@@ -184,8 +184,10 @@ namespace tests::lexer_tests {
         const lexer::token_list_t expected {int_tok(0, 1),
                                             int_tok(strlen("1 "), 2),
                                             int_tok(strlen("1 2 "), 345),
-                                            int_tok(strlen("1 2 345 "), -6),
-                                            int_tok(strlen("1 2 345 -6 "), -7),
+                                            tok(strlen("1 2 345 "), "-", token::token_type::OP),
+                                            int_tok(strlen("1 2 345 -"), 6),
+                                            tok(strlen("1 2 345 -6 "), "-", token::token_type::OP),
+                                            int_tok(strlen("1 2 345 -6 -"), 7),
                                             tok(strlen("1 2 345 -6 -7"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
@@ -215,25 +217,17 @@ namespace tests::lexer_tests {
         const lexer::token_list_t expected {float_tok(0, "0.1", 0.1),
                                             float_tok(strlen("0.1 "), "2.", 2.0),
                                             float_tok(strlen("0.1 2. "), ".3", 0.3),
-                                            float_tok(strlen("0.1 2. .3 "), "-4.5", -4.5),
-                                            float_tok(strlen("0.1 2. .3 -4.5 "), "-6.", -6.0),
-                                            float_tok(strlen("0.1 2. .3 -4.5 -6. "), "-.7", -0.7),
+                                            tok(strlen("0.1 2. .3 "), "-", token::token_type::OP),
+                                            float_tok(strlen("0.1 2. .3 -"), "4.5", 4.5),
+                                            tok(strlen("0.1 2. .3 -4.5 "), "-", token::token_type::OP),
+                                            float_tok(strlen("0.1 2. .3 -4.5 -"), "6.", 6.0),
+                                            tok(strlen("0.1 2. .3 -4.5 -6. "), "-", token::token_type::OP),
+                                            float_tok(strlen("0.1 2. .3 -4.5 -6. -"), ".7", 0.7),
                                             tok(strlen("0.1 2. .3 -4.5 -6. -.7"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            ///////////////////////////////////////////
-            if (tokens[index]->text != expected[index]->text)
-                return "Token " + std::to_string(index) + " had the wrong text: '" + tokens[index]->text
-                     + "' instead of '" + expected[index]->text + "'";
-
-            if (tokens[index]->type != expected[index]->type)
-                return "Token " + std::to_string(index)
-                     + " had the wrong type: " + token::token_type_to_string(tokens[index]->type) + " instead of "
-                     + token::token_type_to_string(expected[index]->type);
-            ///////////////////////////////////////////
-
             if (*tokens[index] != *expected[index]) return "Lexer did not correctly identify a floating-point literal.";
 
             if (expected[index]->type == token::token_type::FLOATVAL) {
@@ -680,7 +674,6 @@ namespace tests::lexer_tests {
                                                         tok(0, ")", token::token_type::RPAREN),
                                                         tok(0, "\n", token::token_type::NEWLINE),
                                                         tok(0, "}", token::token_type::RCURLY),
-                                                        tok(0, "\n", token::token_type::NEWLINE),
                                                         tok(0, "\n", token::token_type::NEWLINE),
                                                         tok(0, "read", token::token_type::READ),
                                                         tok(0, "image", token::token_type::IMAGE),

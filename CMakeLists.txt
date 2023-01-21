@@ -8,4 +8,4 @@ add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 include_directories(".")
 
 add_executable(jplc main.cpp lexer/lexer.cpp file/file.cpp)
-add_executable(lexer_tests tests/tests.cpp lexer/lexer.tests.cpp lexer/lexer.cpp)
+add_executable(lexer_tests tests/tests.cpp lexer/lexer.tests.cpp lexer/lexer.cpp file/file.cpp)
