@@ -86,7 +86,6 @@ int main(int argc, char** argv) {
 
     if (lex_only_flag) return lex_only(filename);
 
-    std::cout << "Compilation failed\n";
-
-    return 1;
+    //  Temporarily always just lex the input file.
+    return lex_only(filename);
 }
