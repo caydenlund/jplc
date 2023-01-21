@@ -129,7 +129,7 @@ namespace lexer {
         //      If the newline is preceded by a backslash, then escape it:
         lexers.emplace_back(construct_lexer("^\\\\\n", token::token_type::SPACE));  //  An escaped newline.
         //      Otherwise, it's a newline token:
-        lexers.emplace_back(construct_lexer("^\n", token::token_type::NEWLINE));  //  A non-escaped newline.
+        lexers.emplace_back(construct_lexer("^\n\\s*", token::token_type::NEWLINE));  //  A non-escaped newline.
 
         //  Single-line comments:
         lexers.emplace_back(
