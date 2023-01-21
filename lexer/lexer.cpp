@@ -76,7 +76,7 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
-    string_lexer::string_lexer() : lexer(R"(^"[ -~]*")", token::token_type::STRING) {}
+    string_lexer::string_lexer() : lexer(R"(^"[ !#-~]*")", token::token_type::STRING) {}
 
     result_t string_lexer::operator()(const std::string& input, unsigned int index) const {
         std::smatch match;

@@ -28,7 +28,7 @@ int lex_only(const std::string& filename) {
         return 0;
     } catch (const std::exception& e) {
         std::cout << "Compilation failed\n";
-        std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
+        //  std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
         return 1;
     }
 }
