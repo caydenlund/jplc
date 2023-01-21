@@ -37,10 +37,17 @@ namespace lexer {
         std::smatch match;
 
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            const double value = std::stod(match[0]);
-            //  This creates a smart pointer to a new `float_token` object.
-            const token_ptr_t new_token = std::make_shared<token::float_token>(
-                    token::float_token {{index, match[0], this->type}, value});
+            token_ptr_t new_token;
+            try {
+                //  This may throw an exception upon overflow:
+                const double value = std::stod(match[0]);
+                new_token = std::make_shared<token::float_token>(
+                        token::float_token {{index, match[0], this->type}, value});
+            } catch (const std::exception& e) {
+                new_token = std::make_shared<token::float_token>(
+                        token::float_token {{index, match[0], this->type}, 0, false});
+            }
+
             return {new_token, index + (unsigned int)match[0].length()};
         }
 
@@ -53,10 +60,16 @@ namespace lexer {
         std::smatch match;
 
         if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            const long value = std::stol(match[0]);
-            //  This creates a smart pointer to a new `int_token` object.
-            const token_ptr_t new_token = std::make_shared<token::int_token>(
-                    token::int_token {{index, match[0], this->type}, value});
+            token_ptr_t new_token;
+            try {
+                //  This may throw an exception upon overflow:
+                const long value = std::stol(match[0]);
+                new_token = std::make_shared<token::int_token>(token::int_token {{index, match[0], this->type}, value});
+            } catch (const std::exception& e) {
+                new_token = std::make_shared<token::int_token>(
+                        token::int_token {{index, match[0], this->type}, 0, false});
+            }
+
             return {new_token, index + (unsigned int)match[0].length()};
         }
 

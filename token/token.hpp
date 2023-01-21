@@ -127,6 +127,13 @@ namespace token {
          *
          */
         double value {};
+
+        /**
+         * @brief Whether the integer is valid.
+         * @details I.e., an overflow did not occur.
+         *
+         */
+        bool valid {false};
     };
 
     /**
@@ -140,6 +147,13 @@ namespace token {
          *
          */
         long value {};
+
+        /**
+         * @brief Whether the integer is valid.
+         * @details I.e., an overflow did not occur.
+         *
+         */
+        bool valid {false};
     };
 
     /**
