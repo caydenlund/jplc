@@ -93,19 +93,6 @@ namespace lexer {
         lexers.emplace_back(std::make_shared<int_lexer>(int_lexer()));        //  Integer literals.
         lexers.emplace_back(std::make_shared<string_lexer>(string_lexer()));  //  String literals.
 
-        //  Characters:
-        //  -----------
-        lexers.emplace_back(construct_lexer("^ ", token::token_type::SPACE));      //  The character ' '.
-        lexers.emplace_back(construct_lexer("^:", token::token_type::COLON));      //  The character ':'.
-        lexers.emplace_back(construct_lexer("^,", token::token_type::COMMA));      //  The character ','.
-        lexers.emplace_back(construct_lexer("^=", token::token_type::EQUALS));     //  The character '='.
-        lexers.emplace_back(construct_lexer("^\\{", token::token_type::LCURLY));   //  The character '{'.
-        lexers.emplace_back(construct_lexer("^\\}", token::token_type::RCURLY));   //  The character '}'.
-        lexers.emplace_back(construct_lexer("^\\(", token::token_type::LPAREN));   //  The character '('.
-        lexers.emplace_back(construct_lexer("^\\)", token::token_type::RPAREN));   //  The character ')'.
-        lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
-        lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
-
         //  Misc. expressions:
         //  ------------------
         //  Variables:
@@ -148,6 +135,19 @@ namespace lexer {
         }
         expression << "!)";
         lexers.emplace_back(construct_lexer(expression.str(), token::token_type::OP));
+
+        //  Characters:
+        //  -----------
+        lexers.emplace_back(construct_lexer("^ ", token::token_type::SPACE));      //  The character ' '.
+        lexers.emplace_back(construct_lexer("^:", token::token_type::COLON));      //  The character ':'.
+        lexers.emplace_back(construct_lexer("^,", token::token_type::COMMA));      //  The character ','.
+        lexers.emplace_back(construct_lexer("^=", token::token_type::EQUALS));     //  The character '='.
+        lexers.emplace_back(construct_lexer("^\\{", token::token_type::LCURLY));   //  The character '{'.
+        lexers.emplace_back(construct_lexer("^\\}", token::token_type::RCURLY));   //  The character '}'.
+        lexers.emplace_back(construct_lexer("^\\(", token::token_type::LPAREN));   //  The character '('.
+        lexers.emplace_back(construct_lexer("^\\)", token::token_type::RPAREN));   //  The character ')'.
+        lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
+        lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
 
         //  Keywords:
         //  ---------
