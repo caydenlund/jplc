@@ -16,10 +16,10 @@ main.o: main.cpp
 	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
 
 file.o: file/file.cpp
-	$(CXX) $(CXXFLAGS) -c file/file.cpp -o main.o
+	$(CXX) $(CXXFLAGS) -c file/file.cpp -o file.o
 
 lexer.o: lexer/lexer.cpp
-	$(CXX) $(CXXFLAGS) -c lexer/lexer.cpp -o main.o
+	$(CXX) $(CXXFLAGS) -c lexer/lexer.cpp -o lexer.o
 
 run: jplc
 	./jplc $(TEST)
