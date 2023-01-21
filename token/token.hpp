@@ -133,7 +133,7 @@ namespace token {
          * @details I.e., an overflow did not occur.
          *
          */
-        bool valid {false};
+        bool valid {true};
     };
 
     /**
@@ -153,7 +153,7 @@ namespace token {
          * @details I.e., an overflow did not occur.
          *
          */
-        bool valid {false};
+        bool valid {true};
     };
 
     /**
