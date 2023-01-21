@@ -28,8 +28,8 @@ namespace file {
             std::string input;
             std::stringstream output;
 
-            while (std::getline(file, input, '\n')) {
-                output << input << "\n";
+            while (std::getline(file, input, ' ')) {
+                output << input << " ";
                 lines.push_back(lines[lines.size() - 1] + input.length());
             }
 
