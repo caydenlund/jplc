@@ -141,7 +141,7 @@ namespace lexer {
         expression.str("");
         expression << "^(";
         for (const std::string ope : {"&&", "\\|\\|", "<=", ">=", "==", "<", ">", "!=", "\\+", "-",
-                                      R"((\\*(?!\/)))",    //  A '*' that doesn't come before a '/'.
+                                      R"((\*(?!\/)))",     //  A '*' that doesn't come before a '/'.
                                       R"((\/(?!\*|\/)))",  //  A '/' that doesn't come before a '/' or '*'.
                                       "%"}) {
             expression << ope << "|";
