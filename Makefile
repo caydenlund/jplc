@@ -3,18 +3,23 @@ TEST=test.jpl
 CXX=clang++
 CXXFLAGS=-Og -std=c++17 -Werror -Wall -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -I.
 
+OBJS=main.o file.o lexer.o
+
 all: run
 
-compile: compiler.o
+compile: jplc
 
-compiler.o: compiler.cpp
-	$(CXX) $(CXXFLAGS) -c compiler.cpp -o compiler.o
+jplc: $(OBJS)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o jplc
+
+main.o: main.cpp
+	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
+
+file.o: file/file.cpp
+	$(CXX) $(CXXFLAGS) -c file/file.cpp -o main.o
 
 lexer.o: lexer/lexer.cpp
-	$(CXX) $(CXXFLAGS) -c lexer/lexer.cpp -o lexer.o
-
-jplc: compiler.o lexer.o
-	$(CXX) $(CXXFLAGS) compiler.o -o jplc
+	$(CXX) $(CXXFLAGS) -c lexer/lexer.cpp -o main.o
 
 run: jplc
 	./jplc $(TEST)
