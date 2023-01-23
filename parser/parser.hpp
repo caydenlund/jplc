@@ -6,6 +6,8 @@
  *
  */
 
+#include "ast_node/ast_node.hpp"
+
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
