@@ -10,6 +10,7 @@
 #define AST_NODE_HPP
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "token/token.hpp"
@@ -337,7 +338,10 @@ namespace ast_node {
          * @param arg_2 The second (`<type>`) argument.
          */
         type_cmd_node(const token::token& arg_1, const std::shared_ptr<type_node>& arg_2)
-            : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {}
+            : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
+            if (arg_1.type != token::token_type::VARIABLE)
+                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -587,7 +591,10 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<variable>`) argument.
          */
-        variable_expr_node(const token::token& arg_1) : expr_node(node_type::VARIABLE_EXPR), arg_1(arg_1) {}
+        variable_expr_node(const token::token& arg_1) : expr_node(node_type::VARIABLE_EXPR), arg_1(arg_1) {
+            if (arg_1.type != token::token_type::VARIABLE)
+                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -706,7 +713,10 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<variable>`) argument.
          */
-        variable_type_node(const token::token& arg_1) : type_node(node_type::VARIABLE_TYPE), arg_1(arg_1) {}
+        variable_type_node(const token::token& arg_1) : type_node(node_type::VARIABLE_TYPE), arg_1(arg_1) {
+            if (arg_1.type != token::token_type::VARIABLE)
+                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -728,7 +738,7 @@ namespace ast_node {
      * @param node An AST node.
      * @return The s-expression for the given AST node.
      */
-    std::string get_s_expression(const std::shared_ptr<ast_node> &node);
+    std::string get_s_expression(const std::shared_ptr<ast_node>& node);
 }  //  namespace ast_node
 
 #endif
