@@ -162,14 +162,14 @@ namespace tests::ast_node_tests {
 
         //  `float_expr_node`:
         //  ------------------
-        const token::float_token float_val {{0, "3.", token::token_type::INTVAL}, 3.0};
+        const token::token float_val {0, "3.", token::token_type::FLOATVAL};
         const ast_node::float_expr_node float_expr(float_val);
         result = str_cmp(float_expr.s_expression(), R"((FloatExpr 3))");
         if (result != "") return result;
 
         //  `integer_expr_node`:
         //  --------------------
-        const token::int_token int_val {{0, "3", token::token_type::INTVAL}, 3};
+        const token::token int_val {0, "3", token::token_type::INTVAL};
         const ast_node::integer_expr_node integer_expr(int_val);
         result = str_cmp(integer_expr.s_expression(), R"((IntExpr 3))");
         if (result != "") return result;

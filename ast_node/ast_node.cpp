@@ -85,12 +85,10 @@ namespace ast_node {
     std::string false_expr_node::s_expression() const { return "FalseExpr"; }
 
     std::string float_expr_node::s_expression() const {
-        return "(FloatExpr " + std::to_string((long)this->arg_1.value) + ")";
+        return "(FloatExpr " + std::to_string((long)this->value) + ")";
     }
 
-    std::string integer_expr_node::s_expression() const {
-        return "(IntExpr " + std::to_string(this->arg_1.value) + ")";
-    }
+    std::string integer_expr_node::s_expression() const { return "(IntExpr " + std::to_string(this->value) + ")"; }
 
     std::string true_expr_node::s_expression() const { return "TrueExpr"; }
 

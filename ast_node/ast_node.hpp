@@ -516,18 +516,23 @@ namespace ast_node {
      */
     struct float_expr_node : public expr_node {
         /**
-         * @brief The `<float>` argument.
+         * @brief The `<float>` value.
          *
          */
-        const token::float_token arg_1;
+        double value;
+
         /**
          * @brief Class constructor.
          * @details Initializes `type` to `node_type::FLOAT_EXPR`.
          *
          * @param arg_1 The first (`<float>`) argument.
          */
-        float_expr_node(const token::float_token& arg_1) : expr_node(node_type::FLOAT_EXPR), arg_1(arg_1) {
-            if (!arg_1.valid) throw std::runtime_error("Floating-point overflow");
+        float_expr_node(const token::token& arg_1) : expr_node(node_type::FLOAT_EXPR) {
+            if (arg_1.type != token::token_type::FLOATVAL)
+                throw std::runtime_error("Attempted to construct a `float_expr_node` without a `<float>` argument");
+            try {
+                value = std::stod(arg_1.text);
+            } catch (const std::exception& err) { throw std::runtime_error("Floating-point literal overflow"); }
         }
 
         /**
@@ -544,10 +549,10 @@ namespace ast_node {
      */
     struct integer_expr_node : public expr_node {
         /**
-         * @brief The `<integer>` argument.
+         * @brief The `<integer>` value.
          *
          */
-        const token::int_token arg_1;
+        long value;
 
         /**
          * @brief Class constructor.
@@ -555,8 +560,12 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<integer>`) argument.
          */
-        integer_expr_node(const token::int_token& arg_1) : expr_node(node_type::INTEGER_EXPR), arg_1(arg_1) {
-            if (!arg_1.valid) throw std::runtime_error("Integer overflow");
+        integer_expr_node(const token::token& arg_1) : expr_node(node_type::INTEGER_EXPR) {
+            if (arg_1.type != token::token_type::INTVAL)
+                throw std::runtime_error("Attempted to construct an `int_expr_node` without an `<integer>` argument");
+            try {
+                value = std::stod(arg_1.text);
+            } catch (const std::exception& err) { throw std::runtime_error("Integer literal overflow"); }
         }
 
         /**
