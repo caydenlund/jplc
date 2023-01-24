@@ -23,6 +23,20 @@ namespace parser {
         return (unsigned int)tokens.size();
     }
 
+    parser_return_t apply_parsers(token_vec_t tokens, const std::vector<parser_t>& parsers, unsigned int index) {
+        //  Try all the parsers, one by one.
+        for (const parser_t& parser : parsers) {
+            try {
+                return parser(tokens, index);
+            } catch (const parser_error& err) {
+                //  Ignore and try the next parser.
+            }
+        }
+
+        //  No parsers were successful.
+        throw parser_error();
+    }
+
     /*
     ==============================
     ||  AST Node Superclasses:  ||
