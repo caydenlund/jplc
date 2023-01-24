@@ -275,7 +275,7 @@ namespace ast_node {
          * @param arg_2 The second (`<string>`) argument.
          */
         assert_cmd_node(const std::shared_ptr<expr_node>& arg_1, const token::string_token& arg_2)
-                : cmd_node(node_type::ASSERT_CMD), arg_1(arg_1), arg_2(arg_2) {}
+            : cmd_node(node_type::ASSERT_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -311,7 +311,7 @@ namespace ast_node {
          * @param arg_2 The second (`<expr>`) node.
          */
         let_cmd_node(const std::shared_ptr<lvalue_node>& arg_1, const std::shared_ptr<expr_node>& arg_2)
-                : cmd_node(node_type::LET_CMD), arg_1(arg_1), arg_2(arg_2) {}
+            : cmd_node(node_type::LET_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -439,7 +439,7 @@ namespace ast_node {
          * @param arg_2 The second (`<type>`) argument.
          */
         type_cmd_node(const token::token& arg_1, const std::shared_ptr<type_node>& arg_2)
-                : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
+            : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
             if (arg_1.type != token::token_type::VARIABLE)
                 throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
         }
@@ -507,8 +507,8 @@ namespace ast_node {
          *
          * @return The s-expression string for this AST node.
          */
-            std::string s_expression() const override;
-        };
+        std::string s_expression() const override;
+    };
 
     /**
      * @brief The `<float>` expression.
@@ -526,7 +526,9 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<float>`) argument.
          */
-        float_expr_node(const token::float_token& arg_1) : expr_node(node_type::FLOAT_EXPR), arg_1(arg_1) {}
+        float_expr_node(const token::float_token& arg_1) : expr_node(node_type::FLOAT_EXPR), arg_1(arg_1) {
+            if (!arg_1.valid) throw std::runtime_error("Floating-point overflow");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -553,7 +555,9 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<integer>`) argument.
          */
-        integer_expr_node(const token::int_token& arg_1) : expr_node(node_type::INTEGER_EXPR), arg_1(arg_1) {}
+        integer_expr_node(const token::int_token& arg_1) : expr_node(node_type::INTEGER_EXPR), arg_1(arg_1) {
+            if (!arg_1.valid) throw std::runtime_error("Integer overflow");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
