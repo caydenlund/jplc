@@ -723,11 +723,12 @@ namespace ast_node {
     */
     /**
      * @brief Returns the s-expression for the given AST node.
+     * @details Performs the necessary type casting.
      *
      * @param node An AST node.
      * @return The s-expression for the given AST node.
      */
-    std::string s_expression(const ast_node* const node);
+    std::string get_s_expression(const std::shared_ptr<ast_node> &node);
 }  //  namespace ast_node
 
 #endif
