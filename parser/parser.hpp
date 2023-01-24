@@ -18,10 +18,10 @@
 
 namespace parser {
     /**
-     * @brief A const reference to a vector of tokens.
+     * @brief A const reference to a vector of smart pointers to tokens.
      *
      */
-    using token_vec_t = const std::vector<token::token>&;
+    using token_vec_t = const std::vector<std::shared_ptr<token::token>>&;
 
     /**
      * @brief A pointer to an AST node.
