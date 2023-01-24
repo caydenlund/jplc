@@ -6,6 +6,7 @@
  *
  */
 
+#include <functional>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -35,6 +36,13 @@ namespace parser {
      *
      */
     using parser_return_t = std::tuple<node_ptr_t, unsigned int>;
+
+    /**
+     * @brief The type of a single parser.
+     * @details I.e., a function that takes a vector of tokens and an index and returns a `parser_return_t`.
+     *
+     */
+     using parser_t = std::function<parser_return_t(token_vec_t, unsigned int)>;
 
     /**
      * @brief The main parser routine.
@@ -124,7 +132,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_argument_variable(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_argument_variable(token_vec_t tokens, unsigned int index);
 
     //  Commands:
     //  ---------
@@ -136,7 +144,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_assert(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_assert(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `let` command.
@@ -146,7 +154,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_let(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_let(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `print` command.
@@ -156,7 +164,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_print(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_print(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `read` command.
@@ -166,7 +174,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_read(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_read(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `show` command.
@@ -176,7 +184,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_show(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_show(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `type` command.
@@ -186,7 +194,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_type(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_type(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `write` command.
@@ -196,7 +204,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_cmd_write(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_cmd_write(token_vec_t tokens, unsigned int index);
 
     //  Expressions:
     //  ------------
@@ -208,7 +216,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_expr_false(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_expr_false(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `<float>` expression.
@@ -218,7 +226,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_expr_float(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_expr_float(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `<integer>` expression.
@@ -228,7 +236,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_expr_integer(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_expr_integer(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `true` expression.
@@ -238,7 +246,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_expr_true(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_expr_true(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `<variable>` expression.
@@ -248,7 +256,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_expr_variable(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_expr_variable(token_vec_t tokens, unsigned int index);
 
     //  Lvalues:
     //  --------
@@ -260,7 +268,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    node_ptr_t parse_lvalue_argument(token_vec_t tokens, unsigned int index);
+    parser_return_t parse_lvalue_argument(token_vec_t tokens, unsigned int index);
 
     //  Types:
     //  ------
