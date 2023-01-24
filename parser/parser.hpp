@@ -59,12 +59,47 @@ namespace parser {
         /**
          * @brief Class constructor.
          *
-         * @param byte_index The byte index in the file where the error originated.
+         * @param byte_position The byte index in the file where the error originated.
          */
-        parser_error(unsigned int byte_index = 0)
+        parser_error(unsigned int byte_position)
             : std::runtime_error("The parser failed to parse the sequence of tokens at "
-                                 + std::to_string(file::get_line(byte_index)) + ":"
-                                 + std::to_string(file::get_column(byte_index))) {}
+                                 + std::to_string(file::get_line(byte_position)) + ":"
+                                 + std::to_string(file::get_column(byte_position))) {}
+
+        /**
+         * @brief Class constructor.
+         *
+         * @param message The message to pass on to `std::runtime_error`.
+         */
+        parser_error(const std::string& message) : std::runtime_error(message) {}
+    };
+
+    /**
+     * @brief The exception that is thrown when a parser fails to parse the sequence of tokens.
+     * @details This one is thrown when the file ends unexpectedly.
+     *
+     */
+    struct parser_error_eof : public parser_error {
+        /**
+         * @brief Class constructor.
+         *
+         */
+        parser_error_eof() : parser_error("The file ended unexpectedly") {}
+    };
+
+    /**
+     * @brief The exception that is thrown when a parser fails to parse the sequence of tokens.
+     * @details This one is thrown when the line ends unexpectedly.
+     *
+     */
+    struct parser_error_newline : public parser_error {
+        /**
+         * @brief Class constructor.
+         *
+         * @param byte_position The byte index in the file where the error originated.
+         */
+        parser_error_newline(unsigned int byte_position)
+            : parser_error("Line " + std::to_string(file::get_line(byte_position)) + " ended unexpectedly") {}
     };
 
     /*
