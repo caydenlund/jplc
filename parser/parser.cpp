@@ -361,18 +361,15 @@ namespace parser {
     parser_return_t parse_expr_float(token_vec_t tokens, unsigned int index) {
         //  1: `<float>`.
         if (tokens[index]->type != token::token_type::FLOATVAL) throw parser_error_recoverable();
-        std::shared_ptr<token::float_token> float_val = std::reinterpret_pointer_cast<token::float_token>(
-                tokens[index]);
 
-        return {std::make_shared<ast_node::float_expr_node>(*float_val), index + 1};
+        return {std::make_shared<ast_node::float_expr_node>(*tokens[index]), index + 1};
     }
 
     parser_return_t parse_expr_integer(token_vec_t tokens, unsigned int index) {
         //  1: `<integer>`.
         if (tokens[index]->type != token::token_type::INTVAL) throw parser_error_recoverable();
-        std::shared_ptr<token::int_token> integer = std::reinterpret_pointer_cast<token::int_token>(tokens[index]);
 
-        return {std::make_shared<ast_node::integer_expr_node>(*integer), index + 1};
+        return {std::make_shared<ast_node::integer_expr_node>(*tokens[index]), index + 1};
     }
 
     parser_return_t parse_expr_true(token_vec_t tokens, unsigned int index) {

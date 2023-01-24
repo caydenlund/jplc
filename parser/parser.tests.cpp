@@ -73,7 +73,7 @@ namespace tests::parser_tests {
                                 std::make_shared<ast_node::variable_argument_node>(
                                         token::token {0, "x", token::token_type::VARIABLE})),
                         std::make_shared<ast_node::integer_expr_node>(
-                                token::int_token {{0, "7", token::token_type::INTVAL}, 7})),
+                                token::token {0, "7", token::token_type::INTVAL})),
                 //  `print "Hello, world."`
                 std::make_shared<ast_node::print_cmd_node>(
                         token::string_token {{0, "\"Hello, world.\"", token::token_type::STRING}, "Hello, world."}),
