@@ -280,7 +280,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    parser_return_t parse_type_bool(token_vec_t tokens);
+    parser_return_t parse_type_bool(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Parses a single `float` type.
