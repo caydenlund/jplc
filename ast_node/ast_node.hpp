@@ -459,10 +459,10 @@ namespace ast_node {
      */
     struct write_cmd_node : public cmd_node {
         /**
-         * @brief The `<argument>` node argument.
+         * @brief The `<expr>` node argument.
          *
          */
-        const std::shared_ptr<argument_node> arg_1;
+        const std::shared_ptr<expr_node> arg_1;
 
         /**
          * @brief The `<string>` node argument.
@@ -477,7 +477,7 @@ namespace ast_node {
          * @param arg_1 The first (`<expr>`) argument.
          * @param arg_2 The second (`<string>`) argument.
          */
-        write_cmd_node(const std::shared_ptr<argument_node>& arg_1, const token::string_token& arg_2)
+        write_cmd_node(const std::shared_ptr<expr_node>& arg_1, const token::string_token& arg_2)
             : cmd_node(node_type::WRITE_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**

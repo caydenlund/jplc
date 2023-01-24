@@ -134,8 +134,11 @@ namespace tests::ast_node_tests {
 
         //  `write_cmd_node`:
         //  -----------------
-        const ast_node::write_cmd_node write_cmd(variable_argument, file);
-        result = str_cmp(write_cmd.s_expression(), R"((WriteCmd (VarArgument xyz) "file.png"))");
+        const std::shared_ptr<ast_node::variable_expr_node> variable_expr
+                = std::make_shared<ast_node::variable_expr_node>(variable);
+
+        const ast_node::write_cmd_node write_cmd(variable_expr, file);
+        result = str_cmp(write_cmd.s_expression(), R"((WriteCmd (VarExpr xyz) "file.png"))");
         return result;
     }
 
