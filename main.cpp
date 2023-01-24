@@ -14,47 +14,52 @@
 #include "parser/parser.hpp"
 #include "token/token.hpp"
 
-int lex_only(const std::string& filename, bool debug = false) {
-    try {
-        const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
+/**
+ * @brief Only lexes the input file.
+ *
+ * @param filename The file to read.
+ * @return 0 on success; an exception is thrown otherwise.
+ */
+int lex_only(const std::string& filename) {
+    const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
 
-        for (const lexer::token_ptr_t& token : tokens) {
-            std::cout << token::token_type_to_string(token->type);
-            if (token->type != token::token_type::NEWLINE && token->type != token::token_type::END_OF_FILE)
-                std::cout << " '" << token->text << "'";
-            std::cout << "\n";
-        }
-
-        std::cout << "Compilation succeeded: lexical analysis complete\n";
-
-        return 0;
-    } catch (const std::exception& e) {
-        std::cout << "Compilation failed\n";
-        if (debug) std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
-        return 1;
+    for (const lexer::token_ptr_t& token : tokens) {
+        std::cout << token::token_type_to_string(token->type);
+        if (token->type != token::token_type::NEWLINE && token->type != token::token_type::END_OF_FILE)
+            std::cout << " '" << token->text << "'";
+        std::cout << "\n";
     }
+
+    std::cout << "Compilation succeeded: lexical analysis complete\n";
+
+    return 0;
 }
 
-int lex_and_parse_only(const std::string& filename, bool debug = false) {
-    try {
-        const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
-        const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
+/**
+ * @brief Only lexes and parses the input file.
+ *
+ * @param filename The file to read.
+ * @return 0 on success; an exception is thrown otherwise.
+ */
+int lex_and_parse_only(const std::string& filename) {
+    const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
+    const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
 
-        for (const parser::node_ptr_t& node : nodes) { std::cout << ast_node::get_s_expression(node) << "\n"; }
+    for (const parser::node_ptr_t& node : nodes) { std::cout << ast_node::get_s_expression(node) << "\n"; }
 
-        std::cout << "Compilation succeeded: parsing complete\n";
+    std::cout << "Compilation succeeded: parsing complete\n";
 
-        return 0;
-    } catch (const std::exception& e) {
-        std::cout << "Compilation failed\n";
-        if (debug) std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
-        return 1;
-    }
+    return 0;
 }
 
-int lex_parse_and_check_only(const std::string&, bool) {
-    //  TODO: Implement.
-
+/**
+ * @brief Only lexes, parses, and type-checks the input file.
+ * @details TODO: Implement.
+ *
+ * @param filename The file to read.
+ * @return 0 on success; an exception is thrown otherwise.
+ */
+int lex_parse_and_check_only(const std::string&) {
     std::cout << "Compilation failed\n";
     return 1;
 }
@@ -65,12 +70,6 @@ int lex_parse_and_check_only(const std::string&, bool) {
  * @return 0 on success; 1 on error.
  */
 int main(int argc, char** argv) {
-    //  TODO: Parse options more elegantly.
-    if (argc == 1) {
-        std::cout << "Compilation failed\n";
-        return 1;
-    }
-
     std::string filename;
     bool debug = false;
     bool lex_only_flag = false;
@@ -90,16 +89,26 @@ int main(int argc, char** argv) {
     }
 
     if (filename.empty()) {
+        //  No filename was given.
         std::cout << "Compilation failed\n";
         return 1;
     }
 
-    if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename, debug);
+    try {
+        if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename);
+        if (lex_and_parse_only_flag) return lex_and_parse_only(filename);
+        if (lex_only_flag) return lex_only(filename);
 
-    if (lex_and_parse_only_flag) return lex_and_parse_only(filename, debug);
-
-    if (lex_only_flag) return lex_only(filename, debug);
-
-    //  Temporarily always just lex the input file.
-    return lex_only(filename, debug);
+        //  If we've made it this far, then we perform the whole compilation.
+        //  This is not yet implemented; quit.
+        std::cout << "Compilation failed\n";
+        return 1;
+    } catch (const std::exception& err) {
+        //  The lexer, parser, and type checker may throw an exception.
+        //  Catch it, print "Compilation failed", and quit.
+        std::cout << "Compilation failed\n";
+        //  If the debug flag was given, then also print the exception message.
+        if (debug) std::cerr << "An exception was thrown: \"" << err.what() << "\"" << std::endl;
+        return 1;
+    }
 }
