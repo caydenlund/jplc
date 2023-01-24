@@ -32,31 +32,6 @@ namespace tests::lexer_tests {
     }
 
     /**
-     * @brief Returns a smart pointer to a new floating-point token.
-     *
-     * @param start The start index of the token.
-     * @param text The text of the token.
-     * @param value The value of the token.
-     * @return A smart pointer to the new token.
-     */
-    inline std::shared_ptr<token::float_token> float_tok(unsigned int start, const std::string& text, double value) {
-        return std::make_shared<token::float_token>(
-                token::float_token {{start, text, token::token_type::FLOATVAL}, value});
-    }
-
-    /**
-     * @brief Returns a smart pointer to a new integer token.
-     *
-     * @param start The start index of the token.
-     * @param value The value of the token.
-     * @return A smart pointer to the new token.
-     */
-    std::shared_ptr<token::int_token> int_tok(unsigned int start, long value) {
-        return std::make_shared<token::int_token>(
-                token::int_token {{start, std::to_string(value), token::token_type::INTVAL}, value});
-    }
-
-    /**
      * @brief Returns a smart pointer to a new string token.
      *
      * @param start The start index of the token.
@@ -181,26 +156,19 @@ namespace tests::lexer_tests {
     std::string lex_all_integers() {
         const lexer::token_list_t tokens = lexer::lex_all("1 2 345 -6 -7");
 
-        const lexer::token_list_t expected {int_tok(0, 1),
-                                            int_tok(strlen("1 "), 2),
-                                            int_tok(strlen("1 2 "), 345),
+        const lexer::token_list_t expected {tok(0, "1", token::token_type::INTVAL),
+                                            tok(strlen("1 "), "2", token::token_type::INTVAL),
+                                            tok(strlen("1 2 "), "345", token::token_type::INTVAL),
                                             tok(strlen("1 2 345 "), "-", token::token_type::OP),
-                                            int_tok(strlen("1 2 345 -"), 6),
+                                            tok(strlen("1 2 345 -"), "6", token::token_type::INTVAL),
                                             tok(strlen("1 2 345 -6 "), "-", token::token_type::OP),
-                                            int_tok(strlen("1 2 345 -6 -"), 7),
+                                            tok(strlen("1 2 345 -6 -"), "7", token::token_type::INTVAL),
                                             tok(strlen("1 2 345 -6 -7"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            if (*tokens[index] != *expected[index]) return "Lexer did not correctly identify an integer literal";
-
-            if (expected[index]->type == token::token_type::INTVAL) {
-                const long actual_value = std::static_pointer_cast<token::int_token>(tokens[index])->value;
-                const long expected_value = std::static_pointer_cast<token::int_token>(expected[index])->value;
-                if (actual_value != expected_value)
-                    return "Lexer did not correctly identify the integer value of " + std::to_string(expected_value);
-            }
+            if (*tokens[index] != *expected[index]) return "Token " + std::to_string(index) + " was not correct";
         }
 
         return "";
@@ -214,29 +182,21 @@ namespace tests::lexer_tests {
     std::string lex_all_floats() {
         const lexer::token_list_t tokens = lexer::lex_all("0.1 2. .3 -4.5 -6. -.7");
 
-        const lexer::token_list_t expected {float_tok(0, "0.1", 0.1),
-                                            float_tok(strlen("0.1 "), "2.", 2.0),
-                                            float_tok(strlen("0.1 2. "), ".3", 0.3),
+        const lexer::token_list_t expected {tok(0, "0.1", token::token_type::FLOATVAL),
+                                            tok(strlen("0.1 "), "2.", token::token_type::FLOATVAL),
+                                            tok(strlen("0.1 2. "), ".3", token::token_type::FLOATVAL),
                                             tok(strlen("0.1 2. .3 "), "-", token::token_type::OP),
-                                            float_tok(strlen("0.1 2. .3 -"), "4.5", 4.5),
+                                            tok(strlen("0.1 2. .3 -"), "4.5", token::token_type::FLOATVAL),
                                             tok(strlen("0.1 2. .3 -4.5 "), "-", token::token_type::OP),
-                                            float_tok(strlen("0.1 2. .3 -4.5 -"), "6.", 6.0),
+                                            tok(strlen("0.1 2. .3 -4.5 -"), "6.", token::token_type::FLOATVAL),
                                             tok(strlen("0.1 2. .3 -4.5 -6. "), "-", token::token_type::OP),
-                                            float_tok(strlen("0.1 2. .3 -4.5 -6. -"), ".7", 0.7),
+                                            tok(strlen("0.1 2. .3 -4.5 -6. -"), ".7", token::token_type::FLOATVAL),
                                             tok(strlen("0.1 2. .3 -4.5 -6. -.7"), "", token::token_type::END_OF_FILE)};
 
         if (tokens.size() != expected.size()) return "Lexer did not return the correct number of tokens";
 
         for (unsigned int index = 0; index < (unsigned int)tokens.size(); index++) {
-            if (*tokens[index] != *expected[index]) return "Lexer did not correctly identify a floating-point literal.";
-
-            if (expected[index]->type == token::token_type::FLOATVAL) {
-                const double actual_value = std::static_pointer_cast<token::float_token>(tokens[index])->value;
-                const double expected_value = std::static_pointer_cast<token::float_token>(expected[index])->value;
-                if (actual_value != expected_value)
-                    return "Lexer did not correctly identify the double value of '" + std::to_string(expected_value)
-                         + "'";
-            }
+            if (*tokens[index] != *expected[index]) return "Token " + std::to_string(index) + " was not correct";
         }
 
         return "";
@@ -547,42 +507,42 @@ namespace tests::lexer_tests {
                                                         tok(0, "{", token::token_type::LCURLY),
                                                         tok(0, "pixel_one", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 0),
+                                                        tok(0, "0", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, "+", token::token_type::OP),
                                                         tok(0, "pixel_two", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 0),
+                                                        tok(0, "0", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, ",", token::token_type::COMMA),
                                                         tok(0, "pixel_one", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 1),
+                                                        tok(0, "1", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, "+", token::token_type::OP),
                                                         tok(0, "pixel_two", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 1),
+                                                        tok(0, "1", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, ",", token::token_type::COMMA),
                                                         tok(0, "pixel_one", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 2),
+                                                        tok(0, "2", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, "+", token::token_type::OP),
                                                         tok(0, "pixel_two", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 2),
+                                                        tok(0, "2", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, ",", token::token_type::COMMA),
                                                         tok(0, "pixel_one", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 3),
+                                                        tok(0, "3", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, "+", token::token_type::OP),
                                                         tok(0, "pixel_two", token::token_type::VARIABLE),
                                                         tok(0, "{", token::token_type::LCURLY),
-                                                        int_tok(0, 3),
+                                                        tok(0, "3", token::token_type::INTVAL),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, "}", token::token_type::RCURLY),
                                                         tok(0, "\n", token::token_type::NEWLINE),
@@ -601,14 +561,6 @@ namespace tests::lexer_tests {
                 return "Token " + std::to_string(index)
                      + " had the wrong type: " + token::token_type_to_string(tokens[index]->type) + " instead of "
                      + token::token_type_to_string(expected[index]->type);
-
-            if (tokens[index]->type == token::token_type::INTVAL) {
-                const unsigned int actual_value = std::static_pointer_cast<token::int_token>(tokens[index])->value;
-                const unsigned int expected_value = std::static_pointer_cast<token::int_token>(expected[index])->value;
-                if (actual_value != expected_value)
-                    return "Token " + std::to_string(index) + " had the wrong value: " + std::to_string(actual_value)
-                         + " instead of " + std::to_string(expected_value);
-            }
         }
 
         return "";
@@ -703,14 +655,6 @@ namespace tests::lexer_tests {
                 return "Token " + std::to_string(index)
                      + " had the wrong type: " + token::token_type_to_string(tokens[index]->type) + " instead of "
                      + token::token_type_to_string(expected[index]->type);
-
-            if (tokens[index]->type == token::token_type::INTVAL) {
-                const unsigned int actual_value = std::static_pointer_cast<token::int_token>(tokens[index])->value;
-                const unsigned int expected_value = std::static_pointer_cast<token::int_token>(expected[index])->value;
-                if (actual_value != expected_value)
-                    return "Token " + std::to_string(index) + " had the wrong value: " + std::to_string(actual_value)
-                         + " instead of " + std::to_string(expected_value);
-            }
         }
 
         return "";
