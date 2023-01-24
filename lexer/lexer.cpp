@@ -31,51 +31,6 @@ namespace lexer {
         return {std::make_shared<token::token>(), index};
     }
 
-    float_lexer::float_lexer() : lexer(R"(^((\d+\.\d*)|(\d*\.\d+)))", token::token_type::FLOATVAL) {}
-
-    result_t float_lexer::operator()(const std::string& input, unsigned int index) const {
-        std::smatch match;
-
-        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            token_ptr_t new_token;
-            try {
-                //  This may throw an exception upon overflow:
-                const double value = std::stod(match[0]);
-                new_token = std::make_shared<token::float_token>(
-                        token::float_token {{index, match[0], this->type}, value});
-            } catch (const std::exception& e) {
-                new_token = std::make_shared<token::float_token>(
-                        token::float_token {{index, match[0], this->type}, 0, false});
-            }
-
-            return {new_token, index + (unsigned int)match[0].length()};
-        }
-
-        return {std::make_shared<token::token>(), index};
-    }
-
-    int_lexer::int_lexer() : lexer("^\\d+", token::token_type::INTVAL) {}
-
-    result_t int_lexer::operator()(const std::string& input, unsigned int index) const {
-        std::smatch match;
-
-        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            token_ptr_t new_token;
-            try {
-                //  This may throw an exception upon overflow:
-                const long value = std::stol(match[0]);
-                new_token = std::make_shared<token::int_token>(token::int_token {{index, match[0], this->type}, value});
-            } catch (const std::exception& e) {
-                new_token = std::make_shared<token::int_token>(
-                        token::int_token {{index, match[0], this->type}, 0, false});
-            }
-
-            return {new_token, index + (unsigned int)match[0].length()};
-        }
-
-        return {std::make_shared<token::token>(), index};
-    }
-
     string_lexer::string_lexer() : lexer(R"(^"[ !#-~]*")", token::token_type::STRING) {}
 
     result_t string_lexer::operator()(const std::string& input, unsigned int index) const {
@@ -102,9 +57,10 @@ namespace lexer {
 
         //  Literals:
         //  ---------
-        lexers.emplace_back(std::make_shared<float_lexer>(float_lexer()));    //  Floating-point literals.
-        lexers.emplace_back(std::make_shared<int_lexer>(int_lexer()));        //  Integer literals.
-        lexers.emplace_back(std::make_shared<string_lexer>(string_lexer()));  //  String literals.
+        lexers.emplace_back(construct_lexer(R"(^((\d+\.\d*)|(\d*\.\d+)))",
+                                            token::token_type::FLOATVAL));         //  Floating-point literals.
+        lexers.emplace_back(construct_lexer("^\\d+", token::token_type::INTVAL));  //  Integer literals.
+        lexers.emplace_back(std::make_shared<string_lexer>(string_lexer()));       //  String literals.
 
         //  Misc. expressions:
         //  ------------------
