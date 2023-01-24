@@ -28,16 +28,15 @@ namespace file {
             std::string input;
             std::stringstream output;
 
-            while (std::getline(file, input, ' ')) {
-                output << input << " ";
-                lines.push_back(lines[lines.size() - 1] + input.length());
-            }
+            while (std::getline(file, input, ' ')) { output << input << " "; }
 
-            return output.str();
+            const std::string result = output.str();
+            for (unsigned int index = 0; index < (unsigned int)result.size(); index++) {
+                if (result[index] == '\n') lines.emplace_back(index);
+            }
         }
 
-        //  TODO: Handle filesystem errors.
-        throw std::runtime_error("Filesystem error!");
+        throw std::runtime_error("Filesystem error: file \"" + filename + "\" could not be opened for reading");
     }
 
     unsigned int get_line(unsigned int byte_position) {
