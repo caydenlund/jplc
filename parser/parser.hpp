@@ -6,6 +6,9 @@
  *
  */
 
+#ifndef PARSER_HPP
+#define PARSER_HPP
+
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -15,9 +18,6 @@
 #include "ast_node/ast_node.hpp"
 #include "file/file.hpp"
 #include "token/token.hpp"
-
-#ifndef PARSER_HPP
-#define PARSER_HPP
 
 namespace parser {
     /*
@@ -59,19 +59,36 @@ namespace parser {
         /**
          * @brief Class constructor.
          *
+         * @param message The message to pass on to `std::runtime_error`.
+         */
+        parser_error(const std::string& message) : std::runtime_error(message) {}
+    };
+
+    struct parser_error_recoverable : public parser_error {
+        /**
+         * @brief Class constructor.
+         *
+         */
+        parser_error_recoverable() : parser_error("") {}
+    };
+
+    struct parser_error_unrecoverable : public parser_error {
+        /**
+         * @brief Class constructor.
+         *
          * @param byte_position The byte index in the file where the error originated.
          */
-        parser_error(unsigned int byte_position)
-            : std::runtime_error("The parser failed to parse the sequence of tokens at "
-                                 + std::to_string(file::get_line(byte_position)) + ":"
-                                 + std::to_string(file::get_column(byte_position))) {}
+        parser_error_unrecoverable(unsigned int byte_position)
+            : parser_error("The parser failed to parse the sequence of tokens at "
+                           + std::to_string(file::get_line(byte_position)) + ":"
+                           + std::to_string(file::get_column(byte_position))) {}
 
         /**
          * @brief Class constructor.
          *
          * @param message The message to pass on to `std::runtime_error`.
          */
-        parser_error(const std::string& message) : std::runtime_error(message) {}
+        parser_error_unrecoverable(const std::string& message) : parser_error(message) {}
     };
 
     /**
@@ -79,12 +96,12 @@ namespace parser {
      * @details This one is thrown when the file ends unexpectedly.
      *
      */
-    struct parser_error_eof : public parser_error {
+    struct parser_error_eof : public parser_error_unrecoverable {
         /**
          * @brief Class constructor.
          *
          */
-        parser_error_eof() : parser_error("The file ended unexpectedly") {}
+        parser_error_eof() : parser_error_unrecoverable("The file ended unexpectedly") {}
     };
 
     /**
@@ -92,14 +109,51 @@ namespace parser {
      * @details This one is thrown when the line ends unexpectedly.
      *
      */
-    struct parser_error_newline : public parser_error {
+    struct parser_error_newline : public parser_error_unrecoverable {
         /**
          * @brief Class constructor.
          *
          * @param byte_position The byte index in the file where the error originated.
          */
         parser_error_newline(unsigned int byte_position)
-            : parser_error("Line " + std::to_string(file::get_line(byte_position)) + " ended unexpectedly") {}
+            : parser_error_unrecoverable("Line " + std::to_string(file::get_line(byte_position))
+                                         + " ended unexpectedly") {}
+    };
+
+    /**
+     * @brief The exception that is thrown when a parser fails to parse the sequence of tokens.
+     * @details This one is thrown when the given token was not the expected token.
+     *
+     */
+    struct parser_error_token_mismatch : public parser_error_unrecoverable {
+        /**
+         * @brief Class constructor.
+         *
+         * @param byte_position The byte index in the file where the error originated.
+         */
+        parser_error_token_mismatch(unsigned int byte_position, token::token_type actual_type,
+                                    token::token_type expected_type)
+            : parser_error_unrecoverable("Token at " + std::to_string(file::get_line(byte_position)) + ":"
+                                         + std::to_string(file::get_column(byte_position))
+                                         + " was not the expected type (" + token::token_type_to_string(actual_type)
+                                         + " instead of " + token::token_type_to_string(expected_type) + ")") {}
+    };
+
+    /**
+     * @brief The exception that is thrown when a parser fails to parse the sequence of tokens.
+     * @details This one is thrown when one line contains more than a single command.
+     *
+     */
+    struct parser_error_trailing_token : public parser_error_unrecoverable {
+        /**
+         * @brief Class constructor.
+         *
+         * @param byte_position The byte index in the file where the error originated.
+         */
+        parser_error_trailing_token(unsigned int byte_position)
+            : parser_error_unrecoverable("Extra token at " + std::to_string(file::get_line(byte_position)) + ":"
+                                         + std::to_string(file::get_column(byte_position))
+                                         + " exists after the end of a command") {}
     };
 
     /*
@@ -114,16 +168,6 @@ namespace parser {
      * @return A set of parsed AST nodes.
      */
     std::vector<node_ptr_t> parse(token_vec_t tokens);
-
-    /**
-     * @brief Finds the index of the next token of the given type in the given tokens vector.
-     *
-     * @param tokens A sequence of tokens, generated by the lexer.
-     * @param start The starting index from which to search.
-     * @param type The type of token for which to search.
-     * @return The index of the next token of the given type, or `tokens.size()` if no such token exists.
-     */
-    unsigned int find_next(token_vec_t tokens, unsigned int start, token::token_type type);
 
     /**
      * @brief Applies the given set of parsers to the given set of tokens.
