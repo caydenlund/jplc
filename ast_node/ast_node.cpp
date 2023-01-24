@@ -44,55 +44,71 @@ namespace ast_node {
         return "";
     }
 
-    std::string variable_argument_node::s_expression() const { return "(VarArgument" + this->variable + ")"; }
+    /*
+    ===================
+    ||  Subclasses:  ||
+    ===================
+    */
 
-    std::string read_cmd_node::s_expression() const {
-        return "(ReadCmd " + this->arg_1.text + get_s_expression(this->arg_2) + ")";
-    }
+    //  Arguments:
+    //  ----------
+    std::string variable_argument_node::s_expression() const { return "(VarArgument " + this->arg_1.text + ")"; }
 
-    std::string write_cmd_node::s_expression() const {
-        return "(WriteCmd " + get_s_expression(this->arg_1) + " " + this->arg_2.text + ")";
-    }
-
-    std::string type_cmd_node::s_expression() const {
-        return "(TypeCmd " + this->arg_1.text + " " + get_s_expression(this->arg_2) + ")";
+    //  Commands:
+    //  ---------
+    std::string assert_cmd_node::s_expression() const {
+        return "(AssertCmd " + get_s_expression(this->arg_1) + " " + this->arg_2.text + ")";
     }
 
     std::string let_cmd_node::s_expression() const {
         return "(LetCmd " + get_s_expression(this->arg_1) + " " + get_s_expression(this->arg_2) + ")";
     }
 
-    std::string assert_cmd_node::s_expression() const {
-        return "(AssertCmd " + get_s_expression(this->arg_1) + " " + this->arg_2.text + ")";
-    }
-
     std::string print_cmd_node::s_expression() const { return "(PrintCmd " + this->arg_1.text + ")"; }
+
+    std::string read_cmd_node::s_expression() const {
+        return "(ReadCmd " + this->arg_1.text + get_s_expression(this->arg_2) + ")";
+    }
 
     std::string show_cmd_node::s_expression() const { return "(ShowCmd " + get_s_expression(this->arg_1) + ")"; }
 
-    std::string integer_expr_node::s_expression() const {
-        return "(IntExpr " + std::to_string(this->arg_1.value) + ")";
+    std::string type_cmd_node::s_expression() const {
+        return "(TypeCmd " + this->arg_1.text + " " + get_s_expression(this->arg_2) + ")";
     }
+
+    std::string write_cmd_node::s_expression() const {
+        return "(WriteCmd " + get_s_expression(this->arg_1) + " " + this->arg_2.text + ")";
+    }
+
+    //  Expressions:
+    //  ------------
+    std::string false_expr_node::s_expression() const { return "(FalseExpr)"; }
 
     std::string float_expr_node::s_expression() const {
         return "(FloatExpr " + std::to_string((long)this->arg_1.value) + ")";
     }
 
-    std::string true_expr_node::s_expression() const { return "(TrueExpr)"; }
+    std::string integer_expr_node::s_expression() const {
+        return "(IntExpr " + std::to_string(this->arg_1.value) + ")";
+    }
 
-    std::string false_expr_node::s_expression() const { return "(FalseExpr)"; }
+    std::string true_expr_node::s_expression() const { return "(TrueExpr)"; }
 
     std::string variable_expr_node::s_expression() const { return "(VarExpr " + this->arg_1.text + ")"; }
 
+    //  LValues:
+    //  --------
     std::string argument_lvalue_node::s_expression() const {
         return "(ArgLValue " + get_s_expression(this->arg_1) + ")";
     }
 
-    std::string int_type_node::s_expression() const { return "(IntType)"; }
-
+    //  Types:
+    //  ------
     std::string bool_type_node::s_expression() const { return "(BoolType)"; }
 
     std::string float_type_node::s_expression() const { return "(FloatType)"; }
+
+    std::string int_type_node::s_expression() const { return "(IntType)"; }
 
     std::string variable_type_node::s_expression() const { return "(VarType " + this->arg_1.text + ")"; }
 

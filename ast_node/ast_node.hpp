@@ -90,6 +90,12 @@ namespace ast_node {
         ast_node(node_type type) : type(type) {}
 
         /**
+         * @brief Class destructor.
+         *
+         */
+        virtual ~ast_node() = default;
+
+        /**
          * @brief Returns the s-expression string for this AST node.
          *
          * @return The s-expression string for this AST node.
@@ -244,6 +250,106 @@ namespace ast_node {
     //  Commands:
     //  ---------
     /**
+     * @brief The `assert` command.
+     * @details Construction: `assert <expr>, <string>`
+     *
+     */
+    struct assert_cmd_node : public cmd_node {
+        /**
+         * @brief The `<expr>` node argument.
+         *
+         */
+        const std::shared_ptr<expr_node> arg_1;
+
+        /**
+         * @brief The `<string>` node argument.
+         *
+         */
+        const token::string_token arg_2;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::ASSERT_CMD`.
+         *
+         * @param arg_1 The first (`<expr>`) argument.
+         * @param arg_2 The second (`<string>`) argument.
+         */
+        assert_cmd_node(const std::shared_ptr<expr_node>& arg_1, const token::string_token& arg_2)
+                : cmd_node(node_type::ASSERT_CMD), arg_1(arg_1), arg_2(arg_2) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `let` command.
+     * @details Construction: `let <lvalue> = <expr>`
+     *
+     */
+    struct let_cmd_node : public cmd_node {
+        /**
+         * @brief The `<lvalue>` node argument.
+         *
+         */
+        const std::shared_ptr<lvalue_node> arg_1;
+
+        /**
+         * @brief The `<expr>` node argument.
+         *
+         */
+        const std::shared_ptr<expr_node> arg_2;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::LET_CMD`.
+         *
+         * @param arg_1 The first (`<lvalue>`) node.
+         * @param arg_2 The second (`<expr>`) node.
+         */
+        let_cmd_node(const std::shared_ptr<lvalue_node>& arg_1, const std::shared_ptr<expr_node>& arg_2)
+                : cmd_node(node_type::LET_CMD), arg_1(arg_1), arg_2(arg_2) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `print` command.
+     * @details Construction: `print <string>`
+     *
+     */
+    struct print_cmd_node : public cmd_node {
+        /**
+         * @brief The `<string>` node argument.
+         *
+         */
+        const token::string_token arg_1;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::PRINT_CMD`.
+         *
+         * @param arg_1 The first (`<string>`) argument.
+         */
+        print_cmd_node(const token::string_token& arg_1) : cmd_node(node_type::PRINT_CMD), arg_1(arg_1) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
      * @brief The `read` command.
      * @details Construction: `read image <string> to <argument>`
      *
@@ -270,6 +376,73 @@ namespace ast_node {
          */
         read_cmd_node(const token::string_token& arg_1, std::shared_ptr<argument_node> arg_2)
             : cmd_node(node_type::READ_CMD), arg_1(arg_1), arg_2(arg_2) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `show` command.
+     * @details Construction: `show <expr>`
+     *
+     */
+    struct show_cmd_node : public cmd_node {
+        /**
+         * @brief The `<expr>` node argument.
+         *
+         */
+        const std::shared_ptr<expr_node> arg_1;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::SHOW_CMD`.
+         *
+         * @param arg_1 The first (`<expr>`) argument.
+         */
+        show_cmd_node(const std::shared_ptr<expr_node>& arg_1) : cmd_node(node_type::SHOW_CMD), arg_1(arg_1) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `type` command.
+     * @details Construction: `type <variable> = <type>`
+     *
+     */
+    struct type_cmd_node : public cmd_node {
+        /**
+         * @brief The `<variable>` node argument.
+         *
+         */
+        const token::token arg_1;
+
+        /**
+         * @brief The `<type>` node argument.
+         *
+         */
+        const std::shared_ptr<type_node> arg_2;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::TYPE_CMD`.
+         *
+         * @param arg_1 The first (`<variable>`) argument.
+         * @param arg_2 The second (`<type>`) argument.
+         */
+        type_cmd_node(const token::token& arg_1, const std::shared_ptr<type_node>& arg_2)
+                : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
+            if (arg_1.type != token::token_type::VARIABLE)
+                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -315,201 +488,27 @@ namespace ast_node {
         std::string s_expression() const override;
     };
 
-    /**
-     * @brief The `type` command.
-     * @details Construction: `type <variable> = <type>`
-     *
-     */
-    struct type_cmd_node : public cmd_node {
-        /**
-         * @brief The `<variable>` node argument.
-         *
-         */
-        const token::token arg_1;
-
-        /**
-         * @brief The `<type>` node argument.
-         *
-         */
-        const std::shared_ptr<type_node> arg_2;
-
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::TYPE_CMD`.
-         *
-         * @param arg_1 The first (`<variable>`) argument.
-         * @param arg_2 The second (`<type>`) argument.
-         */
-        type_cmd_node(const token::token& arg_1, const std::shared_ptr<type_node>& arg_2)
-            : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
-            if (arg_1.type != token::token_type::VARIABLE)
-                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
-        }
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
-    /**
-     * @brief The `let` command.
-     * @details Construction: `let <lvalue> = <expr>`
-     *
-     */
-    struct let_cmd_node : public cmd_node {
-        /**
-         * @brief The `<lvalue>` node argument.
-         *
-         */
-        const std::shared_ptr<lvalue_node> arg_1;
-
-        /**
-         * @brief The `<expr>` node argument.
-         *
-         */
-        const std::shared_ptr<type_node> arg_2;
-
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::LET_CMD`.
-         *
-         * @param arg_1 The first (`<lvalue>`) node.
-         * @param arg_2 The second (`<expr>`) node.
-         */
-        let_cmd_node(const std::shared_ptr<lvalue_node>& arg_1, const std::shared_ptr<type_node>& arg_2)
-            : cmd_node(node_type::LET_CMD), arg_1(arg_1), arg_2(arg_2) {}
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
-    /**
-     * @brief The `assert` command.
-     * @details Construction: `assert <expr>, <string>`
-     *
-     */
-    struct assert_cmd_node : public cmd_node {
-        /**
-         * @brief The `<expr>` node argument.
-         *
-         */
-        const std::shared_ptr<expr_node> arg_1;
-
-        /**
-         * @brief The `<string>` node argument.
-         *
-         */
-        const token::string_token arg_2;
-
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::ASSERT_CMD`.
-         *
-         * @param arg_1 The first (`<expr>`) argument.
-         * @param arg_2 The second (`<string>`) argument.
-         */
-        assert_cmd_node(const std::shared_ptr<expr_node>& arg_1, const token::string_token& arg_2)
-            : cmd_node(node_type::ASSERT_CMD), arg_1(arg_1), arg_2(arg_2) {}
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
-    /**
-     * @brief The `print` command.
-     * @details Construction: `print <string>`
-     *
-     */
-    struct print_cmd_node : public cmd_node {
-        /**
-         * @brief The `<string>` node argument.
-         *
-         */
-        const token::string_token arg_1;
-
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::PRINT_CMD`.
-         *
-         * @param arg_1 The first (`<string>`) argument.
-         */
-        print_cmd_node(const token::string_token& arg_1) : cmd_node(node_type::PRINT_CMD), arg_1(arg_1) {}
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
-    /**
-     * @brief The `show` command.
-     * @details Construction: `show <expr>`
-     *
-     */
-    struct show_cmd_node : public cmd_node {
-        /**
-         * @brief The `<expr>` node argument.
-         *
-         */
-        const std::shared_ptr<expr_node> arg_1;
-
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::SHOW_CMD`.
-         *
-         * @param arg_1 The first (`<expr>`) argument.
-         */
-        show_cmd_node(const std::shared_ptr<expr_node>& arg_1) : cmd_node(node_type::SHOW_CMD), arg_1(arg_1) {}
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
     //  Expressions:
     //  ------------
     /**
-     * @brief The `<integer>` expression.
+     * @brief The `false` expression.
      *
      */
-    struct integer_expr_node : public expr_node {
-        /**
-         * @brief The `<integer>` argument.
-         *
-         */
-        const token::int_token arg_1;
-
+    struct false_expr_node : public expr_node {
         /**
          * @brief Class constructor.
-         * @details Initializes `type` to `node_type::INTEGER_EXPR`.
+         * @details Initializes `type` to `node_type::FALSE_EXPR`.
          *
-         * @param arg_1 The first (`<integer>`) argument.
          */
-        integer_expr_node(const token::int_token& arg_1) : expr_node(node_type::INTEGER_EXPR), arg_1(arg_1) {}
+        false_expr_node() : expr_node(node_type::FALSE_EXPR) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
          *
          * @return The s-expression string for this AST node.
          */
-        std::string s_expression() const override;
-    };
+            std::string s_expression() const override;
+        };
 
     /**
      * @brief The `<float>` expression.
@@ -528,6 +527,33 @@ namespace ast_node {
          * @param arg_1 The first (`<float>`) argument.
          */
         float_expr_node(const token::float_token& arg_1) : expr_node(node_type::FLOAT_EXPR), arg_1(arg_1) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `<integer>` expression.
+     *
+     */
+    struct integer_expr_node : public expr_node {
+        /**
+         * @brief The `<integer>` argument.
+         *
+         */
+        const token::int_token arg_1;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::INTEGER_EXPR`.
+         *
+         * @param arg_1 The first (`<integer>`) argument.
+         */
+        integer_expr_node(const token::int_token& arg_1) : expr_node(node_type::INTEGER_EXPR), arg_1(arg_1) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -558,26 +584,6 @@ namespace ast_node {
     };
 
     /**
-     * @brief The `false` expression.
-     *
-     */
-    struct false_expr_node : public expr_node {
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::FALSE_EXPR`.
-         *
-         */
-        false_expr_node() : expr_node(node_type::FALSE_EXPR) {}
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
-    /**
      * @brief The `<variable>` expression.
      *
      */
@@ -596,7 +602,8 @@ namespace ast_node {
          */
         variable_expr_node(const token::token& arg_1) : expr_node(node_type::VARIABLE_EXPR), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
-                throw std::runtime_error("Attempted to construct a `variable_expr_node` without a `<variable>` argument");
+                throw std::runtime_error(
+                        "Attempted to construct a `variable_expr_node` without a `<variable>` argument");
         }
 
         /**
@@ -640,26 +647,6 @@ namespace ast_node {
     //  Types:
     //  ------
     /**
-     * @brief The `int` type.
-     *
-     */
-    struct int_type_node : public type_node {
-        /**
-         * @brief Class constructor.
-         * @details Initializes `type` to `node_type::INT_TYPE`.
-         *
-         */
-        int_type_node() : type_node(node_type::INT_TYPE) {}
-
-        /**
-         * @brief Returns the s-expression string for this AST node.
-         *
-         * @return The s-expression string for this AST node.
-         */
-        std::string s_expression() const override;
-    };
-
-    /**
      * @brief The `bool` type.
      *
      */
@@ -700,6 +687,26 @@ namespace ast_node {
     };
 
     /**
+     * @brief The `int` type.
+     *
+     */
+    struct int_type_node : public type_node {
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::INT_TYPE`.
+         *
+         */
+        int_type_node() : type_node(node_type::INT_TYPE) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
      * @brief The `<variable>` type.
      *
      */
@@ -718,7 +725,8 @@ namespace ast_node {
          */
         variable_type_node(const token::token& arg_1) : type_node(node_type::VARIABLE_TYPE), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
-                throw std::runtime_error("Attempted to construct a `variable_type_node` without a `<variable>` argument");
+                throw std::runtime_error(
+                        "Attempted to construct a `variable_type_node` without a `<variable>` argument");
         }
 
         /**
