@@ -34,6 +34,8 @@ namespace file {
             for (unsigned int index = 0; index < (unsigned int)result.size(); index++) {
                 if (result[index] == '\n') lines.emplace_back(index);
             }
+
+            return result;
         }
 
         throw std::runtime_error("Filesystem error: file \"" + filename + "\" could not be opened for reading");
