@@ -317,9 +317,9 @@ namespace parser {
         if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
         if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
 
-        //  3: `<argument>`.
-        parser_return_t result = parse_argument(tokens, index);
-        std::shared_ptr<ast_node::argument_node> argument = std::reinterpret_pointer_cast<ast_node::argument_node>(
+        //  3: `<expr>`.
+        parser_return_t result = parse_expr(tokens, index);
+        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -346,7 +346,7 @@ namespace parser {
         if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
         if (tokens[index]->type != token::token_type::NEWLINE) throw parser_error_trailing_token(tokens[index]->start);
 
-        return {std::make_shared<ast_node::write_cmd_node>(argument, string_tok), index + 1};
+        return {std::make_shared<ast_node::write_cmd_node>(expr, string_tok), index + 1};
     }
 
     //  Expressions:

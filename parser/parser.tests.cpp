@@ -11,7 +11,6 @@
 #include "lexer/lexer.hpp"
 #include "parser.hpp"
 #include "tests/tests.hpp"
-#include "token/token.hpp"
 
 namespace tests::parser_tests {
     /**
@@ -91,7 +90,7 @@ namespace tests::parser_tests {
                                                           std::make_shared<ast_node::float_type_node>()),
                 //  `write image xyz to "photo.png"`
                 std::make_shared<ast_node::write_cmd_node>(
-                        std::make_shared<ast_node::variable_argument_node>(
+                        std::make_shared<ast_node::variable_expr_node>(
                                 token::token {0, "xyz", token::token_type::VARIABLE}),
                         token::string_token {{0, "\"photo.png\"", token::token_type::STRING}, "photo.png"})};
 
