@@ -67,7 +67,7 @@ namespace ast_node {
     std::string print_cmd_node::s_expression() const { return "(PrintCmd " + this->arg_1.text + ")"; }
 
     std::string read_cmd_node::s_expression() const {
-        return "(ReadCmd " + this->arg_1.text + get_s_expression(this->arg_2) + ")";
+        return "(ReadCmd " + this->arg_1.text + " " + get_s_expression(this->arg_2) + ")";
     }
 
     std::string show_cmd_node::s_expression() const { return "(ShowCmd " + get_s_expression(this->arg_1) + ")"; }
