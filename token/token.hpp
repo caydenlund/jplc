@@ -117,46 +117,6 @@ namespace token {
     };
 
     /**
-     * @brief Represents a `float` literal.
-     *
-     */
-    struct float_token : token {
-        /**
-         * @brief The (floating-point) value of the number.
-         * @details Initialized to 0.
-         *
-         */
-        double value {};
-
-        /**
-         * @brief Whether the integer is valid.
-         * @details I.e., an overflow did not occur.
-         *
-         */
-        bool valid {true};
-    };
-
-    /**
-     * @brief Represents an `int` literal.
-     *
-     */
-    struct int_token : token {
-        /**
-         * @brief The (integer) value of the number.
-         * @details Initialized to 0.
-         *
-         */
-        long value {};
-
-        /**
-         * @brief Whether the integer is valid.
-         * @details I.e., an overflow did not occur.
-         *
-         */
-        bool valid {true};
-    };
-
-    /**
      * @brief Represents a string literal.
      *
      */
