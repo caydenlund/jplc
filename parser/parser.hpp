@@ -8,16 +8,23 @@
 
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
 #include "ast_node/ast_node.hpp"
+#include "file/file.hpp"
 #include "token/token.hpp"
 
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
 namespace parser {
+    /*
+    ==============
+    ||  Types:  ||
+    ==============
+    */
     /**
      * @brief A const reference to a vector of smart pointers to tokens.
      *
@@ -44,6 +51,27 @@ namespace parser {
      */
     using parser_t = std::function<parser_return_t(token_vec_t, unsigned int)>;
 
+    /**
+     * @brief The exception that is thrown when a parser fails to parse the sequence of tokens.
+     *
+     */
+    struct parser_error : public std::runtime_error {
+        /**
+         * @brief Class constructor.
+         *
+         * @param byte_index The byte index in the file where the error originated.
+         */
+        parser_error(unsigned int byte_index = 0)
+            : std::runtime_error("The parser failed to parse the sequence of tokens at "
+                                 + std::to_string(file::get_line(byte_index)) + ":"
+                                 + std::to_string(file::get_column(byte_index))) {}
+    };
+
+    /*
+    ==================
+    ||  Functions:  ||
+    ==================
+    */
     /**
      * @brief The main parser routine.
      *

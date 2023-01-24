@@ -16,7 +16,6 @@ namespace parser {
     }
 
     unsigned int find_next(token_vec_t tokens, unsigned int start, token::token_type type) {
-        //  TODO: Implement.
         for (unsigned int index = start; index < (unsigned int)tokens.size(); index++) {
             if (tokens[index]->type == type) { return index; }
         }
@@ -34,7 +33,7 @@ namespace parser {
         }
 
         //  No parsers were successful.
-        throw parser_error();
+        throw parser_error(tokens[index]->start);
     }
 
     /*
@@ -43,36 +42,28 @@ namespace parser {
     ==============================
     */
     parser_return_t parse_argument(token_vec_t tokens, unsigned int index) {
-        //  TODO: Implement.
-        const std::vector<parser_t> argument_parsers {parse_argument_variable};
-        return {};
+        return apply_parsers(tokens, {parse_argument_variable}, index);
     }
 
     parser_return_t parse_cmd(token_vec_t tokens, unsigned int index) {
-        //  TODO: Implement.
-        const std::vector<parser_t> cmd_parsers {parse_cmd_assert, parse_cmd_let,  parse_cmd_print, parse_cmd_read,
-                                                 parse_cmd_show,   parse_cmd_type, parse_cmd_write};
-        return {};
+        return apply_parsers(tokens,
+                             {parse_cmd_assert, parse_cmd_let, parse_cmd_print, parse_cmd_read, parse_cmd_show,
+                              parse_cmd_type, parse_cmd_write},
+                             index);
     }
 
     parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
-        //  TODO: Implement.
-        const std::vector<parser_t> expr_parsers {parse_expr_false, parse_expr_float, parse_expr_integer,
-                                                  parse_expr_true, parse_expr_variable};
-        return {};
+        return apply_parsers(
+                tokens, {parse_expr_false, parse_expr_float, parse_expr_integer, parse_expr_true, parse_expr_variable},
+                index);
     }
 
     parser_return_t parse_lvalue(token_vec_t tokens, unsigned int index) {
-        //  TODO: Implement.
-        const std::vector<parser_t> lvalue_parsers {parse_lvalue_argument};
-        return {};
+        return apply_parsers(tokens, {parse_lvalue_argument}, index);
     }
 
     parser_return_t parse_type(token_vec_t tokens, unsigned int index) {
-        //  TODO: Implement.
-        const std::vector<parser_t> type_parsers {parse_type_bool, parse_type_float, parse_type_int,
-                                                  parse_type_variable};
-        return {};
+        return apply_parsers(tokens, {parse_type_bool, parse_type_float, parse_type_int, parse_type_variable}, index);
     }
 
     /*
