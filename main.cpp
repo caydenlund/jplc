@@ -8,8 +8,10 @@
 #include <iostream>
 #include <string>
 
+#include "ast_node/ast_node.hpp"
 #include "file/file.hpp"
 #include "lexer/lexer.hpp"
+#include "parser/parser.hpp"
 #include "token/token.hpp"
 
 int lex_only(const std::string& filename, bool debug = false) {
@@ -33,11 +35,21 @@ int lex_only(const std::string& filename, bool debug = false) {
     }
 }
 
-int lex_and_parse_only(const std::string&, bool) {
-    //  TODO: Implement.
+int lex_and_parse_only(const std::string& filename, bool debug = false) {
+    try {
+        const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
+        const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
 
-    std::cout << "Compilation failed\n";
-    return 1;
+        for (const parser::node_ptr_t& node : nodes) { std::cout << ast_node::get_s_expression(node) << "\n"; }
+
+        std::cout << "Compilation succeeded: parsing complete\n";
+
+        return 0;
+    } catch (const std::exception& e) {
+        std::cout << "Compilation failed\n";
+        if (debug) std::cerr << "Exception emitted: \"" << e.what() << "\"" << std::endl;
+        return 1;
+    }
 }
 
 int lex_parse_and_check_only(const std::string&, bool) {
