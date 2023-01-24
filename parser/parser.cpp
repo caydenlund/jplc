@@ -430,6 +430,6 @@ namespace parser {
         //  1: `<variable>`.
         if (tokens[index]->type != token::token_type::VARIABLE) throw parser_error_recoverable();
 
-        return {std::make_shared<ast_node::variable_type_node>(*tokens[index - 1]), index + 1};
+        return {std::make_shared<ast_node::variable_type_node>(*tokens[index]), index + 1};
     }
 }  //  namespace parser
