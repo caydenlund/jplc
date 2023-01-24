@@ -216,19 +216,22 @@ namespace ast_node {
      */
     struct variable_argument_node : public argument_node {
         /**
-         * @brief The name of the variable.
+         * @brief The `<variable>` node argument.
          *
          */
-        const std::string variable;
+        const token::token arg_1;
 
         /**
          * @brief Class constructor.
          * @details Initializes `type` to `node_type::VARIABLE_ARGUMENT`.
          *
-         * @param variable The name of the variable.
+         * @param arg_1 The first (`<variable>`) argument.
          */
-        variable_argument_node(const std::string& variable)
-            : argument_node(node_type::VARIABLE_ARGUMENT), variable(variable) {}
+        variable_argument_node(const token::token& arg_1) : argument_node(node_type::VARIABLE_ARGUMENT), arg_1(arg_1) {
+            if (arg_1.type != token::token_type::VARIABLE)
+                throw std::runtime_error(
+                        "Attempted to construct a `variable_argument_node` without a `<variable>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -593,7 +596,7 @@ namespace ast_node {
          */
         variable_expr_node(const token::token& arg_1) : expr_node(node_type::VARIABLE_EXPR), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
-                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
+                throw std::runtime_error("Attempted to construct a `variable_expr_node` without a `<variable>` argument");
         }
 
         /**
@@ -715,7 +718,7 @@ namespace ast_node {
          */
         variable_type_node(const token::token& arg_1) : type_node(node_type::VARIABLE_TYPE), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
-                throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
+                throw std::runtime_error("Attempted to construct a `variable_type_node` without a `<variable>` argument");
         }
 
         /**
