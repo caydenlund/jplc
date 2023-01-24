@@ -96,74 +96,70 @@ namespace ast_node {
 
     std::string variable_type_node::s_expression() const { return "(VarType " + this->arg_1.text + ")"; }
 
-    std::string correct_s_expression(const ast_node* node) {
-        if (node == nullptr) return "";
+    std::string get_s_expression(const std::shared_ptr<ast_node>& node) {
         switch (node->type) {
-            //  ==================
-            //  ||  Arguments:  ||
-            //  ==================
+            //  Arguments:
+            //  ----------
             case ARGUMENT:  //  AST node `argument_node`.
-                return ((argument_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<argument_node>(node))->s_expression();
             case VARIABLE_ARGUMENT:  //  AST node `variable_argument_node`.
-                return ((variable_argument_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<variable_argument_node>(node))->s_expression();
 
-            //  =================
-            //  ||  Commands:  ||
-            //  =================
+            //  Commands:
+            //  ---------
             case CMD:  //  AST node `cmd_node`.
-                return ((cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<cmd_node>(node))->s_expression();
             case READ_CMD:  //  AST node `read_cmd_node`.
-                return ((read_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<read_cmd_node>(node))->s_expression();
             case WRITE_CMD:  //  AST node `write_cmd_node`.
-                return ((write_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<write_cmd_node>(node))->s_expression();
             case TYPE_CMD:  //  AST node `type_cmd_node`.
-                return ((type_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<type_cmd_node>(node))->s_expression();
             case LET_CMD:  //  AST node `let_cmd_node`.
-                return ((let_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<let_cmd_node>(node))->s_expression();
             case ASSERT_CMD:  //  AST node `assert_cmd_node`.
-                return ((assert_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<assert_cmd_node>(node))->s_expression();
             case PRINT_CMD:  //  AST node `print_cmd_node`.
-                return ((print_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<print_cmd_node>(node))->s_expression();
             case SHOW_CMD:  //  AST node `show_cmd_node`.
-                return ((show_cmd_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<show_cmd_node>(node))->s_expression();
 
-            //  ====================
-            //  ||  Expressions:  ||
-            //  ====================
+            //  Expressions:
+            //  ------------
             case EXPR:  //  AST node `expr_node`.
-                return ((expr_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<expr_node>(node))->s_expression();
             case INTEGER_EXPR:  //  AST node `integer_expr_node`.
-                return ((integer_expr_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<integer_expr_node>(node))->s_expression();
             case FLOAT_EXPR:  //  AST node `float_expr_node`.
-                return ((float_expr_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<float_expr_node>(node))->s_expression();
             case TRUE_EXPR:  //  AST node `true_expr_node`.
-                return ((true_expr_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<true_expr_node>(node))->s_expression();
             case FALSE_EXPR:  //  AST node `false_expr_node`.
-                return ((false_expr_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<false_expr_node>(node))->s_expression();
             case VARIABLE_EXPR:  //  AST node `variable_expr_node`.
-                return ((variable_expr_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<variable_expr_node>(node))->s_expression();
 
-            //  ================
-            //  ||  Lvalues:  ||
-            //  ================
+            //  Lvalues:
+            //  --------
             case LVALUE:  //  AST node `lvalue_node`.
-                return ((lvalue_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<lvalue_node>(node))->s_expression();
             case ARGUMENT_LVALUE:  //  AST node `argument_lvalue_node`.
-                return ((argument_lvalue_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<argument_lvalue_node>(node))->s_expression();
 
-            //  ==============
-            //  ||  Types:  ||
-            //  ==============
+            //  Types:
+            //  ------
             case TYPE:  //  AST node `type_node`.
-                return ((type_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<type_node>(node))->s_expression();
             case INT_TYPE:  //  AST node `int_type_node`.
-                return ((int_type_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<int_type_node>(node))->s_expression();
             case BOOL_TYPE:  //  AST node `bool_type_node`.
-                return ((bool_type_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<bool_type_node>(node))->s_expression();
             case FLOAT_TYPE:  //  AST node `float_type_node`.
-                return ((float_type_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<float_type_node>(node))->s_expression();
             case VARIABLE_TYPE:  //  AST node `variable_type_node`.
-                return ((variable_type_node*)node)->s_expression();
+                return (std::reinterpret_pointer_cast<variable_type_node>(node))->s_expression();
+            default:
+                throw std::runtime_error("Attempting to call `s_expression` on an unimplemented node type");
         }
     }
 }  //  namespace ast_node
