@@ -115,7 +115,7 @@ namespace tests::ast_node_tests {
         //  `read_cmd_node`:
         //  ----------------
         const ast_node::read_cmd_node read_cmd(file, variable_argument);
-        result = str_cmp(read_cmd.s_expression(), R"((ReadCmd "photo.png" (VarArgument xyz)))");
+        result = str_cmp(read_cmd.s_expression(), R"((ReadCmd "file.png" (VarArgument xyz)))");
         if (result != "") return result;
 
         //  `show_cmd_node`:
@@ -129,13 +129,13 @@ namespace tests::ast_node_tests {
         const std::shared_ptr<ast_node::bool_type_node> bool_type = std::make_shared<ast_node::bool_type_node>();
 
         const ast_node::type_cmd_node type_cmd(variable, bool_type);
-        result = str_cmp(read_cmd.s_expression(), R"((TypeCmd (VarArgument xyz) (BoolType)))");
+        result = str_cmp(type_cmd.s_expression(), R"((TypeCmd xyz (BoolType)))");
         if (result != "") return result;
 
         //  `write_cmd_node`:
         //  -----------------
         const ast_node::write_cmd_node write_cmd(variable_argument, file);
-        result = str_cmp(read_cmd.s_expression(), R"((WriteCmd (VarArgument xyz) "photo.png"))");
+        result = str_cmp(write_cmd.s_expression(), R"((WriteCmd (VarArgument xyz) "file.png"))");
         return result;
     }
 
