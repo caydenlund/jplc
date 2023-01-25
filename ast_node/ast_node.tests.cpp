@@ -108,7 +108,7 @@ namespace tests::ast_node_tests {
 
         //  `print_cmd_node`:
         //  -----------------
-        const ast_node::print_cmd_node print_cmd(file);
+        const ast_node::print_cmd_node print_cmd(file.value);
         result = str_cmp(print_cmd.s_expression(), R"((PrintCmd "file.png"))");
         if (result != "") return result;
 

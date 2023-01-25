@@ -331,7 +331,7 @@ namespace ast_node {
          * @brief The `<string>` node argument.
          *
          */
-        const token::string_token arg_1;
+        const std::string arg_1;
 
         /**
          * @brief Class constructor.
@@ -339,7 +339,7 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<string>`) argument.
          */
-        print_cmd_node(const token::string_token& arg_1) : cmd_node(node_type::PRINT_CMD), arg_1(arg_1) {}
+        print_cmd_node(const std::string& arg_1) : cmd_node(node_type::PRINT_CMD), arg_1(arg_1) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.

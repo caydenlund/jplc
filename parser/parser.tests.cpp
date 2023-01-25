@@ -75,8 +75,7 @@ namespace tests::parser_tests {
                         std::make_shared<ast_node::integer_expr_node>(
                                 token::token {0, "7", token::token_type::INTVAL})),
                 //  `print "Hello, world."`
-                std::make_shared<ast_node::print_cmd_node>(
-                        token::string_token {{0, "\"Hello, world.\"", token::token_type::STRING}, "Hello, world."}),
+                std::make_shared<ast_node::print_cmd_node>("Hello, world."),
                 //  `read image "photo.png" to xyz`
                 std::make_shared<ast_node::read_cmd_node>(
                         token::string_token {{0, "\"photo.png\"", token::token_type::STRING}, "photo.png"},

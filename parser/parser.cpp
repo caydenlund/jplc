@@ -184,7 +184,7 @@ namespace parser {
         if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
         if (tokens[index]->type != token::token_type::NEWLINE) throw parser_error_trailing_token(tokens[index]->start);
 
-        return {std::make_shared<ast_node::print_cmd_node>(string_tok), index + 1};
+        return {std::make_shared<ast_node::print_cmd_node>(string_tok.value), index + 1};
     }
 
     parser_return_t parse_cmd_read(token_vec_t tokens, unsigned int index) {
