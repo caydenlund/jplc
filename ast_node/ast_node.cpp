@@ -82,7 +82,7 @@ namespace ast_node {
 
     //  Expressions:
     //  ------------
-    std::string false_expr_node::s_expression() const { return "FalseExpr"; }
+    std::string false_expr_node::s_expression() const { return "(FalseExpr)"; }
 
     std::string float_expr_node::s_expression() const {
         return "(FloatExpr " + std::to_string((long)this->value) + ")";
@@ -90,7 +90,7 @@ namespace ast_node {
 
     std::string integer_expr_node::s_expression() const { return "(IntExpr " + std::to_string(this->value) + ")"; }
 
-    std::string true_expr_node::s_expression() const { return "TrueExpr"; }
+    std::string true_expr_node::s_expression() const { return "(TrueExpr)"; }
 
     std::string variable_expr_node::s_expression() const { return "(VarExpr " + this->arg_1.text + ")"; }
 

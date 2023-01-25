@@ -91,7 +91,7 @@ namespace tests::ast_node_tests {
         const token::string_token file {{0, R"("file.png")", token::token_type::VARIABLE}, "file.png"};
 
         const ast_node::assert_cmd_node assert_cmd(true_expr, file);
-        result = str_cmp(assert_cmd.s_expression(), R"((AssertCmd TrueExpr "file.png"))");
+        result = str_cmp(assert_cmd.s_expression(), R"((AssertCmd (TrueExpr) "file.png"))");
         if (result != "") return result;
 
         //  `let_cmd_node`:
@@ -103,7 +103,7 @@ namespace tests::ast_node_tests {
                 = std::make_shared<ast_node::argument_lvalue_node>(variable_argument);
 
         const ast_node::let_cmd_node let_cmd(argument_lvalue, true_expr);
-        result = str_cmp(let_cmd.s_expression(), R"((LetCmd (ArgLValue (VarArgument xyz)) TrueExpr))");
+        result = str_cmp(let_cmd.s_expression(), R"((LetCmd (ArgLValue (VarArgument xyz)) (TrueExpr)))");
         if (result != "") return result;
 
         //  `print_cmd_node`:
@@ -121,7 +121,7 @@ namespace tests::ast_node_tests {
         //  `show_cmd_node`:
         //  ----------------
         const ast_node::show_cmd_node show_cmd(true_expr);
-        result = str_cmp(show_cmd.s_expression(), R"((ShowCmd TrueExpr))");
+        result = str_cmp(show_cmd.s_expression(), R"((ShowCmd (TrueExpr)))");
         if (result != "") return result;
 
         //  `type_cmd_node`:
@@ -157,7 +157,7 @@ namespace tests::ast_node_tests {
         //  `false_expr_node`:
         //  ------------------
         const ast_node::false_expr_node false_expr;
-        result = str_cmp(false_expr.s_expression(), R"(FalseExpr)");
+        result = str_cmp(false_expr.s_expression(), R"((FalseExpr))");
         if (result != "") return result;
 
         //  `float_expr_node`:
@@ -177,7 +177,7 @@ namespace tests::ast_node_tests {
         //  `true_expr_node`:
         //  -----------------
         const ast_node::true_expr_node true_expr;
-        result = str_cmp(true_expr.s_expression(), R"(TrueExpr)");
+        result = str_cmp(true_expr.s_expression(), R"((TrueExpr))");
         if (result != "") return result;
 
         //  `variable_expr_node`:
