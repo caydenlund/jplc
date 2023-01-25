@@ -564,7 +564,7 @@ namespace ast_node {
             if (arg_1.type != token::token_type::INTVAL)
                 throw std::runtime_error("Attempted to construct an `int_expr_node` without an `<integer>` argument");
             try {
-                value = std::stod(arg_1.text);
+                value = std::stol(arg_1.text);
             } catch (const std::exception& err) { throw std::runtime_error("Integer literal overflow"); }
         }
 
