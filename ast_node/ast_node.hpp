@@ -250,7 +250,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -325,7 +324,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -387,7 +385,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -423,7 +420,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -518,7 +514,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -674,7 +669,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -791,7 +785,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -820,7 +813,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -856,7 +848,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -998,7 +989,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1027,7 +1017,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1117,7 +1106,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1155,7 +1143,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1193,7 +1180,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1222,7 +1208,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1262,7 +1247,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
@@ -1351,7 +1335,6 @@ namespace ast_node {
 
         /**
          * @brief Returns the s-expression string for this AST node.
-         * @details TODO: Implement.
          *
          * @return The s-expression string for this AST node.
          */
