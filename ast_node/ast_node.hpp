@@ -842,7 +842,7 @@ namespace ast_node {
          * @brief The set of function call arguments.
          *
          */
-        const std::vector<token::token> call_args;
+        const std::vector<std::shared_ptr<expr_node>> call_args;
 
         /**
          * @brief Class constructor.
@@ -851,7 +851,7 @@ namespace ast_node {
          * @param name The name of the function.
          * @param call_args The arguments in the function call.
          */
-        call_expr_node(const token::token name, const std::vector<token::token> call_args)
+        call_expr_node(const token::token name, const std::vector<std::shared_ptr<expr_node>> call_args)
             : expr_node(node_type::CALL_EXPR), name(name), call_args(call_args) {}
 
         /**
@@ -984,7 +984,7 @@ namespace ast_node {
          * @brief The `<integer>` index.
          *
          */
-        const std::shared_ptr<integer_expr_node> index;
+        const unsigned long index;
 
         /**
          * @brief Class constructor.
@@ -993,7 +993,7 @@ namespace ast_node {
          * @param expr The `<expr>` node tuple argument.
          * @param expr The `<integer>` node index.
          */
-        tuple_index_expr_node(const std::shared_ptr<expr_node> expr, const std::shared_ptr<integer_expr_node> index)
+        tuple_index_expr_node(const std::shared_ptr<expr_node> expr, const unsigned long index)
             : expr_node(node_type::TUPLE_INDEX_EXPR), expr(expr), index(index) {}
 
         /**
@@ -1112,7 +1112,8 @@ namespace ast_node {
          *
          * @param lvalues The set of lvalues in the lvalue tuple.
          */
-        tuple_lvalue_node( const std::vector<std::shared_ptr<lvalue_node>> lvalues ) : lvalue_node(node_type::TUPLE_LVALUE), lvalues(lvalues) {}
+        tuple_lvalue_node(const std::vector<std::shared_ptr<lvalue_node>> lvalues)
+            : lvalue_node(node_type::TUPLE_LVALUE), lvalues(lvalues) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1247,7 +1248,7 @@ namespace ast_node {
          * @details The number of commas, plus one.
          *
          */
-         const unsigned long dimensions;
+        const unsigned long dimensions;
 
         /**
          * @brief Class constructor.
@@ -1256,7 +1257,8 @@ namespace ast_node {
          * @param main_type The main type of the array.
          * @param dimensions The number of dimensions in the array.
          */
-        array_type_node(const std::shared_ptr<type_node> main_type, const unsigned long dimensions) : type_node(node_type::ARRAY_TYPE), main_type(main_type), dimensions(dimensions) {}
+        array_type_node(const std::shared_ptr<type_node> main_type, const unsigned long dimensions)
+            : type_node(node_type::ARRAY_TYPE), main_type(main_type), dimensions(dimensions) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
