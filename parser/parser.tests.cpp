@@ -1,6 +1,6 @@
 /**
  * @file parser.tests.cpp
- * @package Assignment 3.
+ * @package Assignment 3-4.
  * @author Cayden Lund (u1182408)
  * @brief Contains tests for the parser.
  *
@@ -39,11 +39,11 @@ namespace tests::parser_tests {
     }
 
     /**
-     * @brief Ensures that the parser can correctly parse all kinds of commands.
+     * @brief Ensures that the parser can correctly parse all kinds of homework 3's commands.
      *
      * @return The empty string if successful; an error message otherwise.
      */
-    std::string parse_commands() {
+    std::string parse_commands_hw3() {
         std::stringstream input;
         input << R"(assert a, "Error.")"
               << "\n"
@@ -97,13 +97,67 @@ namespace tests::parser_tests {
     }
 
     /**
+     * @brief Ensures that the parser can correctly parse an entire function.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string parse_function() {
+        //  Hey, check out this mess:
+        std::stringstream input;
+        input << "fn test_function(x : int, y : int) : bool {\n"
+              << "    let left = x\n"
+              << "    let right = y\n"
+              << "    return true\n"
+              << "}\n";
+
+        parser::token_vec_t tokens = lexer::lex_all(input.str());
+        std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
+
+        const token::token function_name {0, "test_function", token::token_type::VARIABLE};
+
+        const std::shared_ptr<ast_node::var_binding_node> function_binding_x
+                = std::make_shared<ast_node::var_binding_node>(
+                        std::make_shared<ast_node::variable_argument_node>(
+                                token::token {0, "x", token::token_type::VARIABLE}),
+                        std::make_shared<ast_node::int_type_node>());
+        const std::shared_ptr<ast_node::var_binding_node> function_binding_y
+                = std::make_shared<ast_node::var_binding_node>(
+                        std::make_shared<ast_node::variable_argument_node>(
+                                token::token {0, "y", token::token_type::VARIABLE}),
+                        std::make_shared<ast_node::int_type_node>());
+        const std::vector<std::shared_ptr<ast_node::binding_node>> function_bindings {function_binding_x,
+                                                                                      function_binding_y};
+        const std::shared_ptr<ast_node::type_node> function_return_type = std::make_shared<ast_node::bool_type_node>();
+
+        const std::shared_ptr<ast_node::let_stmt_node> function_statement_1 = std::make_shared<ast_node::let_stmt_node>(
+                std::make_shared<ast_node::argument_lvalue_node>(std::make_shared<ast_node::variable_argument_node>(
+                        token::token {0, "left", token::token_type::VARIABLE})),
+                std::make_shared<ast_node::variable_expr_node>(token::token {0, "x", token::token_type::VARIABLE}));
+        const std::shared_ptr<ast_node::let_stmt_node> function_statement_2 = std::make_shared<ast_node::let_stmt_node>(
+                std::make_shared<ast_node::argument_lvalue_node>(std::make_shared<ast_node::variable_argument_node>(
+                        token::token {0, "right", token::token_type::VARIABLE})),
+                std::make_shared<ast_node::variable_expr_node>(token::token {0, "y", token::token_type::VARIABLE}));
+        const std::shared_ptr<ast_node::return_stmt_node> function_statement_3
+                = std::make_shared<ast_node::return_stmt_node>(std::make_shared<ast_node::true_expr_node>());
+        const std::vector<std::shared_ptr<ast_node::stmt_node>> function_statements {
+                function_statement_1, function_statement_2, function_statement_3};
+
+        const std::shared_ptr<ast_node::fn_cmd_node> function = std::make_shared<ast_node::fn_cmd_node>(
+                function_name, function_bindings, function_return_type, function_statements);
+
+        const std::vector<parser::node_ptr_t> expected_nodes {function};
+        return nodes_cmp(nodes, expected_nodes);
+    }
+
+    /**
      * @brief Assembles the set of all parser unit tests.
      *
      * @return The set of all parser unit tests.
      */
     std::vector<test_t> get_all_tests() {
         std::vector<test_t> tests;
-        tests.emplace_back(parse_commands, "Parse commands");
+        tests.emplace_back(parse_commands_hw3, "Parse commands (hw3)");
+        tests.emplace_back(parse_function, "Parse function");
 
         return tests;
     }
