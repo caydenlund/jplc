@@ -45,7 +45,7 @@ int lex_and_parse_only(const std::string& filename) {
     const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
     const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
 
-    for (const parser::node_ptr_t& node : nodes) { std::cout << ast_node::get_s_expression(node) << "\n"; }
+    for (const parser::node_ptr_t& node : nodes) { std::cout << node->s_expression() << "\n"; }
 
     std::cout << "Compilation succeeded: parsing complete\n";
 
