@@ -1,6 +1,6 @@
 /**
  * @file parser.cpp
- * @package Assignment 3
+ * @package Assignment 3-4.
  * @author Cayden Lund (u1182408)
  * @brief Implements the parser functions.
  * @details See header file for documentation.
@@ -10,9 +10,9 @@
 #include "parser.hpp"
 
 namespace parser {
-    std::vector<node_ptr_t> parse(token_vec_t tokens) {
+    node_list_t parse(token_vec_t tokens) {
         unsigned int index = 0;
-        std::vector<node_ptr_t> nodes;
+        node_list_t nodes;
 
         while (index < tokens.size() - 1) {
             parser_return_t result = apply_parsers(tokens, {parse_cmd}, index);
@@ -43,28 +43,41 @@ namespace parser {
     ==============================
     */
     parser_return_t parse_argument(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(tokens, {parse_argument_variable}, index);
+        return apply_parsers(tokens, {parse_argument_array, parse_argument_variable}, index);
+    }
+
+    parser_return_t parse_binding(token_vec_t tokens, unsigned int index) {
+        return apply_parsers(tokens, {parse_binding_tuple, parse_binding_variable}, index);
     }
 
     parser_return_t parse_cmd(token_vec_t tokens, unsigned int index) {
         return apply_parsers(tokens,
-                             {parse_cmd_assert, parse_cmd_let, parse_cmd_print, parse_cmd_read, parse_cmd_show,
-                              parse_cmd_type, parse_cmd_write},
+                             {parse_cmd_assert, parse_cmd_fn, parse_cmd_let, parse_cmd_print, parse_cmd_read,
+                              parse_cmd_show, parse_cmd_type, parse_cmd_write},
                              index);
     }
 
     parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(
-                tokens, {parse_expr_false, parse_expr_float, parse_expr_integer, parse_expr_true, parse_expr_variable},
-                index);
+        return apply_parsers(tokens,
+                             {parse_expr_array_index, parse_expr_array_literal, parse_expr_call, parse_expr_false,
+                              parse_expr_float, parse_expr_integer, parse_expr_true, parse_expr_tuple_index,
+                              parse_expr_tuple_literal, parse_expr_variable},
+                             index);
     }
 
     parser_return_t parse_lvalue(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(tokens, {parse_lvalue_argument}, index);
+        return apply_parsers(tokens, {parse_lvalue_argument, parse_lvalue_tuple}, index);
+    }
+
+    parser_return_t parse_statement(token_vec_t tokens, unsigned int index) {
+        return apply_parsers(tokens, {parse_statement_assert, parse_statement_let, parse_statement_return}, index);
     }
 
     parser_return_t parse_type(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(tokens, {parse_type_bool, parse_type_float, parse_type_int, parse_type_variable}, index);
+        return apply_parsers(tokens,
+                             {parse_type_array, parse_type_bool, parse_type_float, parse_type_int, parse_type_tuple,
+                              parse_type_variable},
+                             index);
     }
 
     /*
@@ -74,10 +87,30 @@ namespace parser {
     */
     //  Arguments:
     //  ----------
+    parser_return_t parse_argument_array(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
     parser_return_t parse_argument_variable(token_vec_t tokens, unsigned int index) {
         try {
             return {std::make_shared<ast_node::variable_argument_node>(*tokens[index]), index + 1};
         } catch (const std::runtime_error& err) { throw parser_error_recoverable(); }
+    }
+
+    //  Bindings:
+    //  ---------
+    parser_return_t parse_binding_tuple(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    parser_return_t parse_binding_variable(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
     }
 
     //  Commands:
@@ -122,6 +155,12 @@ namespace parser {
 
         //  Return.
         return {std::make_shared<ast_node::assert_cmd_node>(expr, string_tok), index + 1};
+    }
+
+    parser_return_t parse_cmd_fn(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
     }
 
     parser_return_t parse_cmd_let(token_vec_t tokens, unsigned int index) {
@@ -351,6 +390,24 @@ namespace parser {
 
     //  Expressions:
     //  ------------
+    parser_return_t parse_expr_array_index(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    parser_return_t parse_expr_array_literal(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    parser_return_t parse_expr_call(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
     parser_return_t parse_expr_false(token_vec_t tokens, unsigned int index) {
         //  1: `"false"`.
         if (tokens[index]->type != token::token_type::FALSE) throw parser_error_recoverable();
@@ -379,6 +436,18 @@ namespace parser {
         return {std::make_shared<ast_node::true_expr_node>(), index + 1};
     }
 
+    parser_return_t parse_expr_tuple_index(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    parser_return_t parse_expr_tuple_literal(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
     parser_return_t parse_expr_variable(token_vec_t tokens, unsigned int index) {
         //  1: `<variable>`.
         if (tokens[index]->type != token::token_type::VARIABLE) throw parser_error_recoverable();
@@ -400,8 +469,40 @@ namespace parser {
         }
     }
 
+    parser_return_t parse_lvalue_tuple(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    //  Statements:
+    //  -----------
+    parser_return_t parse_statement_assert(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    parser_return_t parse_statement_let(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
+    parser_return_t parse_statement_return(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
     //  Types:
     //  ------
+    parser_return_t parse_type_array(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
+    }
+
     parser_return_t parse_type_bool(token_vec_t tokens, unsigned int index) {
         //  1: `"bool"`.
         if (tokens[index]->type != token::token_type::BOOL) throw parser_error_recoverable();
@@ -421,6 +522,12 @@ namespace parser {
         if (tokens[index]->type != token::token_type::INT) throw parser_error_recoverable();
 
         return {std::make_shared<ast_node::int_type_node>(), index + 1};
+    }
+
+    parser_return_t parse_type_tuple(token_vec_t tokens, unsigned int index) {
+        //  TODO: This.
+        tokens[index];
+        return {};
     }
 
     parser_return_t parse_type_variable(token_vec_t tokens, unsigned int index) {
