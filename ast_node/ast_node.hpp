@@ -57,12 +57,12 @@ namespace ast_node {
         ARRAY_INDEX_EXPR,    //  AST node `array_index_expr_node`.
         ARRAY_LITERAL_EXPR,  //  AST node `array_literal_expr_node`.
         CALL_EXPR,           //  AST node `call_expr_node`.
-        INTEGER_EXPR,        //  AST node `integer_expr_node`.
+        FALSE_EXPR,          //  AST node `false_expr_node`.
         FLOAT_EXPR,          //  AST node `float_expr_node`.
+        INTEGER_EXPR,        //  AST node `integer_expr_node`.
+        TRUE_EXPR,           //  AST node `true_expr_node`.
         TUPLE_INDEX_EXPR,    //  AST node `tuple_index_expr_node`.
         TUPLE_LITERAL_EXPR,  //  AST node `tuple_literal_expr_node`.
-        TRUE_EXPR,           //  AST node `true_expr_node`.
-        FALSE_EXPR,          //  AST node `false_expr_node`.
         VARIABLE_EXPR,       //  AST node `variable_expr_node`.
 
         //  ================
@@ -85,9 +85,9 @@ namespace ast_node {
         //  ==============
         TYPE,          //  AST node `type_node`.
         ARRAY_TYPE,    //  AST node `array_type_node`.
-        INT_TYPE,      //  AST node `int_type_node`.
         BOOL_TYPE,     //  AST node `bool_type_node`.
         FLOAT_TYPE,    //  AST node `float_type_node`.
+        INT_TYPE,      //  AST node `int_type_node`.
         TUPLE_TYPE,    //  AST node `tuple_type_node`.
         VARIABLE_TYPE  //  AST node `variable_type_node`.
     };
@@ -761,7 +761,7 @@ namespace ast_node {
          * @brief The array to access.
          *
          */
-        const token::token array;
+        const std::shared_ptr<expr_node> array;
 
         /**
          * @brief The set of subscript parameters.
@@ -776,12 +776,9 @@ namespace ast_node {
          * @param array The array to access.
          * @param params The subscript parameters as a set of expression nodes.
          */
-        array_index_expr_node(const token::token array, const std::vector<std::shared_ptr<expr_node>> params)
-            : expr_node(node_type::ARRAY_INDEX_EXPR), array(array), params(params) {
-            if (array.type != token::token_type::VARIABLE)
-                throw std::runtime_error(
-                        "Attempted to construct an `array_index_expr_node` without a `<variable>` array");
-        }
+        array_index_expr_node(const std::shared_ptr<expr_node> array,
+                              const std::vector<std::shared_ptr<expr_node>> params)
+            : expr_node(node_type::ARRAY_INDEX_EXPR), array(array), params(params) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -820,7 +817,7 @@ namespace ast_node {
     };
 
     /**
-     * @brief The `<variable>(<variable, ...)` expression (for function calls).
+     * @brief The `<variable>(<expr>, ...)` expression (for function calls).
      *
      */
     struct call_expr_node : public expr_node {
@@ -975,7 +972,7 @@ namespace ast_node {
          * @brief The `<integer>` index.
          *
          */
-        const unsigned long index;
+        std::shared_ptr<integer_expr_node> index;
 
         /**
          * @brief Class constructor.
@@ -984,7 +981,7 @@ namespace ast_node {
          * @param expr The `<expr>` node tuple argument.
          * @param expr The `<integer>` node index.
          */
-        tuple_index_expr_node(const std::shared_ptr<expr_node> expr, const unsigned long index)
+        tuple_index_expr_node(const std::shared_ptr<expr_node> expr, std::shared_ptr<integer_expr_node> index)
             : expr_node(node_type::TUPLE_INDEX_EXPR), expr(expr), index(index) {}
 
         /**

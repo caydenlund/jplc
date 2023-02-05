@@ -134,7 +134,7 @@ namespace ast_node {
     //  ------------
     std::string array_index_expr_node::s_expression() const {
         std::stringstream result;
-        result << "(ArrayIndexExpr " << this->array.text;
+        result << "(ArrayIndexExpr " << this->array->s_expression();
         for (const std::shared_ptr<expr_node>& param : this->params) { result << " " << param->s_expression(); }
         result << ")";
         return result.str();
@@ -167,7 +167,7 @@ namespace ast_node {
     std::string true_expr_node::s_expression() const { return "(TrueExpr)"; }
 
     std::string tuple_index_expr_node::s_expression() const {
-        return "(TupleIndexExpr " + this->expr->s_expression() + " " + std::to_string(index) + ")";
+        return "(TupleIndexExpr " + this->expr->s_expression() + " " + std::to_string(index->value) + ")";
     }
 
     std::string tuple_literal_expr_node::s_expression() const {

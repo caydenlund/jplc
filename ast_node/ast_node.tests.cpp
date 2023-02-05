@@ -224,11 +224,12 @@ namespace tests::ast_node_tests {
         //  `array_index_expr_node`:
         //  ------------------------
         const token::token variable {0, "xyz", token::token_type::VARIABLE};
+        const std::shared_ptr<ast_node::expr_node> array = std::make_shared<ast_node::variable_expr_node>(variable);
         const std::vector<std::shared_ptr<ast_node::expr_node>> index_params {
                 std::make_shared<ast_node::true_expr_node>(), std::make_shared<ast_node::false_expr_node>()};
 
-        const ast_node::array_index_expr_node array_index_expr(variable, index_params);
-        result = str_cmp(array_index_expr.s_expression(), R"((ArrayIndexExpr xyz (TrueExpr) (FalseExpr)))");
+        const ast_node::array_index_expr_node array_index_expr(array, index_params);
+        result = str_cmp(array_index_expr.s_expression(), R"((ArrayIndexExpr (VarExpr xyz) (TrueExpr) (FalseExpr)))");
         if (result != "") return result;
 
         //  `array_literal_expr_node`:
@@ -277,8 +278,10 @@ namespace tests::ast_node_tests {
         //  `tuple_index_expr_node`:
         //  ------------------------
         const std::shared_ptr<ast_node::expr_node> true_expr_ptr = std::make_shared<ast_node::true_expr_node>();
+        const std::shared_ptr<ast_node::integer_expr_node> index_expr = std::make_shared<ast_node::integer_expr_node>(
+                token::token {0, "1", token::token_type::INTVAL});
 
-        const ast_node::tuple_index_expr_node tuple_index_expr(true_expr_ptr, 1);
+        const ast_node::tuple_index_expr_node tuple_index_expr(true_expr_ptr, index_expr);
         result = str_cmp(tuple_index_expr.s_expression(), R"((TupleIndexExpr (TrueExpr) 1))");
         if (result != "") return result;
 
