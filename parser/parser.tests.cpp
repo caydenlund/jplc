@@ -160,7 +160,6 @@ namespace tests::parser_tests {
                 argument_xyz);
         const std::shared_ptr<ast_node::let_cmd_node> let_cmd = std::make_shared<ast_node::let_cmd_node>(lvalue_xyz,
                                                                                                          expr_true);
-
         tokens = lexer::lex_all("let xyz = true\n");
         node = std::get<0>(parser::parse_cmd(tokens, 0));
 
@@ -213,7 +212,7 @@ namespace tests::parser_tests {
         const std::shared_ptr<ast_node::type_cmd_node> type_cmd = std::make_shared<ast_node::type_cmd_node>(
                 variable_xyz, type_int);
 
-        tokens = lexer::lex_all("type xyz = int");
+        tokens = lexer::lex_all("type xyz = int\n");
         node = std::get<0>(parser::parse_cmd(tokens, 0));
 
         result = nodes_cmp(node, type_cmd);
@@ -241,22 +240,33 @@ namespace tests::parser_tests {
         const token::token variable_xyz {0, "xyz", token::token_type::VARIABLE};
         const token::token int_1 {0, "1", token::token_type::INTVAL};
         const token::token int_2 {0, "2", token::token_type::INTVAL};
+        const token::token int_3 {0, "3", token::token_type::INTVAL};
+        const token::token int_4 {0, "4", token::token_type::INTVAL};
+        const token::token int_5 {0, "5", token::token_type::INTVAL};
+        const std::shared_ptr<ast_node::expr_node> expr_xyz = std::make_shared<ast_node::variable_expr_node>(
+                variable_xyz);
         const std::shared_ptr<ast_node::expr_node> expr_1 = std::make_shared<ast_node::integer_expr_node>(int_1);
         const std::shared_ptr<ast_node::expr_node> expr_2 = std::make_shared<ast_node::integer_expr_node>(int_2);
-        const std::vector<std::shared_ptr<ast_node::expr_node>> expr_set {expr_1, expr_2};
-        const std::shared_ptr<ast_node::array_index_expr_node> array_index_expr
-                = std::make_shared<ast_node::array_index_expr_node>(variable_xyz, expr_set);
+        const std::shared_ptr<ast_node::expr_node> expr_3 = std::make_shared<ast_node::integer_expr_node>(int_3);
+        const std::shared_ptr<ast_node::expr_node> expr_4 = std::make_shared<ast_node::integer_expr_node>(int_4);
+        const std::shared_ptr<ast_node::expr_node> expr_5 = std::make_shared<ast_node::integer_expr_node>(int_5);
+        const std::vector<std::shared_ptr<ast_node::expr_node>> expr_set_inner {expr_1, expr_2};
+        const std::vector<std::shared_ptr<ast_node::expr_node>> expr_set_outer {expr_3, expr_4, expr_5};
+        const std::shared_ptr<ast_node::array_index_expr_node> array_index_expr_inner
+                = std::make_shared<ast_node::array_index_expr_node>(expr_xyz, expr_set_inner);
+        const std::shared_ptr<ast_node::array_index_expr_node> array_index_expr_outer
+                = std::make_shared<ast_node::array_index_expr_node>(array_index_expr_inner, expr_set_outer);
 
-        lexer::token_list_t tokens = lexer::lex_all("xyz[1, 2]");
+        lexer::token_list_t tokens = lexer::lex_all("xyz[1, 2][3, 4, 5]");
         parser::node_ptr_t node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        std::string result = nodes_cmp(node, array_index_expr);
+        std::string result = nodes_cmp(node, array_index_expr_outer);
         if (result != "") return result;
 
         //  `array_literal_expr_node`:
         //  --------------------------
         const std::shared_ptr<ast_node::array_literal_expr_node> array_literal_expr
-                = std::make_shared<ast_node::array_literal_expr_node>(expr_set);
+                = std::make_shared<ast_node::array_literal_expr_node>(expr_set_inner);
 
         tokens = lexer::lex_all("[1, 2]");
         node = std::get<0>(parser::parse_expr(tokens, 0));
@@ -267,8 +277,6 @@ namespace tests::parser_tests {
         //  `call_expr_node`:
         //  -----------------
         const token::token variable_blur = {0, "blur", token::token_type::VARIABLE};
-        const std::shared_ptr<ast_node::expr_node> expr_xyz = std::make_shared<ast_node::variable_expr_node>(
-                variable_xyz);
         const std::shared_ptr<ast_node::expr_node> expr_true = std::make_shared<ast_node::true_expr_node>();
         const std::vector<std::shared_ptr<ast_node::expr_node>> args {expr_xyz, expr_true};
         const std::shared_ptr<ast_node::call_expr_node> call_expr = std::make_shared<ast_node::call_expr_node>(
@@ -324,8 +332,11 @@ namespace tests::parser_tests {
 
         //  `tuple_index_expr_node`:
         //  ------------------------
+        const token::token index {0, "0", token::token_type::INTVAL};
+        const std::shared_ptr<ast_node::integer_expr_node> index_expr = std::make_shared<ast_node::integer_expr_node>(
+                index);
         const std::shared_ptr<ast_node::tuple_index_expr_node> tuple_index_expr
-                = std::make_shared<ast_node::tuple_index_expr_node>(expr_xyz, 0);
+                = std::make_shared<ast_node::tuple_index_expr_node>(expr_xyz, index_expr);
 
         tokens = lexer::lex_all("xyz{0}");
         node = std::get<0>(parser::parse_expr(tokens, 0));
@@ -336,7 +347,7 @@ namespace tests::parser_tests {
         //  `tuple_literal_expr_node`:
         //  --------------------------
         const std::shared_ptr<ast_node::tuple_literal_expr_node> tuple_literal_expr
-                = std::make_shared<ast_node::tuple_literal_expr_node>(expr_set);
+                = std::make_shared<ast_node::tuple_literal_expr_node>(expr_set_inner);
 
         tokens = lexer::lex_all("{1, 2}");
         node = std::get<0>(parser::parse_expr(tokens, 0));
@@ -445,14 +456,26 @@ namespace tests::parser_tests {
     std::string parse_types() {
         //  `array_type_node`:
         //  ------------------
-        const std::shared_ptr<ast_node::type_node> type_int = std::make_shared<ast_node::int_type_node>();
+        const token::token variable_xyz {0, "xyz", token::token_type::VARIABLE};
+        const std::shared_ptr<ast_node::type_node> type_xyz = std::make_shared<ast_node::variable_type_node>(
+                variable_xyz);
         const std::shared_ptr<ast_node::array_type_node> array_type = std::make_shared<ast_node::array_type_node>(
-                type_int, 2);
+                type_xyz, 2);
 
-        lexer::token_list_t tokens = lexer::lex_all("int[,]");
+        lexer::token_list_t tokens = lexer::lex_all("xyz[,]");
         parser::node_ptr_t node = std::get<0>(parser::parse_type(tokens, 0));
 
         std::string result = nodes_cmp(node, array_type);
+        if (result != "") return result;
+
+        //  The same thing again, but with a nested array type:
+        const std::shared_ptr<ast_node::array_type_node> outer_array_type = std::make_shared<ast_node::array_type_node>(
+                array_type, 3);
+
+        tokens = lexer::lex_all("xyz[,][,,]");
+        node = std::get<0>(parser::parse_type(tokens, 0));
+
+        result = nodes_cmp(node, array_type);
         if (result != "") return result;
 
         //  `bool_type_node`:
@@ -499,7 +522,6 @@ namespace tests::parser_tests {
 
         //  `variable_type_node`:
         //  ---------------------
-        const token::token variable_xyz {0, "xyz", token::token_type::VARIABLE};
         const std::shared_ptr<ast_node::variable_type_node> variable_type
                 = std::make_shared<ast_node::variable_type_node>(variable_xyz);
 
