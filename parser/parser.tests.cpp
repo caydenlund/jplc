@@ -475,7 +475,7 @@ namespace tests::parser_tests {
         tokens = lexer::lex_all("xyz[,][,,]");
         node = std::get<0>(parser::parse_type(tokens, 0));
 
-        result = nodes_cmp(node, array_type);
+        result = nodes_cmp(node, outer_array_type);
         if (result != "") return result;
 
         //  `bool_type_node`:
