@@ -167,10 +167,11 @@ namespace lexer {
                     //  The lexer succeeded.
                     //  Add the new token to the vector, unless the token is a space.
                     //  Also, don't add a second consecutive newline.
+                    //  The first token should not be a newline, either.
                     const token_ptr_t new_token = std::get<0>(result);
                     if (new_token->type != token::token_type::SPACE
-                        && (new_token->type != token::token_type::NEWLINE || tokens.empty()
-                            || tokens[tokens.size() - 1]->type != token::token_type::NEWLINE))
+                        && (new_token->type != token::token_type::NEWLINE
+                            || (!tokens.empty() && tokens[tokens.size() - 1]->type != token::token_type::NEWLINE)))
                         tokens.push_back(new_token);
 
                     valid_token = true;
