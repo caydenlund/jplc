@@ -1,6 +1,6 @@
 /**
  * @file ast_node.tests.cpp
- * @package Assignment 3.
+ * @package Assignments 3-5
  * @author Cayden Lund (u1182408)
  * @brief Contains tests for the `ast_node` class and derivatives.
  *
@@ -211,6 +211,7 @@ namespace tests::ast_node_tests {
 
     /**
      * @brief Ensures that expression AST nodes return the correct s-expression.
+     * @details Does not include tests for operators.
      *
      * @return The empty string if successful; an error message otherwise.
      */
@@ -295,6 +296,124 @@ namespace tests::ast_node_tests {
         //  ---------------------
         const ast_node::variable_expr_node variable_expr(variable);
         result = str_cmp(variable_expr.s_expression(), R"((VarExpr xyz))");
+        return result;
+    }
+
+    /**
+     * @brief Ensures that operator AST nodes return the correct s-expression.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string operator_s_expressions() {
+        const token::token variable_a {0, "a", token::token_type::VARIABLE};
+        const token::token variable_b {0, "b", token::token_type::VARIABLE};
+        const token::token variable_c {0, "c", token::token_type::VARIABLE};
+        const std::shared_ptr<ast_node::expr_node> var_expr_a = std::make_shared<ast_node::variable_expr_node>(
+                variable_a);
+        const std::shared_ptr<ast_node::expr_node> var_expr_b = std::make_shared<ast_node::variable_expr_node>(
+                variable_b);
+        const std::shared_ptr<ast_node::expr_node> var_expr_c = std::make_shared<ast_node::variable_expr_node>(
+                variable_c);
+        const token::token operator_inverse {0, "!", token::token_type::OP};
+        const token::token operator_negate {0, "-", token::token_type::OP};
+        const token::token operator_times {0, "*", token::token_type::OP};
+        const token::token operator_divide {0, "/", token::token_type::OP};
+        const token::token operator_mod {0, "%", token::token_type::OP};
+        const token::token operator_plus {0, "+", token::token_type::OP};
+        const token::token operator_minus {0, "-", token::token_type::OP};
+        const token::token operator_lt {0, "<", token::token_type::OP};
+        const token::token operator_gt {0, ">", token::token_type::OP};
+        const token::token operator_leq {0, "<=", token::token_type::OP};
+        const token::token operator_geq {0, ">=", token::token_type::OP};
+        const token::token operator_eq {0, "==", token::token_type::OP};
+        const token::token operator_neq {0, "!=", token::token_type::OP};
+        const token::token operator_and {0, "&&", token::token_type::OP};
+        const token::token operator_or {0, "||", token::token_type::OP};
+
+        //  `array_loop_expr_node`:
+        //  -----------------------
+        const std::vector<ast_node::array_loop_expr_node::binding_pair_t> array_bindings {{variable_a, var_expr_b}};
+        const ast_node::array_loop_expr_node array_loop_expr(array_bindings, var_expr_c);
+        std::string result = str_cmp(array_loop_expr.s_expression(), "(ArrayLoopExpr a (VarExpr b) (VarExpr c))");
+        if (result != "") return result;
+
+        //  `binop_expr_node`:
+        //  ------------------
+        //  `binop_type::PLUS`:
+        const ast_node::binop_expr_node plus_binop_expr(operator_plus, var_expr_a, var_expr_b);
+        result = str_cmp(plus_binop_expr.s_expression(), "(BinopExpr + (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::MINUS`:
+        const ast_node::binop_expr_node minus_binop_expr(operator_minus, var_expr_a, var_expr_b);
+        result = str_cmp(minus_binop_expr.s_expression(), "(BinopExpr - (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::TIMES`:
+        const ast_node::binop_expr_node times_binop_expr(operator_times, var_expr_a, var_expr_b);
+        result = str_cmp(times_binop_expr.s_expression(), "(BinopExpr * (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::DIVIDE`:
+        const ast_node::binop_expr_node divide_binop_expr(operator_divide, var_expr_a, var_expr_b);
+        result = str_cmp(divide_binop_expr.s_expression(), "(BinopExpr / (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::MOD`:
+        const ast_node::binop_expr_node mod_binop_expr(operator_mod, var_expr_a, var_expr_b);
+        result = str_cmp(mod_binop_expr.s_expression(), "(BinopExpr % (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::LT`:
+        const ast_node::binop_expr_node lt_binop_expr(operator_lt, var_expr_a, var_expr_b);
+        result = str_cmp(lt_binop_expr.s_expression(), "(BinopExpr < (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::GT`:
+        const ast_node::binop_expr_node gt_binop_expr(operator_gt, var_expr_a, var_expr_b);
+        result = str_cmp(gt_binop_expr.s_expression(), "(BinopExpr > (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::EQ`:
+        const ast_node::binop_expr_node eq_binop_expr(operator_eq, var_expr_a, var_expr_b);
+        result = str_cmp(eq_binop_expr.s_expression(), "(BinopExpr == (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::NEQ`:
+        const ast_node::binop_expr_node neq_binop_expr(operator_neq, var_expr_a, var_expr_b);
+        result = str_cmp(neq_binop_expr.s_expression(), "(BinopExpr != (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::LEQ`:
+        const ast_node::binop_expr_node leq_binop_expr(operator_leq, var_expr_a, var_expr_b);
+        result = str_cmp(leq_binop_expr.s_expression(), "(BinopExpr <= (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::GEQ`:
+        const ast_node::binop_expr_node geq_binop_expr(operator_geq, var_expr_a, var_expr_b);
+        result = str_cmp(geq_binop_expr.s_expression(), "(BinopExpr >= (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::AND`:
+        const ast_node::binop_expr_node and_binop_expr(operator_and, var_expr_a, var_expr_b);
+        result = str_cmp(and_binop_expr.s_expression(), "(BinopExpr && (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+        //  `binop_type::OR`:
+        const ast_node::binop_expr_node or_binop_expr(operator_or, var_expr_a, var_expr_b);
+        result = str_cmp(or_binop_expr.s_expression(), "(BinopExpr || (VarExpr a) (VarExpr b))");
+        if (result != "") return result;
+
+        //  `if_expr_node`:
+        //  ---------------
+        const ast_node::if_expr_node if_expr(var_expr_a, var_expr_b, var_expr_c);
+        result = str_cmp(if_expr.s_expression(), "(IfExpr (VarExpr a) (VarExpr b) (VarExpr c))");
+        if (result != "") return result;
+
+        //  `sum_loop_expr_node`:
+        //  ---------------------
+        const std::vector<ast_node::sum_loop_expr_node::binding_pair_t> sum_bindings {{variable_a, var_expr_b}};
+        const ast_node::sum_loop_expr_node sum_loop_expr(sum_bindings, var_expr_c);
+        result = str_cmp(sum_loop_expr.s_expression(), "(SumLoopExpr a (VarExpr b) (VarExpr c))");
+        if (result != "") return result;
+
+        //  `unop_expr_node`:
+        //  -----------------
+        //  `unop_type::INV`:
+        const ast_node::unop_expr_node inv_unop_expr(operator_inverse, var_expr_a);
+        result = str_cmp(inv_unop_expr.s_expression(), "(UnopExpr ! (VarExpr a))");
+        if (result != "") return result;
+        //  `unop_type::NEG`:
+        const ast_node::unop_expr_node neg_unop_expr(operator_negate, var_expr_a);
+        result = str_cmp(neg_unop_expr.s_expression(), "(UnopExpr - (VarExpr a))");
         return result;
     }
 
@@ -447,6 +566,7 @@ namespace tests::ast_node_tests {
         tests.emplace_back(binding_s_expressions, "Binding s-expressions");
         tests.emplace_back(command_s_expressions, "Command s-expressions");
         tests.emplace_back(expression_s_expressions, "Expression s-expressions");
+        tests.emplace_back(operator_s_expressions, "Operator s-expressions");
         tests.emplace_back(lvalue_s_expressions, "Lvalue s-expressions");
         tests.emplace_back(statement_s_expressions, "Statement s-expressions");
         tests.emplace_back(type_s_expressions, "Type s-expressions");

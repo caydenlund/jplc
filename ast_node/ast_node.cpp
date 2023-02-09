@@ -1,6 +1,6 @@
 /**
  * @file ast_node.cpp
- * @package Assignment 3
+ * @package Assignments 3-5
  * @author Cayden Lund (u1182408)
  * @brief Implements the AST node classes.
  *
@@ -140,11 +140,71 @@ namespace ast_node {
         return result.str();
     }
 
+    std::string array_loop_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(ArrayLoopExpr";
+        for (const array_loop_expr_node::binding_pair_t& binding : this->binding_pairs) {
+            result << " " << std::get<0>(binding).text << " " << std::get<1>(binding)->s_expression();
+        }
+        result << " " << this->item_expr->s_expression() << ")";
+        return result.str();
+    }
+
     std::string array_literal_expr_node::s_expression() const {
         std::stringstream result;
         result << "(ArrayLiteralExpr";
         for (const std::shared_ptr<expr_node>& expr : this->expressions) { result << " " << expr->s_expression(); }
         result << ")";
+        return result.str();
+    }
+
+    std::string binop_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(BinopExpr ";
+        switch (this->type) {
+            case binop_type::PLUS:
+                result << "+";
+                break;
+            case binop_type::MINUS:
+                result << "-";
+                break;
+            case binop_type::TIMES:
+                result << "*";
+                break;
+            case binop_type::DIVIDE:
+                result << "/";
+                break;
+            case binop_type::MOD:
+                result << "%";
+                break;
+            case binop_type::LT:
+                result << "<";
+                break;
+            case binop_type::GT:
+                result << ">";
+                break;
+            case binop_type::EQ:
+                result << "==";
+                break;
+            case binop_type::NEQ:
+                result << "!=";
+                break;
+            case binop_type::LEQ:
+                result << "<=";
+                break;
+            case binop_type::GEQ:
+                result << ">=";
+                break;
+            case binop_type::AND:
+                result << "&&";
+                break;
+            case binop_type::OR:
+                result << "||";
+                break;
+            default:
+                throw std::runtime_error("Unhandled `binop_type` in s-expression");
+        }
+        result << " " << this->left_operand->s_expression() << " " << this->right_operand->s_expression() << ")";
         return result.str();
     }
 
@@ -162,7 +222,22 @@ namespace ast_node {
         return "(FloatExpr " + std::to_string((long)this->value) + ")";
     }
 
+    std::string if_expr_node::s_expression() const {
+        return "(IfExpr " + this->conditional_expr->s_expression() + " " + this->affirmative_expr->s_expression() + " "
+             + this->negative_expr->s_expression() + ")";
+    }
+
     std::string integer_expr_node::s_expression() const { return "(IntExpr " + std::to_string(this->value) + ")"; }
+
+    std::string sum_loop_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(SumLoopExpr";
+        for (const array_loop_expr_node::binding_pair_t& binding : this->binding_pairs) {
+            result << " " << std::get<0>(binding).text << " " << std::get<1>(binding)->s_expression();
+        }
+        result << " " << this->sum_expr->s_expression() << ")";
+        return result.str();
+    }
 
     std::string true_expr_node::s_expression() const { return "(TrueExpr)"; }
 
@@ -175,6 +250,23 @@ namespace ast_node {
         result << "(TupleLiteralExpr";
         for (const std::shared_ptr<expr_node>& expr : this->exprs) { result << " " << expr->s_expression(); }
         result << ")";
+        return result.str();
+    }
+
+    std::string unop_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(UnopExpr ";
+        switch (this->type) {
+            case unop_type::INV:
+                result << "!";
+                break;
+            case unop_type::NEG:
+                result << "-";
+                break;
+            default:
+                throw std::runtime_error("Unhandled `unop_type` in s-expression");
+        }
+        result << " " << this->operand->s_expression() << ")";
         return result.str();
     }
 

@@ -1,6 +1,6 @@
 /**
  * @file ast_node.hpp
- * @package Assignment 3
+ * @package Assignments 3-5
  * @author Cayden Lund (u1182408)
  * @brief Defines the AST node classes.
  *
@@ -12,6 +12,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "token/token.hpp"
@@ -56,13 +57,18 @@ namespace ast_node {
         EXPR,                //  AST node `expr_node`.
         ARRAY_INDEX_EXPR,    //  AST node `array_index_expr_node`.
         ARRAY_LITERAL_EXPR,  //  AST node `array_literal_expr_node`.
+        ARRAY_LOOP_EXPR,     //  AST node `array_loop_expr_node`.
+        BINOP_EXPR,          //  AST node `binop_expr_node`.
         CALL_EXPR,           //  AST node `call_expr_node`.
         FALSE_EXPR,          //  AST node `false_expr_node`.
         FLOAT_EXPR,          //  AST node `float_expr_node`.
+        IF_EXPR,             //  AST node `if_expr_node`.
         INTEGER_EXPR,        //  AST node `integer_expr_node`.
+        SUM_LOOP_EXPR,       //  AST node `sum_loop_expr_node`.
         TRUE_EXPR,           //  AST node `true_expr_node`.
         TUPLE_INDEX_EXPR,    //  AST node `tuple_index_expr_node`.
         TUPLE_LITERAL_EXPR,  //  AST node `tuple_literal_expr_node`.
+        UNOP_EXPR,           //  AST node `unop_expr_node`.
         VARIABLE_EXPR,       //  AST node `variable_expr_node`.
 
         //  ================
@@ -90,6 +96,35 @@ namespace ast_node {
         INT_TYPE,      //  AST node `int_type_node`.
         TUPLE_TYPE,    //  AST node `tuple_type_node`.
         VARIABLE_TYPE  //  AST node `variable_type_node`.
+    };
+
+    /**
+     * @brief An enumeration of the different binary operators.
+     *
+     */
+    enum binop_type {
+        PLUS,    //  "+"
+        MINUS,   //  "-"
+        TIMES,   //  "*"
+        DIVIDE,  //  "/"
+        MOD,     //  "%"
+        LT,      //  "<"
+        GT,      //  ">"
+        EQ,      //  "=="
+        NEQ,     //  "!="
+        LEQ,     //  "<="
+        GEQ,     //  ">="
+        AND,     //  "&&"
+        OR       //  "||"
+    };
+
+    /**
+     * @brief An enumeration of the different unary operators.
+     *
+     */
+    enum unop_type {
+        INV,  // "!"
+        NEG   // "-"
     };
 
     /*
@@ -789,6 +824,53 @@ namespace ast_node {
     };
 
     /**
+     * @brief The `array[<variable> : <expr>, ...] <expr>` expression.
+     *
+     */
+    struct array_loop_expr_node : public expr_node {
+        /**
+         * @brief Defines a single `<variable> : <expr>` ordered pair.
+         *
+         */
+        using binding_pair_t = std::tuple<token::token, std::shared_ptr<expr_node>>;
+
+        /**
+         * @brief Contains all the `<variable> : <expr>` ordered pairs.
+         *
+         */
+        const std::vector<binding_pair_t> binding_pairs;
+
+        /**
+         * @brief Defines the expression to evaluate for every combination of the bound variables.
+         *
+         */
+        const std::shared_ptr<expr_node> item_expr;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::ARRAY_LOOP_EXPR`.
+         *
+         * @param binding_pairs All the `<variable> : <expr>` bindings.
+         * @param item_expr The expression to evaluate and store for every combination of the bound variables.
+         */
+        array_loop_expr_node(std::vector<binding_pair_t> binding_pairs, const std::shared_ptr<expr_node> item_expr)
+            : expr_node(node_type::ARRAY_LOOP_EXPR), binding_pairs(binding_pairs), item_expr(item_expr) {
+            for (const binding_pair_t& binding : binding_pairs) {
+                if (std::get<0>(binding).type != token::token_type::VARIABLE)
+                    throw std::runtime_error(
+                            "Attempted to construct an `array_loop_expr_node` without a `<variable>` argument");
+            }
+        }
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
      * @brief The `[<expr, ...]` expression (for array literals).
      *
      */
@@ -807,6 +889,93 @@ namespace ast_node {
          */
         array_literal_expr_node(const std::vector<std::shared_ptr<expr_node>> expressions)
             : expr_node(node_type::ARRAY_LITERAL_EXPR), expressions(expressions) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `<expr> <binop> <expr>` expression.
+     * @details `<binop>` is one of the following:
+     *     - `"+"`
+     *     - `"-"`
+     *     - `"*"`
+     *     - `"/"`
+     *     - `"%"`
+     *     - `"<"`
+     *     - `">"`
+     *     - `"=="`
+     *     - `"!="`
+     *     - `"<="`
+     *     - `">="`
+     *     - `"&&"`
+     *     - `"||"`
+     *
+     */
+    struct binop_expr_node : public expr_node {
+        /**
+         * @brief This node's type.
+         *
+         */
+        binop_type type;
+
+        /**
+         * @brief The left-hand side operand of the operator.
+         *
+         */
+        const std::shared_ptr<expr_node> left_operand;
+
+        /**
+         * @brief The right-hand side operand of the operator.
+         *
+         */
+        const std::shared_ptr<expr_node> right_operand;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::BINOP_EXPR`.
+         *
+         * @param binop The operator token that creates this expression.
+         * @param left_operand The left-hand side operand of the operator.
+         * @param right_operand The right-hand side operand of the operator.
+         */
+        binop_expr_node(const token::token binop, const std::shared_ptr<expr_node> left_operand,
+                        const std::shared_ptr<expr_node> right_operand)
+            : expr_node(node_type::BINOP_EXPR), left_operand(left_operand), right_operand(right_operand) {
+            if (binop.type != token::token_type::OP)
+                throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
+            if (binop.text == "+") this->type = binop_type::PLUS;
+            else if (binop.text == "-")
+                this->type = binop_type::MINUS;
+            else if (binop.text == "*")
+                this->type = binop_type::TIMES;
+            else if (binop.text == "/")
+                this->type = binop_type::DIVIDE;
+            else if (binop.text == "%")
+                this->type = binop_type::MOD;
+            else if (binop.text == "<")
+                this->type = binop_type::LT;
+            else if (binop.text == ">")
+                this->type = binop_type::GT;
+            else if (binop.text == "==")
+                this->type = binop_type::EQ;
+            else if (binop.text == "!=")
+                this->type = binop_type::NEQ;
+            else if (binop.text == "<=")
+                this->type = binop_type::LEQ;
+            else if (binop.text == ">=")
+                this->type = binop_type::GEQ;
+            else if (binop.text == "&&")
+                this->type = binop_type::AND;
+            else if (binop.text == "||")
+                this->type = binop_type::OR;
+            else
+                throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -938,6 +1107,104 @@ namespace ast_node {
     };
 
     /**
+     * @brief The `if <expr> then <expr> else <expr>` expression.
+     *
+     */
+    struct if_expr_node : public expr_node {
+        /**
+         * @brief The conditional expression.
+         * @details "if THIS then . . .".
+         *     Determines whether to evaluate the affirmative or the negative expression.
+         *
+         */
+        const std::shared_ptr<expr_node> conditional_expr;
+
+        /**
+         * @brief The affirmative expression.
+         * @details "if . . . then THIS else . . .".
+         *     Evaluated when the condition is true.
+         *
+         */
+        const std::shared_ptr<expr_node> affirmative_expr;
+
+        /**
+         * @brief The negative expression.
+         * @details "if . . . then . . . else THIS".
+         *     Evaluated when the conditional is false.
+         *
+         */
+        const std::shared_ptr<expr_node> negative_expr;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::IF_EXPR`.
+         *
+         * @param conditional_expr The expression that determines whether to evaluate the affirmative or the negative
+         *     expression.
+         * @param affirmative_expr The expression that is evaluated when the condition is true.
+         * @param negative_expr The expression that is evaluated when the condition is false.
+         */
+        if_expr_node(const std::shared_ptr<expr_node> conditional_expr,
+                     const std::shared_ptr<expr_node> affirmative_expr, const std::shared_ptr<expr_node> negative_expr)
+            : expr_node(node_type::IF_EXPR), conditional_expr(conditional_expr), affirmative_expr(affirmative_expr),
+              negative_expr(negative_expr) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `sum[<variable> : <expr>, ...] <expr>` expression.
+     *
+     */
+    struct sum_loop_expr_node : public expr_node {
+        /**
+         * @brief Defines a single `<variable> : <expr>` ordered pair.
+         *
+         */
+        using binding_pair_t = std::tuple<token::token, std::shared_ptr<expr_node>>;
+
+        /**
+         * @brief Contains all the `<variable> : <expr>` ordered pairs.
+         *
+         */
+        const std::vector<binding_pair_t> binding_pairs;
+
+        /**
+         * @brief Defines the expression to evaluate for every combination of the bound variables.
+         *
+         */
+        const std::shared_ptr<expr_node> sum_expr;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::SUM_LOOP_EXPR`.
+         *
+         * @param binding_pairs All the `<variable> : <expr>` bindings.
+         * @param sum_expr The expression to evaluate and sum for every combination of the bound variables.
+         */
+        sum_loop_expr_node(std::vector<binding_pair_t> binding_pairs, const std::shared_ptr<expr_node> sum_expr)
+            : expr_node(node_type::SUM_LOOP_EXPR), binding_pairs(binding_pairs), sum_expr(sum_expr) {
+            for (const binding_pair_t& binding : binding_pairs) {
+                if (std::get<0>(binding).type != token::token_type::VARIABLE)
+                    throw std::runtime_error(
+                            "Attempted to construct a `sum_loop_expr_node` without a `<variable>` argument");
+            }
+        }
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
      * @brief The `true` expression.
      *
      */
@@ -1011,6 +1278,52 @@ namespace ast_node {
          */
         tuple_literal_expr_node(const std::vector<std::shared_ptr<expr_node>> exprs)
             : expr_node(node_type::TUPLE_LITERAL_EXPR), exprs(exprs) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `<unop> <expr>` expression.
+     * @details `<unop>` is one of the following:
+     *     - `"!"`
+     *     - `"-"`
+     *
+     */
+    struct unop_expr_node : public expr_node {
+        /**
+         * @brief This node's type.
+         *
+         */
+        unop_type type;
+
+        /**
+         * @brief The operand of the operator.
+         *
+         */
+        const std::shared_ptr<expr_node> operand;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::UNOP_EXPR`.
+         *
+         * @param unop The operator token that creates this expression.
+         * @param operand The operand of this operator.
+         */
+        unop_expr_node(const token::token unop, const std::shared_ptr<expr_node> operand)
+            : expr_node(node_type::UNOP_EXPR), operand(operand) {
+            if (unop.type != token::token_type::OP)
+                throw std::runtime_error("Attempted to construct a `unop_expr_node` without a `<unop>` argument");
+            if (unop.text == "!") this->type = unop_type::INV;
+            else if (unop.text == "-")
+                this->type = unop_type::NEG;
+            else
+                throw std::runtime_error("Attempted to construct a `unop_expr_node` without a `<unop>` argument");
+        }
 
         /**
          * @brief Returns the s-expression string for this AST node.
