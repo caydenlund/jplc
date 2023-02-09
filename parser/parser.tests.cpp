@@ -1,6 +1,6 @@
 /**
  * @file parser.tests.cpp
- * @package Assignment 3-4.
+ * @package Assignments 3-5
  * @author Cayden Lund (u1182408)
  * @brief Contains tests for the parser.
  *
@@ -231,6 +231,8 @@ namespace tests::parser_tests {
 
     /**
      * @brief Ensures that the parser can correctly parse expressions.
+     * @details Does not include operators, except for the indexing operator
+     *     on arrays and tuples.
      *
      * @return The empty string if successful; an error message otherwise.
      */
@@ -364,6 +366,1620 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         return nodes_cmp(node, variable_expr);
+    }
+
+    /**
+     * @brief Ensures that the parser can correctly parse operators.
+     *
+     * @return The empty string if successful; an error message otherwise.
+     */
+    std::string parse_operators() {
+        lexer::token_list_t tokens;
+        parser::node_ptr_t node;
+        parser::node_ptr_t expected_node;
+        std::string result;
+
+        const token::token variable_a {0, "a", token::token_type::VARIABLE};
+        const token::token variable_b {0, "b", token::token_type::VARIABLE};
+        const token::token variable_c {0, "c", token::token_type::VARIABLE};
+        const token::token variable_d {0, "d", token::token_type::VARIABLE};
+        const token::token variable_e {0, "e", token::token_type::VARIABLE};
+        const token::token variable_abc {0, "abc", token::token_type::VARIABLE};
+        const token::token variable_xyz {0, "xyz", token::token_type::VARIABLE};
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_a = std::make_shared<ast_node::variable_expr_node>(
+                variable_a);
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_b = std::make_shared<ast_node::variable_expr_node>(
+                variable_b);
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_c = std::make_shared<ast_node::variable_expr_node>(
+                variable_c);
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_d = std::make_shared<ast_node::variable_expr_node>(
+                variable_d);
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_e = std::make_shared<ast_node::variable_expr_node>(
+                variable_e);
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_abc
+                = std::make_shared<ast_node::variable_expr_node>(variable_abc);
+        const std::shared_ptr<ast_node::variable_expr_node> var_expr_xyz
+                = std::make_shared<ast_node::variable_expr_node>(variable_xyz);
+        const token::token operator_inverse {0, "!", token::token_type::OP};
+        const token::token operator_negate {0, "-", token::token_type::OP};
+        const token::token operator_times {0, "*", token::token_type::OP};
+        const token::token operator_divide {0, "/", token::token_type::OP};
+        const token::token operator_mod {0, "%", token::token_type::OP};
+        const token::token operator_plus {0, "+", token::token_type::OP};
+        const token::token operator_minus {0, "-", token::token_type::OP};
+        const token::token operator_lt {0, "<", token::token_type::OP};
+        const token::token operator_gt {0, ">", token::token_type::OP};
+        const token::token operator_leq {0, "<=", token::token_type::OP};
+        const token::token operator_geq {0, ">=", token::token_type::OP};
+        const token::token operator_eq {0, "==", token::token_type::OP};
+        const token::token operator_neq {0, "!=", token::token_type::OP};
+        const token::token operator_and {0, "&&", token::token_type::OP};
+        const token::token operator_or {0, "||", token::token_type::OP};
+        const std::shared_ptr<ast_node::integer_expr_node> int_expr_0 = std::make_shared<ast_node::integer_expr_node>(
+                token::token {0, "0", token::token_type::INTVAL});
+
+        std::vector<std::shared_ptr<ast_node::expr_node>> index_args;
+        std::shared_ptr<ast_node::array_index_expr_node> inner_array_index_expr;
+        std::shared_ptr<ast_node::tuple_index_expr_node> inner_tuple_index_expr;
+        std::shared_ptr<ast_node::expr_node> inner_expr;
+        std::vector<ast_node::array_loop_expr_node::binding_pair_t> array_bindings;
+        std::vector<ast_node::sum_loop_expr_node::binding_pair_t> sum_bindings;
+        std::shared_ptr<ast_node::expr_node> if_condition;
+        std::shared_ptr<ast_node::expr_node> if_then;
+        std::shared_ptr<ast_node::expr_node> if_else;
+        std::shared_ptr<ast_node::expr_node> left_expr;
+        std::shared_ptr<ast_node::expr_node> right_expr;
+
+        //  1: Indexing:
+        //  ------------
+        tokens = lexer::lex_all("xyz[]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a, b, c]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a, var_expr_b, var_expr_c};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz{0}");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::tuple_index_expr_node>(var_expr_xyz, int_expr_0);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a, b, c][d, e]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a, var_expr_b, var_expr_c};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        index_args = {var_expr_d, var_expr_e};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(inner_array_index_expr, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a, b, c]{0}");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a, var_expr_b, var_expr_c};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::tuple_index_expr_node>(inner_array_index_expr, int_expr_0);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz{0}[a, b, c]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_tuple_index_expr = std::make_shared<ast_node::tuple_index_expr_node>(var_expr_xyz, int_expr_0);
+        index_args = {var_expr_a, var_expr_b, var_expr_c};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(inner_tuple_index_expr, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz{0}{0}");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_tuple_index_expr = std::make_shared<ast_node::tuple_index_expr_node>(var_expr_xyz, int_expr_0);
+        expected_node = std::make_shared<ast_node::tuple_index_expr_node>(inner_tuple_index_expr, int_expr_0);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        //  2: Unary inverse `!` and negation `-`:
+        //  --------------------------------------
+        tokens = lexer::lex_all("!xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_xyz);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_xyz);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!-xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-!xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!xyz[a]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, inner_array_index_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(!xyz)[a]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_xyz);
+        index_args = {var_expr_a};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(inner_expr, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-xyz[a]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_array_index_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[!a]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_xyz);
+        index_args = {inner_expr};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[-a]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_xyz);
+        index_args = {inner_expr};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        //  3: Multiplicative `*`, `/`, and `%`:
+        //  ------------------------------------
+        tokens = lexer::lex_all("a * b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a / b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_divide, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a % b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_mod, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * b * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * b / c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_divide, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * b % c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_mod, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a / b * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_divide, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a / b / c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_divide, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_divide, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a / b % c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_divide, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_mod, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a % b * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_mod, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a % b / c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_divide, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_mod, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a % b % c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_mod, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_mod, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a] * b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_array_index_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * xyz[b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_b};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, inner_array_index_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a * b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        index_args = {inner_expr};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!a * b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * !b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!(a * b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-a * b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * -b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-(a * b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        //  4: Additive `+` and `-`:
+        //  ------------------------
+        tokens = lexer::lex_all("a + b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a - b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + b + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + (b + c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + b - c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_minus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + (b - c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a - b + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a - (b + c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a - b - c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_minus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a - (b - c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_minus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a] + b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a};
+        inner_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + xyz[b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_b};
+        inner_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a + b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        index_args = {inner_expr};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!a + b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + !b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!(a + b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-a + b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + -b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-(a + b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * b + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * (b + c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + b * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(a + b) * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+
+        //  5: Comparative `<`, `>` `<=`, `>=`, `==`, and `!=`:
+        //  ---------------------------------------------------
+        tokens = lexer::lex_all("a < b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a > b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_gt, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a <= b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_leq, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a >= b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_geq, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a == b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_eq, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a != b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_neq, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b < c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b < c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b > c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_gt, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b > c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_gt, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b <= c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_leq, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b <= c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_leq, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b >= c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_geq, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b >= c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_geq, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b == c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_eq, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b == c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_eq, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b != c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_neq, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b != c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_neq, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a] < b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < xyz[b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_b};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a < b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        index_args = {inner_expr};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!a < b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < !b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!(a < b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-a < b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < -b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-(a < b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + b < c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(a < b) + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + (b < c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        //  6: Boolean `&&` and `||`:
+        //  -------------------------
+        tokens = lexer::lex_all("a && b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a || b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_or, var_expr_a, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && b && c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && b || c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_or, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && (b || c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_or, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a || b && c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_or, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a || (b || c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_or, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_or, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a] && b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_a};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && xyz[b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        index_args = {var_expr_b};
+        inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("xyz[a && b]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        index_args = {inner_expr};
+        expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!a && b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && !b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("!(a && b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_inverse, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-a && b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_b);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && -b");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-(a && b)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && b * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(a && b) * c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * b && c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a * (b && c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && b + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(a && b) + c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + b && c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a + (b && c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < b && c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a < (b && c)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("a && b < c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(a && b) < c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        //  7: Prefix `array`, `sum`, and `if`:
+        //  -----------------------------------
+        tokens = lexer::lex_all("array[] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: a] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {{variable_a, var_expr_a}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: a, b: b] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {{variable_a, var_expr_a}, {variable_b, var_expr_b}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: array[] xyz] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        array_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: sum[] xyz] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        array_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: if b then c else d] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::if_expr_node>(var_expr_b, var_expr_c, var_expr_d);
+        array_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: a] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {{variable_a, var_expr_a}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: a, b: b] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {{variable_a, var_expr_a}, {variable_b, var_expr_b}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: array[] xyz] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        sum_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: sum[] xyz] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        sum_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: if b then c else d] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::if_expr_node>(var_expr_b, var_expr_c, var_expr_d);
+        sum_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, var_expr_b, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if array[] xyz then b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        if_condition = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::if_expr_node>(if_condition, var_expr_b, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then array[] xyz else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        if_then = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, if_condition, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then b else array[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        if_else = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, var_expr_b, if_else);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if sum[] xyz then b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        if_condition = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::if_expr_node>(if_condition, var_expr_b, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then sum[] xyz else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        if_then = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, if_condition, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then b else sum[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        if_else = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, var_expr_b, if_else);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-array[a: a] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {{variable_a, var_expr_a}};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: -a] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        array_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[a: a] -abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_abc);
+        array_bindings = {{variable_a, var_expr_a}};
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-sum[a: a] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {{variable_a, var_expr_a}};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: -a] abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        sum_bindings = {{variable_a, inner_expr}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[a: a] -abc");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_abc);
+        sum_bindings = {{variable_a, var_expr_a}};
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("-if a then b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        inner_expr = std::make_shared<ast_node::if_expr_node>(var_expr_a, var_expr_b, var_expr_c);
+        expected_node = std::make_shared<ast_node::unop_expr_node>(operator_negate, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if -a then b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        if_condition = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
+        expected_node = std::make_shared<ast_node::if_expr_node>(if_condition, var_expr_b, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then -b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        if_then = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_b);
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, if_then, var_expr_c);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("if a then b else -c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        if_else = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_c);
+        expected_node = std::make_shared<ast_node::if_expr_node>(var_expr_a, var_expr_b, if_else);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] abc * array[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] (abc * array[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] abc * sum[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] (abc * sum[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] abc + array[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] (abc + array[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] abc + sum[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] (abc + sum[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] abc < array[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] (abc < array[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] abc < sum[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] (abc < sum[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] abc && array[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("array[] (abc && array[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        array_bindings = {};
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] abc && sum[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, left_expr, right_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("sum[] (abc && sum[] xyz)");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_abc, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        return {};
     }
 
     /**
@@ -541,6 +2157,7 @@ namespace tests::parser_tests {
         tests.emplace_back(parse_arguments, "Parse arguments");
         tests.emplace_back(parse_bindings, "Parse bindings");
         tests.emplace_back(parse_commands, "Parse commands");
+        tests.emplace_back(parse_operators, "Parse operators");
         tests.emplace_back(parse_expressions, "Parse expressions");
         tests.emplace_back(parse_lvalues, "Parse lvalues");
         tests.emplace_back(parse_statements, "Parse statements");
