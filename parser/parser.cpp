@@ -693,6 +693,92 @@ namespace parser {
         return {std::make_shared<ast_node::array_literal_expr_node>(expr_list), index + 1};
     }
 
+    parser_return_t parse_expr_array_loop(token_vec_t tokens, unsigned int index) {
+        //  1: `"array"`.
+        if (tokens[index]->type != token::token_type::ARRAY) throw parser_error_recoverable();
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  2: `"["`.
+        if (tokens[index]->type != token::token_type::LSQUARE)
+            throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::LSQUARE);
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  3: `<variable> : <expr>, ...`.
+        std::vector<ast_node::array_loop_expr_node::binding_pair_t> bindings;
+        while (tokens[index]->type != token::token_type::RSQUARE) {
+            //  3.1: `<variable>`.
+            if (tokens[index]->type != token::token_type::VARIABLE)
+                throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type,
+                                                  token::token_type::VARIABLE);
+            const token::token variable = *tokens[index];
+
+            //  Increment and check.
+            index++;
+            if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+            if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+            //  3.2: `":"`.
+            if (tokens[index]->type != token::token_type::COLON)
+                throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::COLON);
+
+            //  Increment and check.
+            index++;
+            if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+            if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+            //  3.3: `<expr>`.
+            const parser_return_t result = parse_expr(tokens, index);
+            const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
+                    std::get<0>(result));
+
+            //  Add it to the end of the list of bindings.
+            bindings.emplace_back(variable, expression);
+
+            //  Increment and check.
+            index = std::get<1>(result);
+            if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+            if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+            if (tokens[index]->type != token::token_type::COMMA && tokens[index]->type != token::token_type::RSQUARE)
+                throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::COMMA);
+            if (tokens[index]->type == token::token_type::COMMA) {
+                index++;
+                if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+                if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+                if (tokens[index]->type != token::token_type::VARIABLE)
+                    throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type,
+                                                      token::token_type::VARIABLE);
+            }
+        }
+
+        //  4: `"]"`.
+        if (tokens[index]->type != token::token_type::RSQUARE)
+            throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::RSQUARE);
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  5: `<expr>`.
+        parser_return_t result = parse_expr(tokens, index);
+        const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
+                std::get<0>(result));
+
+        //  Increment and check.
+        index = std::get<1>(result);
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+
+        return {std::make_shared<ast_node::array_loop_expr_node>(bindings, expression), index};
+    }
+
     parser_return_t parse_expr_call(token_vec_t tokens, unsigned int index) {
         //  1: `<variable>`.
         if (tokens[index]->type != token::token_type::VARIABLE) throw parser_error_recoverable();
@@ -994,6 +1080,92 @@ namespace parser {
         if (tokens[index]->type != token::token_type::NEWLINE) throw parser_error_trailing_token(tokens[index]->start);
 
         return {std::make_shared<ast_node::return_stmt_node>(expr), index + 1};
+    }
+
+    parser_return_t parse_expr_sum_loop(token_vec_t tokens, unsigned int index) {
+        //  1: `"sum"`.
+        if (tokens[index]->type != token::token_type::SUM) throw parser_error_recoverable();
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  2: `"["`.
+        if (tokens[index]->type != token::token_type::LSQUARE)
+            throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::LSQUARE);
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  3: `<variable> : <expr>, ...`.
+        std::vector<ast_node::sum_loop_expr_node::binding_pair_t> bindings;
+        while (tokens[index]->type != token::token_type::RSQUARE) {
+            //  3.1: `<variable>`.
+            if (tokens[index]->type != token::token_type::VARIABLE)
+                throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type,
+                                                  token::token_type::VARIABLE);
+            const token::token variable = *tokens[index];
+
+            //  Increment and check.
+            index++;
+            if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+            if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+            //  3.2: `":"`.
+            if (tokens[index]->type != token::token_type::COLON)
+                throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::COLON);
+
+            //  Increment and check.
+            index++;
+            if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+            if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+            //  3.3: `<expr>`.
+            const parser_return_t result = parse_expr(tokens, index);
+            const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
+                    std::get<0>(result));
+
+            //  Add it to the end of the list of bindings.
+            bindings.emplace_back(variable, expression);
+
+            //  Increment and check.
+            index = std::get<1>(result);
+            if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+            if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+            if (tokens[index]->type != token::token_type::COMMA && tokens[index]->type != token::token_type::RSQUARE)
+                throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::COMMA);
+            if (tokens[index]->type == token::token_type::COMMA) {
+                index++;
+                if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+                if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+                if (tokens[index]->type != token::token_type::VARIABLE)
+                    throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type,
+                                                      token::token_type::VARIABLE);
+            }
+        }
+
+        //  4: `"]"`.
+        if (tokens[index]->type != token::token_type::RSQUARE)
+            throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::RSQUARE);
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  5: `<expr>`.
+        parser_return_t result = parse_expr(tokens, index);
+        const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
+                std::get<0>(result));
+
+        //  Increment and check.
+        index = std::get<1>(result);
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+
+        return {std::make_shared<ast_node::sum_loop_expr_node>(bindings, expression), index};
     }
 
     //  Types:

@@ -237,19 +237,38 @@ namespace tests::parser_tests {
      * @return The empty string if successful; an error message otherwise.
      */
     std::string parse_expressions() {
-        //  `array_index_expr_node`:
-        //  ------------------------
-        const token::token variable_xyz {0, "xyz", token::token_type::VARIABLE};
+        //  `array_loop_expr_node`:
+        //  -----------------------
+        const token::token variable_a {0, "a", token::token_type::VARIABLE};
+        const token::token variable_b {0, "b", token::token_type::VARIABLE};
+        const token::token variable_c {0, "c", token::token_type::VARIABLE};
+        const std::shared_ptr<ast_node::expr_node> var_expr_a = std::make_shared<ast_node::variable_expr_node>(variable_a);
+        const std::shared_ptr<ast_node::expr_node> var_expr_b = std::make_shared<ast_node::variable_expr_node>(variable_b);
+        const std::shared_ptr<ast_node::expr_node> var_expr_c = std::make_shared<ast_node::variable_expr_node>(variable_c);
         const token::token int_1 {0, "1", token::token_type::INTVAL};
         const token::token int_2 {0, "2", token::token_type::INTVAL};
         const token::token int_3 {0, "3", token::token_type::INTVAL};
+        const token::token int_12 {0, "12", token::token_type::INTVAL};
+        const std::shared_ptr<ast_node::expr_node> expr_1 = std::make_shared<ast_node::integer_expr_node>(int_1);
+        const std::shared_ptr<ast_node::expr_node> expr_2 = std::make_shared<ast_node::integer_expr_node>(int_2);
+        const std::shared_ptr<ast_node::expr_node> expr_3 = std::make_shared<ast_node::integer_expr_node>(int_3);
+        const std::shared_ptr<ast_node::expr_node> expr_12 = std::make_shared<ast_node::integer_expr_node>(int_12);
+        const std::vector<ast_node::array_loop_expr_node::binding_pair_t> binding_pairs = {{variable_a, expr_1},{variable_b, expr_2},{variable_c, expr_3}};
+        const std::shared_ptr<ast_node::array_loop_expr_node> array_loop_expr = std::make_shared<ast_node::array_loop_expr_node>(binding_pairs, expr_12);
+        
+        lexer::token_list_t tokens = lexer::lex_all("array[a: 1, b: 2, c: 3] 12");
+        parser::node_ptr_t node = std::get<0>(parser::parse_expr(tokens, 0));
+        
+        std::string result = nodes_cmp(node, array_loop_expr);
+        if (result != "") return result;
+
+        //  `array_index_expr_node`:
+        //  ------------------------
+        const token::token variable_xyz {0, "xyz", token::token_type::VARIABLE};
         const token::token int_4 {0, "4", token::token_type::INTVAL};
         const token::token int_5 {0, "5", token::token_type::INTVAL};
         const std::shared_ptr<ast_node::expr_node> expr_xyz = std::make_shared<ast_node::variable_expr_node>(
                 variable_xyz);
-        const std::shared_ptr<ast_node::expr_node> expr_1 = std::make_shared<ast_node::integer_expr_node>(int_1);
-        const std::shared_ptr<ast_node::expr_node> expr_2 = std::make_shared<ast_node::integer_expr_node>(int_2);
-        const std::shared_ptr<ast_node::expr_node> expr_3 = std::make_shared<ast_node::integer_expr_node>(int_3);
         const std::shared_ptr<ast_node::expr_node> expr_4 = std::make_shared<ast_node::integer_expr_node>(int_4);
         const std::shared_ptr<ast_node::expr_node> expr_5 = std::make_shared<ast_node::integer_expr_node>(int_5);
         const std::vector<std::shared_ptr<ast_node::expr_node>> expr_set_inner {expr_1, expr_2};
@@ -259,10 +278,10 @@ namespace tests::parser_tests {
         const std::shared_ptr<ast_node::array_index_expr_node> array_index_expr_outer
                 = std::make_shared<ast_node::array_index_expr_node>(array_index_expr_inner, expr_set_outer);
 
-        lexer::token_list_t tokens = lexer::lex_all("xyz[1, 2][3, 4, 5]");
-        parser::node_ptr_t node = std::get<0>(parser::parse_expr(tokens, 0));
+        tokens = lexer::lex_all("xyz[1, 2][3, 4, 5]");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        std::string result = nodes_cmp(node, array_index_expr_outer);
+        result = nodes_cmp(node, array_index_expr_outer);
         if (result != "") return result;
 
         //  `array_literal_expr_node`:
@@ -320,6 +339,16 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         result = nodes_cmp(node, integer_expr);
+        if (result != "") return result;
+
+        //  `sum_loop_expr_node`:
+        //  -----------------------
+        const std::shared_ptr<ast_node::sum_loop_expr_node> sum_loop_expr = std::make_shared<ast_node::sum_loop_expr_node>(binding_pairs, expr_12);
+
+        tokens = lexer::lex_all("sum[a: 1, b: 2, c: 3] 12");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+        
+        result = nodes_cmp(node, sum_loop_expr);
         if (result != "") return result;
 
         //  `true_expr_node`:
