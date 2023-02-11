@@ -17,8 +17,10 @@ Checks: '
     -hicpp-named-parameter,
     -llvm-header-guard,
     -llvmlibc*,
+    -misc-no-recursion,
     -misc-non-private-member-variables-in-classes,
     -modernize-use-trailing-return-type,
     -readability-braces-around-statements,
+    -readability-function-cognitive-complexity,
     -readability-named-parameter,
     '
