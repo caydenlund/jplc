@@ -341,55 +341,55 @@ namespace tests::ast_node_tests {
         //  ------------------
         //  `binop_type::PLUS`:
         const ast_node::binop_expr_node plus_binop_expr(operator_plus, var_expr_a, var_expr_b);
-        result = str_cmp(plus_binop_expr.s_expression(), "(BinopExpr + (VarExpr a) (VarExpr b))");
+        result = str_cmp(plus_binop_expr.s_expression(), "(BinopExpr (VarExpr a) + (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::MINUS`:
         const ast_node::binop_expr_node minus_binop_expr(operator_minus, var_expr_a, var_expr_b);
-        result = str_cmp(minus_binop_expr.s_expression(), "(BinopExpr - (VarExpr a) (VarExpr b))");
+        result = str_cmp(minus_binop_expr.s_expression(), "(BinopExpr (VarExpr a) - (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::TIMES`:
         const ast_node::binop_expr_node times_binop_expr(operator_times, var_expr_a, var_expr_b);
-        result = str_cmp(times_binop_expr.s_expression(), "(BinopExpr * (VarExpr a) (VarExpr b))");
+        result = str_cmp(times_binop_expr.s_expression(), "(BinopExpr (VarExpr a) * (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::DIVIDE`:
         const ast_node::binop_expr_node divide_binop_expr(operator_divide, var_expr_a, var_expr_b);
-        result = str_cmp(divide_binop_expr.s_expression(), "(BinopExpr / (VarExpr a) (VarExpr b))");
+        result = str_cmp(divide_binop_expr.s_expression(), "(BinopExpr (VarExpr a) / (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::MOD`:
         const ast_node::binop_expr_node mod_binop_expr(operator_mod, var_expr_a, var_expr_b);
-        result = str_cmp(mod_binop_expr.s_expression(), "(BinopExpr % (VarExpr a) (VarExpr b))");
+        result = str_cmp(mod_binop_expr.s_expression(), "(BinopExpr (VarExpr a) % (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::LT`:
         const ast_node::binop_expr_node lt_binop_expr(operator_lt, var_expr_a, var_expr_b);
-        result = str_cmp(lt_binop_expr.s_expression(), "(BinopExpr < (VarExpr a) (VarExpr b))");
+        result = str_cmp(lt_binop_expr.s_expression(), "(BinopExpr (VarExpr a) < (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::GT`:
         const ast_node::binop_expr_node gt_binop_expr(operator_gt, var_expr_a, var_expr_b);
-        result = str_cmp(gt_binop_expr.s_expression(), "(BinopExpr > (VarExpr a) (VarExpr b))");
+        result = str_cmp(gt_binop_expr.s_expression(), "(BinopExpr (VarExpr a) > (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::EQ`:
         const ast_node::binop_expr_node eq_binop_expr(operator_eq, var_expr_a, var_expr_b);
-        result = str_cmp(eq_binop_expr.s_expression(), "(BinopExpr == (VarExpr a) (VarExpr b))");
+        result = str_cmp(eq_binop_expr.s_expression(), "(BinopExpr (VarExpr a) == (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::NEQ`:
         const ast_node::binop_expr_node neq_binop_expr(operator_neq, var_expr_a, var_expr_b);
-        result = str_cmp(neq_binop_expr.s_expression(), "(BinopExpr != (VarExpr a) (VarExpr b))");
+        result = str_cmp(neq_binop_expr.s_expression(), "(BinopExpr (VarExpr a) != (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::LEQ`:
         const ast_node::binop_expr_node leq_binop_expr(operator_leq, var_expr_a, var_expr_b);
-        result = str_cmp(leq_binop_expr.s_expression(), "(BinopExpr <= (VarExpr a) (VarExpr b))");
+        result = str_cmp(leq_binop_expr.s_expression(), "(BinopExpr (VarExpr a) <= (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::GEQ`:
         const ast_node::binop_expr_node geq_binop_expr(operator_geq, var_expr_a, var_expr_b);
-        result = str_cmp(geq_binop_expr.s_expression(), "(BinopExpr >= (VarExpr a) (VarExpr b))");
+        result = str_cmp(geq_binop_expr.s_expression(), "(BinopExpr (VarExpr a) >= (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::AND`:
         const ast_node::binop_expr_node and_binop_expr(operator_and, var_expr_a, var_expr_b);
-        result = str_cmp(and_binop_expr.s_expression(), "(BinopExpr && (VarExpr a) (VarExpr b))");
+        result = str_cmp(and_binop_expr.s_expression(), "(BinopExpr (VarExpr a) && (VarExpr b))");
         if (result != "") return result;
         //  `binop_type::OR`:
         const ast_node::binop_expr_node or_binop_expr(operator_or, var_expr_a, var_expr_b);
-        result = str_cmp(or_binop_expr.s_expression(), "(BinopExpr || (VarExpr a) (VarExpr b))");
+        result = str_cmp(or_binop_expr.s_expression(), "(BinopExpr (VarExpr a) || (VarExpr b))");
         if (result != "") return result;
 
         //  `if_expr_node`:

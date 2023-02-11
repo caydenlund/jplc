@@ -160,7 +160,7 @@ namespace ast_node {
 
     std::string binop_expr_node::s_expression() const {
         std::stringstream result;
-        result << "(BinopExpr ";
+        result << "(BinopExpr " << this->left_operand->s_expression() << " ";
         switch (this->type) {
             case binop_type::PLUS:
                 result << "+";
@@ -204,7 +204,7 @@ namespace ast_node {
             default:
                 throw std::runtime_error("Unhandled `binop_type` in s-expression");
         }
-        result << " " << this->left_operand->s_expression() << " " << this->right_operand->s_expression() << ")";
+        result << " " << this->right_operand->s_expression() << ")";
         return result.str();
     }
 
