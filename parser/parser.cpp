@@ -59,6 +59,107 @@ namespace parser {
         throw parser_error_unrecoverable(tokens[index]->start);
     }
 
+    std::vector<std::vector<token::token>> split_tokens(token_vec_t tokens, unsigned int index) {
+        std::vector<std::vector<token::token>> split_set;
+        std::vector<token::token> current_set;
+        const std::vector<token::token_type> valid_types = {
+                //  Keywords:
+                //  ---------
+                token::token_type::ARRAY, token::token_type::ELSE, token::token_type::IF, token::token_type::OP,
+                token::token_type::SUM, token::token_type::THEN,
+                //  Values:
+                //  -------
+                token::token_type::FALSE, token::token_type::FLOATVAL, token::token_type::INTVAL,
+                token::token_type::TRUE, token::token_type::VARIABLE,
+                //  Punctuation:
+                //  ------------
+                token::token_type::COLON, token::token_type::COMMA, token::token_type::LCURLY,
+                token::token_type::RCURLY, token::token_type::LPAREN, token::token_type::RPAREN,
+                token::token_type::LSQUARE, token::token_type::RSQUARE};
+        for (unsigned int sub_index = index; sub_index < (unsigned int)tokens.size(); sub_index++) {
+            token::token current_token = *tokens[sub_index];
+            if (current_token.type == token::token_type::OP) {
+                if (!current_set.empty()) split_set.push_back(current_set);
+                split_set.push_back({current_token});
+                current_set.clear();
+            } else if (current_token.type == token::token_type::LPAREN) {
+                current_set.push_back(current_token);
+                //  We need to find the corresponding right parenthesis.
+                unsigned int paren_count = 1;
+                while (paren_count > 0) {
+                    current_token = *tokens[++sub_index];
+                    current_set.push_back(current_token);
+                    switch (current_token.type) {
+                        case token::token_type::LPAREN:
+                            paren_count++;
+                            break;
+                        case token::token_type::RPAREN:
+                            paren_count--;
+                            break;
+                        case token::token_type::NEWLINE:
+                            throw parser_error_newline(current_token.start);
+                        case token::token_type::END_OF_FILE:
+                            throw parser_error_eof();
+                        default:
+                            break;
+                    }
+                }
+            } else if (current_token.type == token::token_type::LSQUARE) {
+                current_set.push_back(current_token);
+                //  We need to find the corresponding right square bracket.
+                unsigned int square_count = 1;
+                while (square_count > 0) {
+                    current_token = *tokens[++sub_index];
+                    current_set.push_back(current_token);
+                    switch (current_token.type) {
+                        case token::token_type::LSQUARE:
+                            square_count++;
+                            break;
+                        case token::token_type::RSQUARE:
+                            square_count--;
+                            break;
+                        case token::token_type::NEWLINE:
+                            throw parser_error_newline(current_token.start);
+                        case token::token_type::END_OF_FILE:
+                            throw parser_error_eof();
+                        default:
+                            break;
+                    }
+                }
+            } else if (current_token.type == token::token_type::LCURLY) {
+                current_set.push_back(current_token);
+                //  We need to find the corresponding right curly brace.
+                unsigned int curly_count = 1;
+                while (curly_count > 0) {
+                    current_token = *tokens[++sub_index];
+                    current_set.push_back(current_token);
+                    switch (current_token.type) {
+                        case token::token_type::LCURLY:
+                            curly_count++;
+                            break;
+                        case token::token_type::RCURLY:
+                            curly_count--;
+                            break;
+                        case token::token_type::NEWLINE:
+                            throw parser_error_newline(current_token.start);
+                        case token::token_type::END_OF_FILE:
+                            throw parser_error_eof();
+                        default:
+                            break;
+                    }
+                }
+            } else if (std::find(valid_types.begin(), valid_types.end(), current_token.type) != valid_types.end()) {
+                current_set.push_back(current_token);
+            } else {
+                split_set.push_back(current_set);
+                break;
+            }
+        }
+
+        return split_set;
+    }
+
+
     /*
     ==============================
     ||  AST Node Superclasses:  ||
@@ -77,6 +178,17 @@ namespace parser {
     }
 
     parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
+        //  This one is more involved than the others, due to operators and operator precedence.
+        //  First, we split the tokens into different sub-expressions.
+        const std::vector<std::vector<token::token>> subsets = split_tokens(tokens, index);
+
+        //  Next, we evaluate all the operators in order.
+
+        //  1: Indexing.
+        //  This is already taken care of in the `split_tokens` method call.
+
+        //  2: Unary inverse and negation.
+
         parser_return_t result = apply_parsers(tokens, expression_parsers, index);
         std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
@@ -249,7 +361,7 @@ namespace parser {
 
         //  2: `<expr>`.
         parser_return_t result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -269,7 +381,7 @@ namespace parser {
         //  4: `<string>`.
         if (tokens[index]->type != token::token_type::STRING)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::STRING);
-        token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
+        const token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
 
         //  Increment and check.
         index++;
@@ -394,7 +506,7 @@ namespace parser {
 
         //  2: `<lvalue>`.
         parser_return_t result = parse_lvalue(tokens, index);
-        std::shared_ptr<ast_node::lvalue_node> lvalue = std::reinterpret_pointer_cast<ast_node::lvalue_node>(
+        const std::shared_ptr<ast_node::lvalue_node> lvalue = std::reinterpret_pointer_cast<ast_node::lvalue_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -413,7 +525,7 @@ namespace parser {
 
         //  4: `<expr>`.
         result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -436,7 +548,7 @@ namespace parser {
         //  2: `<string>`.
         if (tokens[index]->type != token::token_type::STRING)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::STRING);
-        token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
+        const token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
 
         //  Increment and check.
         index++;
@@ -466,7 +578,7 @@ namespace parser {
         //  3: `<string>`.
         if (tokens[index]->type != token::token_type::STRING)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::STRING);
-        token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
+        const token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
 
         //  Increment and check.
         index++;
@@ -484,8 +596,8 @@ namespace parser {
 
         //  5: `<argument>`.
         parser_return_t result = parse_argument(tokens, index);
-        std::shared_ptr<ast_node::argument_node> argument = std::reinterpret_pointer_cast<ast_node::argument_node>(
-                std::get<0>(result));
+        const std::shared_ptr<ast_node::argument_node> argument
+                = std::reinterpret_pointer_cast<ast_node::argument_node>(std::get<0>(result));
 
         //  Increment and check.
         index = std::get<1>(result);
@@ -506,7 +618,7 @@ namespace parser {
 
         //  2: `<expr>`.
         parser_return_t result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -528,7 +640,7 @@ namespace parser {
 
         //  2: `<cmd>`.
         const parser_return_t result = parse_cmd(tokens, index);
-        std::shared_ptr<ast_node::cmd_node> cmd = std::reinterpret_pointer_cast<ast_node::cmd_node>(
+        const std::shared_ptr<ast_node::cmd_node> cmd = std::reinterpret_pointer_cast<ast_node::cmd_node>(
                 std::get<0>(result));
 
         return {std::make_shared<ast_node::time_cmd_node>(cmd), std::get<1>(result)};
@@ -544,7 +656,7 @@ namespace parser {
         if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
 
         //  2: `<variable>`.
-        token::token variable = *tokens[index];
+        const token::token variable = *tokens[index];
         if (tokens[index]->type != token::token_type::VARIABLE)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::VARIABLE);
 
@@ -564,7 +676,7 @@ namespace parser {
 
         //  4: `<type>`.
         parser_return_t result = parse_type(tokens, index);
-        std::shared_ptr<ast_node::type_node> type = std::reinterpret_pointer_cast<ast_node::type_node>(
+        const std::shared_ptr<ast_node::type_node> type = std::reinterpret_pointer_cast<ast_node::type_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -595,7 +707,7 @@ namespace parser {
 
         //  3: `<expr>`.
         parser_return_t result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -615,7 +727,7 @@ namespace parser {
         //  5: `<string>`.
         if (tokens[index]->type != token::token_type::STRING)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::STRING);
-        token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
+        const token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
 
         //  Increment and check.
         index++;
@@ -1135,7 +1247,7 @@ namespace parser {
 
         //  2: `<expr>`.
         parser_return_t result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -1155,7 +1267,7 @@ namespace parser {
         //  4: `<string>`.
         if (tokens[index]->type != token::token_type::STRING)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::STRING);
-        token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
+        const token::string_token string_tok = *std::reinterpret_pointer_cast<token::string_token>(tokens[index]);
 
         //  Increment and check.
         index++;
@@ -1177,7 +1289,7 @@ namespace parser {
 
         //  2: `<lvalue>`.
         parser_return_t result = parse_lvalue(tokens, index);
-        std::shared_ptr<ast_node::lvalue_node> lvalue = std::reinterpret_pointer_cast<ast_node::lvalue_node>(
+        const std::shared_ptr<ast_node::lvalue_node> lvalue = std::reinterpret_pointer_cast<ast_node::lvalue_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -1196,7 +1308,7 @@ namespace parser {
 
         //  4: `<expr>`.
         result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -1218,7 +1330,7 @@ namespace parser {
 
         //  2: `<expr>`.
         const parser_return_t result = parse_expr(tokens, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
+        const std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
                 std::get<0>(result));
 
         //  Increment and check.
@@ -1254,8 +1366,8 @@ namespace parser {
         if (tokens[index]->type != token::token_type::RSQUARE)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::RSQUARE);
 
-        std::shared_ptr<ast_node::array_type_node> node = std::make_shared<ast_node::array_type_node>(type,
-                                                                                                      num_commas + 1);
+        const std::shared_ptr<ast_node::array_type_node> node = std::make_shared<ast_node::array_type_node>(
+                type, num_commas + 1);
 
         return {node, index + 1};
     }
