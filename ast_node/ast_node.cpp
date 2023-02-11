@@ -96,7 +96,7 @@ namespace ast_node {
     std::string fn_cmd_node::s_expression() const {
         std::stringstream result;
         result << "(FnCmd " << name.text << " (";
-        if (this->bindings.size() > 0) {
+        if (!this->bindings.empty()) {
             for (unsigned int index = 0; index < this->bindings.size() - 1; index++) {
                 result << this->bindings[index]->s_expression() << " ";
             }
@@ -162,43 +162,43 @@ namespace ast_node {
         std::stringstream result;
         result << "(BinopExpr " << this->left_operand->s_expression() << " ";
         switch (this->type) {
-            case binop_type::PLUS:
+            case op_type::BINOP_PLUS:
                 result << "+";
                 break;
-            case binop_type::MINUS:
+            case op_type::BINOP_MINUS:
                 result << "-";
                 break;
-            case binop_type::TIMES:
+            case op_type::BINOP_TIMES:
                 result << "*";
                 break;
-            case binop_type::DIVIDE:
+            case op_type::BINOP_DIVIDE:
                 result << "/";
                 break;
-            case binop_type::MOD:
+            case op_type::BINOP_MOD:
                 result << "%";
                 break;
-            case binop_type::LT:
+            case op_type::BINOP_LT:
                 result << "<";
                 break;
-            case binop_type::GT:
+            case op_type::BINOP_GT:
                 result << ">";
                 break;
-            case binop_type::EQ:
+            case op_type::BINOP_EQ:
                 result << "==";
                 break;
-            case binop_type::NEQ:
+            case op_type::BINOP_NEQ:
                 result << "!=";
                 break;
-            case binop_type::LEQ:
+            case op_type::BINOP_LEQ:
                 result << "<=";
                 break;
-            case binop_type::GEQ:
+            case op_type::BINOP_GEQ:
                 result << ">=";
                 break;
-            case binop_type::AND:
+            case op_type::BINOP_AND:
                 result << "&&";
                 break;
-            case binop_type::OR:
+            case op_type::BINOP_OR:
                 result << "||";
                 break;
             default:
@@ -229,6 +229,8 @@ namespace ast_node {
 
     std::string integer_expr_node::s_expression() const { return "(IntExpr " + std::to_string(this->value) + ")"; }
 
+    std::string op_expr_node::s_expression() const { return ""; }
+
     std::string sum_loop_expr_node::s_expression() const {
         std::stringstream result;
         result << "(SumLoopExpr";
@@ -257,10 +259,10 @@ namespace ast_node {
         std::stringstream result;
         result << "(UnopExpr ";
         switch (this->type) {
-            case unop_type::INV:
+            case op_type::UNOP_INV:
                 result << "!";
                 break;
-            case unop_type::NEG:
+            case op_type::UNOP_NEG:
                 result << "-";
                 break;
             default:

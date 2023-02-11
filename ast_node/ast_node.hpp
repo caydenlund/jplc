@@ -64,6 +64,7 @@ namespace ast_node {
         FLOAT_EXPR,          //  AST node `float_expr_node`.
         IF_EXPR,             //  AST node `if_expr_node`.
         INTEGER_EXPR,        //  AST node `integer_expr_node`.
+        OP_EXPR,             //  AST node `op_expr_node`.
         SUM_LOOP_EXPR,       //  AST node `sum_loop_expr_node`.
         TRUE_EXPR,           //  AST node `true_expr_node`.
         TUPLE_INDEX_EXPR,    //  AST node `tuple_index_expr_node`.
@@ -99,32 +100,25 @@ namespace ast_node {
     };
 
     /**
-     * @brief An enumeration of the different binary operators.
+     * @brief An enumeration of the different operators.
      *
      */
-    enum binop_type {
-        PLUS,    //  "+"
-        MINUS,   //  "-"
-        TIMES,   //  "*"
-        DIVIDE,  //  "/"
-        MOD,     //  "%"
-        LT,      //  "<"
-        GT,      //  ">"
-        EQ,      //  "=="
-        NEQ,     //  "!="
-        LEQ,     //  "<="
-        GEQ,     //  ">="
-        AND,     //  "&&"
-        OR       //  "||"
-    };
-
-    /**
-     * @brief An enumeration of the different unary operators.
-     *
-     */
-    enum unop_type {
-        INV,  // "!"
-        NEG   // "-"
+    enum op_type {
+        BINOP_PLUS,    //  "+"
+        BINOP_MINUS,   //  "-"
+        BINOP_TIMES,   //  "*"
+        BINOP_DIVIDE,  //  "/"
+        BINOP_MOD,     //  "%"
+        BINOP_LT,      //  "<"
+        BINOP_GT,      //  ">"
+        BINOP_EQ,      //  "=="
+        BINOP_NEQ,     //  "!="
+        BINOP_LEQ,     //  "<="
+        BINOP_GEQ,     //  ">="
+        BINOP_AND,     //  "&&"
+        BINOP_OR,      //  "||"
+        UNOP_INV,      //  "!"
+        UNOP_NEG       //  "-"
     };
 
     /*
@@ -921,7 +915,7 @@ namespace ast_node {
          * @brief This node's type.
          *
          */
-        binop_type type;
+        op_type type;
 
         /**
          * @brief The left-hand side operand of the operator.
@@ -948,31 +942,31 @@ namespace ast_node {
             : expr_node(node_type::BINOP_EXPR), left_operand(left_operand), right_operand(right_operand) {
             if (binop.type != token::token_type::OP)
                 throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
-            if (binop.text == "+") this->type = binop_type::PLUS;
+            if (binop.text == "+") this->type = op_type::BINOP_PLUS;
             else if (binop.text == "-")
-                this->type = binop_type::MINUS;
+                this->type = op_type::BINOP_MINUS;
             else if (binop.text == "*")
-                this->type = binop_type::TIMES;
+                this->type = op_type::BINOP_TIMES;
             else if (binop.text == "/")
-                this->type = binop_type::DIVIDE;
+                this->type = op_type::BINOP_DIVIDE;
             else if (binop.text == "%")
-                this->type = binop_type::MOD;
+                this->type = op_type::BINOP_MOD;
             else if (binop.text == "<")
-                this->type = binop_type::LT;
+                this->type = op_type::BINOP_LT;
             else if (binop.text == ">")
-                this->type = binop_type::GT;
+                this->type = op_type::BINOP_GT;
             else if (binop.text == "==")
-                this->type = binop_type::EQ;
+                this->type = op_type::BINOP_EQ;
             else if (binop.text == "!=")
-                this->type = binop_type::NEQ;
+                this->type = op_type::BINOP_NEQ;
             else if (binop.text == "<=")
-                this->type = binop_type::LEQ;
+                this->type = op_type::BINOP_LEQ;
             else if (binop.text == ">=")
-                this->type = binop_type::GEQ;
+                this->type = op_type::BINOP_GEQ;
             else if (binop.text == "&&")
-                this->type = binop_type::AND;
+                this->type = op_type::BINOP_AND;
             else if (binop.text == "||")
-                this->type = binop_type::OR;
+                this->type = op_type::BINOP_OR;
             else
                 throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
         }
@@ -1158,6 +1152,67 @@ namespace ast_node {
     };
 
     /**
+     * @brief An AST node for operators. This node is temporary and is used for parsing expressions.
+     *
+     */
+    struct op_expr_node : public expr_node {
+        /**
+         * @brief This node's type.
+         *
+         */
+        op_type type;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::BINOP_EXPR`.
+         *
+         * @param binop The operator token that creates this expression.
+         * @param left_operand The left-hand side operand of the operator.
+         * @param right_operand The right-hand side operand of the operator.
+         */
+        op_expr_node(const token::token op_tok) : expr_node(node_type::OP_EXPR) {
+            if (op_tok.type != token::token_type::OP)
+                throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
+            if (op_tok.text == "+") this->type = op_type::BINOP_PLUS;
+            else if (op_tok.text == "-")
+                this->type = op_type::BINOP_MINUS;
+            else if (op_tok.text == "*")
+                this->type = op_type::BINOP_TIMES;
+            else if (op_tok.text == "/")
+                this->type = op_type::BINOP_DIVIDE;
+            else if (op_tok.text == "%")
+                this->type = op_type::BINOP_MOD;
+            else if (op_tok.text == "<")
+                this->type = op_type::BINOP_LT;
+            else if (op_tok.text == ">")
+                this->type = op_type::BINOP_GT;
+            else if (op_tok.text == "==")
+                this->type = op_type::BINOP_EQ;
+            else if (op_tok.text == "!=")
+                this->type = op_type::BINOP_NEQ;
+            else if (op_tok.text == "<=")
+                this->type = op_type::BINOP_LEQ;
+            else if (op_tok.text == ">=")
+                this->type = op_type::BINOP_GEQ;
+            else if (op_tok.text == "&&")
+                this->type = op_type::BINOP_AND;
+            else if (op_tok.text == "||")
+                this->type = op_type::BINOP_OR;
+            else if (op_tok.text == "!")
+                this->type = op_type::UNOP_INV;
+            else
+                throw std::runtime_error("Attempted to construct an `op_expr_node` without an `<op>` argument");
+        }
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
      * @brief The `sum[<variable> : <expr>, ...] <expr>` expression.
      *
      */
@@ -1299,7 +1354,7 @@ namespace ast_node {
          * @brief This node's type.
          *
          */
-        unop_type type;
+        op_type type;
 
         /**
          * @brief The operand of the operator.
@@ -1318,9 +1373,9 @@ namespace ast_node {
             : expr_node(node_type::UNOP_EXPR), operand(operand) {
             if (unop.type != token::token_type::OP)
                 throw std::runtime_error("Attempted to construct a `unop_expr_node` without a `<unop>` argument");
-            if (unop.text == "!") this->type = unop_type::INV;
+            if (unop.text == "!") this->type = op_type::UNOP_INV;
             else if (unop.text == "-")
-                this->type = unop_type::NEG;
+                this->type = op_type::UNOP_NEG;
             else
                 throw std::runtime_error("Attempted to construct a `unop_expr_node` without a `<unop>` argument");
         }
