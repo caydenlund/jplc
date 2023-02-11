@@ -242,9 +242,12 @@ namespace tests::parser_tests {
         const token::token variable_a {0, "a", token::token_type::VARIABLE};
         const token::token variable_b {0, "b", token::token_type::VARIABLE};
         const token::token variable_c {0, "c", token::token_type::VARIABLE};
-        const std::shared_ptr<ast_node::expr_node> var_expr_a = std::make_shared<ast_node::variable_expr_node>(variable_a);
-        const std::shared_ptr<ast_node::expr_node> var_expr_b = std::make_shared<ast_node::variable_expr_node>(variable_b);
-        const std::shared_ptr<ast_node::expr_node> var_expr_c = std::make_shared<ast_node::variable_expr_node>(variable_c);
+        const std::shared_ptr<ast_node::expr_node> var_expr_a = std::make_shared<ast_node::variable_expr_node>(
+                variable_a);
+        const std::shared_ptr<ast_node::expr_node> var_expr_b = std::make_shared<ast_node::variable_expr_node>(
+                variable_b);
+        const std::shared_ptr<ast_node::expr_node> var_expr_c = std::make_shared<ast_node::variable_expr_node>(
+                variable_c);
         const token::token int_1 {0, "1", token::token_type::INTVAL};
         const token::token int_2 {0, "2", token::token_type::INTVAL};
         const token::token int_3 {0, "3", token::token_type::INTVAL};
@@ -253,12 +256,15 @@ namespace tests::parser_tests {
         const std::shared_ptr<ast_node::expr_node> expr_2 = std::make_shared<ast_node::integer_expr_node>(int_2);
         const std::shared_ptr<ast_node::expr_node> expr_3 = std::make_shared<ast_node::integer_expr_node>(int_3);
         const std::shared_ptr<ast_node::expr_node> expr_12 = std::make_shared<ast_node::integer_expr_node>(int_12);
-        const std::vector<ast_node::array_loop_expr_node::binding_pair_t> binding_pairs = {{variable_a, expr_1},{variable_b, expr_2},{variable_c, expr_3}};
-        const std::shared_ptr<ast_node::array_loop_expr_node> array_loop_expr = std::make_shared<ast_node::array_loop_expr_node>(binding_pairs, expr_12);
-        
+        const std::vector<ast_node::array_loop_expr_node::binding_pair_t> binding_pairs = {{variable_a, expr_1},
+                                                                                           {variable_b, expr_2},
+                                                                                           {variable_c, expr_3}};
+        const std::shared_ptr<ast_node::array_loop_expr_node> array_loop_expr
+                = std::make_shared<ast_node::array_loop_expr_node>(binding_pairs, expr_12);
+
         lexer::token_list_t tokens = lexer::lex_all("array[a: 1, b: 2, c: 3] 12");
         parser::node_ptr_t node = std::get<0>(parser::parse_expr(tokens, 0));
-        
+
         std::string result = nodes_cmp(node, array_loop_expr);
         if (result != "") return result;
 
@@ -330,6 +336,17 @@ namespace tests::parser_tests {
         result = nodes_cmp(node, float_expr);
         if (result != "") return result;
 
+        //  `if_expr_node`:
+        //  ---------------
+        const std::shared_ptr<ast_node::if_expr_node> if_expr = std::make_shared<ast_node::if_expr_node>(
+                var_expr_a, var_expr_b, var_expr_c);
+
+        tokens = lexer::lex_all("if a then b else c");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        result = nodes_cmp(node, if_expr);
+        if (result != "") return result;
+
         //  `integer_expr_node`:
         //  --------------------
         const std::shared_ptr<ast_node::integer_expr_node> integer_expr = std::make_shared<ast_node::integer_expr_node>(
@@ -343,11 +360,12 @@ namespace tests::parser_tests {
 
         //  `sum_loop_expr_node`:
         //  -----------------------
-        const std::shared_ptr<ast_node::sum_loop_expr_node> sum_loop_expr = std::make_shared<ast_node::sum_loop_expr_node>(binding_pairs, expr_12);
+        const std::shared_ptr<ast_node::sum_loop_expr_node> sum_loop_expr
+                = std::make_shared<ast_node::sum_loop_expr_node>(binding_pairs, expr_12);
 
         tokens = lexer::lex_all("sum[a: 1, b: 2, c: 3] 12");
         node = std::get<0>(parser::parse_expr(tokens, 0));
-        
+
         result = nodes_cmp(node, sum_loop_expr);
         if (result != "") return result;
 

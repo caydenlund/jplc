@@ -830,6 +830,67 @@ namespace parser {
         return {std::make_shared<ast_node::float_expr_node>(*tokens[index]), index + 1};
     }
 
+    parser_return_t parse_expr_if(token_vec_t tokens, unsigned int index) {
+        //  1: `"if"`.
+        if (tokens[index]->type != token::token_type::IF) throw parser_error_recoverable();
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  2: `<expr>`.
+        parser_return_t result = parse_expr(tokens, index);
+        const std::shared_ptr<ast_node::expr_node> conditional_expression
+                = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+
+        //  Increment and check.
+        index = std::get<1>(result);
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  3: `"then"`.
+        if (tokens[index]->type != token::token_type::THEN)
+            throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::THEN);
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  4: `<expr>`.
+        result = parse_expr(tokens, index);
+        const std::shared_ptr<ast_node::expr_node> affirmative_expression
+                = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+
+        //  Increment and check.
+        index = std::get<1>(result);
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  5: `"else"`.
+        if (tokens[index]->type != token::token_type::ELSE)
+            throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::ELSE);
+
+        //  Increment and check.
+        index++;
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
+
+        //  6: `<expr>`.
+        result = parse_expr(tokens, index);
+        const std::shared_ptr<ast_node::expr_node> negative_expression
+                = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+
+        //  Increment and check.
+        index = std::get<1>(result);
+        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
+
+        return {std::make_shared<ast_node::if_expr_node>(conditional_expression, affirmative_expression,
+                                                         negative_expression),
+                index + 1};
+    }
+
     parser_return_t parse_expr_integer(token_vec_t tokens, unsigned int index) {
         //  1: `<integer>`.
         if (tokens[index]->type != token::token_type::INTVAL) throw parser_error_recoverable();
