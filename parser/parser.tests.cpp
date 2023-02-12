@@ -594,7 +594,7 @@ namespace tests::parser_tests {
         tokens = lexer::lex_all("(!xyz)[a]");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_xyz);
         index_args = {var_expr_a};
         expected_node = std::make_shared<ast_node::array_index_expr_node>(inner_expr, index_args);
 
@@ -614,7 +614,7 @@ namespace tests::parser_tests {
         tokens = lexer::lex_all("xyz[!a]");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_inverse, var_expr_a);
         index_args = {inner_expr};
         expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
 
@@ -624,7 +624,7 @@ namespace tests::parser_tests {
         tokens = lexer::lex_all("xyz[-a]");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::unop_expr_node>(operator_negate, var_expr_a);
         index_args = {inner_expr};
         expected_node = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
 
@@ -723,8 +723,8 @@ namespace tests::parser_tests {
         tokens = lexer::lex_all("a % b / c");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_divide, var_expr_a, var_expr_b);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_mod, inner_expr, var_expr_c);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_mod, var_expr_a, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_divide, inner_expr, var_expr_c);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1196,7 +1196,7 @@ namespace tests::parser_tests {
 
         index_args = {var_expr_a};
         inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_expr, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, inner_array_index_expr, var_expr_b);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1206,7 +1206,7 @@ namespace tests::parser_tests {
 
         index_args = {var_expr_b};
         inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_expr);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_a, inner_array_index_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1379,7 +1379,7 @@ namespace tests::parser_tests {
 
         index_args = {var_expr_a};
         inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_expr, var_expr_b);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, inner_array_index_expr, var_expr_b);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1389,7 +1389,7 @@ namespace tests::parser_tests {
 
         index_args = {var_expr_b};
         inner_array_index_expr = std::make_shared<ast_node::array_index_expr_node>(var_expr_xyz, index_args);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_expr);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_a, inner_array_index_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1850,7 +1850,7 @@ namespace tests::parser_tests {
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("array[] abc * array[] xyz");
+        tokens = lexer::lex_all("(array[] abc) * array[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         array_bindings = {};
@@ -1861,13 +1861,24 @@ namespace tests::parser_tests {
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("array[] (abc * array[] xyz)");
+        tokens = lexer::lex_all("array[] abc * array[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         array_bindings = {};
         inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_abc, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_abc, inner_expr);
         expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+
+        result = nodes_cmp(node, expected_node);
+        if (result != "") return result;
+
+        tokens = lexer::lex_all("(sum[] abc) * sum[] xyz");
+        node = std::get<0>(parser::parse_expr(tokens, 0));
+
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, left_expr, right_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1876,20 +1887,20 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         sum_bindings = {};
-        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
-        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_times, left_expr, right_expr);
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_abc, inner_expr);
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("sum[] (abc * sum[] xyz)");
+        tokens = lexer::lex_all("(array[] abc) + array[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        sum_bindings = {};
-        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_times, var_expr_abc, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+        array_bindings = {};
+        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, left_expr, right_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1898,20 +1909,20 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         array_bindings = {};
-        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
-        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, left_expr, right_expr);
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_abc, inner_expr);
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("array[] (abc + array[] xyz)");
+        tokens = lexer::lex_all("(sum[] abc) + sum[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        array_bindings = {};
-        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_abc, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, left_expr, right_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1920,20 +1931,20 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         sum_bindings = {};
-        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
-        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_plus, left_expr, right_expr);
+        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_abc, inner_expr);
+        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("sum[] (abc + sum[] xyz)");
+        tokens = lexer::lex_all("(array[] abc) < array[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        sum_bindings = {};
-        inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_plus, var_expr_abc, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
+        array_bindings = {};
+        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, left_expr, right_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1942,20 +1953,20 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         array_bindings = {};
-        left_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_abc);
-        right_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, left_expr, right_expr);
+        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_abc, inner_expr);
+        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("array[] (abc < array[] xyz)");
+        tokens = lexer::lex_all("(sum[] abc) < sum[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
-        array_bindings = {};
-        inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_abc, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
+        sum_bindings = {};
+        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
+        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
+        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, left_expr, right_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
@@ -1964,25 +1975,14 @@ namespace tests::parser_tests {
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         sum_bindings = {};
-        left_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_abc);
-        right_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        expected_node = std::make_shared<ast_node::binop_expr_node>(operator_lt, left_expr, right_expr);
-
-        result = nodes_cmp(node, expected_node);
-        if (result != "") return result;
-
-        tokens = lexer::lex_all("sum[] (abc < sum[] xyz)");
-        node = std::get<0>(parser::parse_expr(tokens, 0));
-
-        sum_bindings = {};
         inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_abc, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_lt, var_expr_abc, inner_expr);
         expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("array[] abc && array[] xyz");
+        tokens = lexer::lex_all("(array[] abc) && array[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         array_bindings = {};
@@ -1993,18 +1993,18 @@ namespace tests::parser_tests {
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("array[] (abc && array[] xyz)");
+        tokens = lexer::lex_all("array[] abc && array[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         array_bindings = {};
         inner_expr = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_abc, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_abc, inner_expr);
         expected_node = std::make_shared<ast_node::array_loop_expr_node>(array_bindings, inner_expr);
 
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("sum[] abc && sum[] xyz");
+        tokens = lexer::lex_all("(sum[] abc) && sum[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         sum_bindings = {};
@@ -2015,18 +2015,15 @@ namespace tests::parser_tests {
         result = nodes_cmp(node, expected_node);
         if (result != "") return result;
 
-        tokens = lexer::lex_all("sum[] (abc && sum[] xyz)");
+        tokens = lexer::lex_all("sum[] abc && sum[] xyz");
         node = std::get<0>(parser::parse_expr(tokens, 0));
 
         sum_bindings = {};
         inner_expr = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, var_expr_xyz);
-        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_abc, var_expr_xyz);
+        inner_expr = std::make_shared<ast_node::binop_expr_node>(operator_and, var_expr_abc, inner_expr);
         expected_node = std::make_shared<ast_node::sum_loop_expr_node>(sum_bindings, inner_expr);
 
-        result = nodes_cmp(node, expected_node);
-        if (result != "") return result;
-
-        return {};
+        return nodes_cmp(node, expected_node);
     }
 
     /**
@@ -2201,14 +2198,14 @@ namespace tests::parser_tests {
      */
     std::vector<test_t> get_all_tests() {
         std::vector<test_t> tests;
-        //  tests.emplace_back(parse_arguments, "Parse arguments");      //  OK
-        //  tests.emplace_back(parse_bindings, "Parse bindings");        //  OK
-        //  tests.emplace_back(parse_commands, "Parse commands");        //  OK
-        tests.emplace_back(parse_operators, "Parse operators");      //  FAIL
-        //  tests.emplace_back(parse_expressions, "Parse expressions");  //  FAIL
-        //  tests.emplace_back(parse_lvalues, "Parse lvalues");          //  OK
-        //  tests.emplace_back(parse_statements, "Parse statements");    //  OK
-        //  tests.emplace_back(parse_types, "Parse types");              //  OK
+        tests.emplace_back(parse_arguments, "Parse arguments");
+        tests.emplace_back(parse_bindings, "Parse bindings");
+        tests.emplace_back(parse_commands, "Parse commands");
+        tests.emplace_back(parse_operators, "Parse operators");
+        tests.emplace_back(parse_expressions, "Parse expressions");
+        tests.emplace_back(parse_lvalues, "Parse lvalues");
+        tests.emplace_back(parse_statements, "Parse statements");
+        tests.emplace_back(parse_types, "Parse types");
 
         return tests;
     }
