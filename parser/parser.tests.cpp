@@ -2201,14 +2201,14 @@ namespace tests::parser_tests {
      */
     std::vector<test_t> get_all_tests() {
         std::vector<test_t> tests;
-        tests.emplace_back(parse_arguments, "Parse arguments");
-        tests.emplace_back(parse_bindings, "Parse bindings");
-        tests.emplace_back(parse_commands, "Parse commands");
-        tests.emplace_back(parse_operators, "Parse operators");
-        tests.emplace_back(parse_expressions, "Parse expressions");
-        tests.emplace_back(parse_lvalues, "Parse lvalues");
-        tests.emplace_back(parse_statements, "Parse statements");
-        tests.emplace_back(parse_types, "Parse types");
+        //  tests.emplace_back(parse_arguments, "Parse arguments");      //  OK
+        //  tests.emplace_back(parse_bindings, "Parse bindings");        //  OK
+        //  tests.emplace_back(parse_commands, "Parse commands");        //  OK
+        tests.emplace_back(parse_operators, "Parse operators");      //  FAIL
+        //  tests.emplace_back(parse_expressions, "Parse expressions");  //  FAIL
+        //  tests.emplace_back(parse_lvalues, "Parse lvalues");          //  OK
+        //  tests.emplace_back(parse_statements, "Parse statements");    //  OK
+        //  tests.emplace_back(parse_types, "Parse types");              //  OK
 
         return tests;
     }

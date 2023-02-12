@@ -140,20 +140,21 @@ namespace ast_node {
         return result.str();
     }
 
+    std::string array_literal_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(ArrayLiteralExpr";
+        for (const std::shared_ptr<expr_node>& expr : this->expressions) { result << " " << expr->s_expression(); }
+        result << ")";
+        return result.str();
+    }
+
     std::string array_loop_expr_node::s_expression() const {
         std::stringstream result;
         result << "(ArrayLoopExpr";
         for (const array_loop_expr_node::binding_pair_t& binding : this->binding_pairs) {
             result << " " << std::get<0>(binding).text << " " << std::get<1>(binding)->s_expression();
         }
-        result << " " << this->item_expr->s_expression() << ")";
-        return result.str();
-    }
-
-    std::string array_literal_expr_node::s_expression() const {
-        std::stringstream result;
-        result << "(ArrayLiteralExpr";
-        for (const std::shared_ptr<expr_node>& expr : this->expressions) { result << " " << expr->s_expression(); }
+        if (this->item_expr != nullptr) result << " " << this->item_expr->s_expression();
         result << ")";
         return result.str();
     }
@@ -229,7 +230,42 @@ namespace ast_node {
 
     std::string integer_expr_node::s_expression() const { return "(IntExpr " + std::to_string(this->value) + ")"; }
 
-    std::string op_expr_node::s_expression() const { return ""; }
+    std::string op_expr_node::s_expression() const {
+        switch (this->operator_type) {
+            case op_type::BINOP_PLUS:
+                return "+";
+            case op_type::BINOP_MINUS:
+                return "-";
+            case op_type::BINOP_TIMES:
+                return "*";
+            case op_type::BINOP_DIVIDE:
+                return "/";
+            case op_type::BINOP_MOD:
+                return "%";
+            case op_type::BINOP_LT:
+                return "<";
+            case op_type::BINOP_GT:
+                return ">";
+            case op_type::BINOP_EQ:
+                return "==";
+            case op_type::BINOP_NEQ:
+                return "!=";
+            case op_type::BINOP_LEQ:
+                return "<=";
+            case op_type::BINOP_GEQ:
+                return ">=";
+            case op_type::BINOP_AND:
+                return "&&";
+            case op_type::BINOP_OR:
+                return "||";
+            case op_type::UNOP_INV:
+                return "!";
+            case op_type::UNOP_NEG:
+                return "-";
+            default:
+                return "";
+        }
+    }
 
     std::string sum_loop_expr_node::s_expression() const {
         std::stringstream result;
@@ -237,7 +273,8 @@ namespace ast_node {
         for (const array_loop_expr_node::binding_pair_t& binding : this->binding_pairs) {
             result << " " << std::get<0>(binding).text << " " << std::get<1>(binding)->s_expression();
         }
-        result << " " << this->sum_expr->s_expression() << ")";
+        if (this->sum_expr != nullptr) result << " " << this->sum_expr->s_expression();
+        result << ")";
         return result.str();
     }
 

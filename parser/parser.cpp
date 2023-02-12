@@ -59,9 +59,9 @@ namespace parser {
         throw parser_error_unrecoverable(tokens[index]->start);
     }
 
-    std::vector<std::vector<token::token>> split_tokens(token_vec_t tokens, unsigned int index) {
-        std::vector<std::vector<token::token>> split_set;
-        std::vector<token::token> current_set;
+    std::vector<std::vector<std::shared_ptr<token::token>>> split_tokens(token_vec_t tokens, unsigned int index) {
+        std::vector<std::vector<std::shared_ptr<token::token>>> split_set;
+        std::vector<std::shared_ptr<token::token>> current_set;
         const std::vector<token::token_type> valid_types = {
                 //  Keywords:
                 //  ---------
@@ -76,19 +76,52 @@ namespace parser {
                 token::token_type::COLON, token::token_type::COMMA, token::token_type::LCURLY,
                 token::token_type::RCURLY, token::token_type::LPAREN, token::token_type::RPAREN,
                 token::token_type::LSQUARE, token::token_type::RSQUARE};
-        for (unsigned int sub_index = index; sub_index < (unsigned int)tokens.size(); sub_index++) {
-            token::token current_token = *tokens[sub_index];
+        for (; index < (unsigned int)tokens.size(); index++) {
+            token::token current_token = *tokens[index];
             if (current_token.type == token::token_type::OP) {
                 if (!current_set.empty()) split_set.push_back(current_set);
-                split_set.push_back({current_token});
+                split_set.push_back({std::make_shared<token::token>(current_token)});
+                current_set.clear();
+            } else if (current_token.type == token::token_type::ARRAY || current_token.type == token::token_type::SUM) {
+                if (!current_set.empty()) split_set.push_back(current_set);
+                current_set.clear();
+                current_set.push_back(std::make_shared<token::token>(current_token));
+                if (++index > tokens.size()) throw parser_error_eof();  //  TODO: Better exception.
+                current_token = *tokens[index];
+                if (current_token.type != token::token_type::LSQUARE)
+                    throw parser_error_token_mismatch(current_token.start, current_token.type,
+                                                      token::token_type::LSQUARE);
+                current_set.push_back(std::make_shared<token::token>(current_token));
+
+                //  We need to find the corresponding right square bracket.
+                unsigned int square_count = 1;
+                while (square_count > 0) {
+                    current_token = *tokens[++index];
+                    current_set.push_back(std::make_shared<token::token>(current_token));
+                    switch (current_token.type) {
+                        case token::token_type::LSQUARE:
+                            square_count++;
+                            break;
+                        case token::token_type::RSQUARE:
+                            square_count--;
+                            break;
+                        case token::token_type::NEWLINE:
+                            throw parser_error_newline(current_token.start);
+                        case token::token_type::END_OF_FILE:
+                            throw parser_error_eof();
+                        default:
+                            break;
+                    }
+                }
+                if (!current_set.empty()) split_set.push_back(current_set);
                 current_set.clear();
             } else if (current_token.type == token::token_type::LPAREN) {
-                current_set.push_back(current_token);
+                current_set.push_back(std::make_shared<token::token>(current_token));
                 //  We need to find the corresponding right parenthesis.
                 unsigned int paren_count = 1;
                 while (paren_count > 0) {
-                    current_token = *tokens[++sub_index];
-                    current_set.push_back(current_token);
+                    current_token = *tokens[++index];
+                    current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LPAREN:
                             paren_count++;
@@ -105,12 +138,12 @@ namespace parser {
                     }
                 }
             } else if (current_token.type == token::token_type::LSQUARE) {
-                current_set.push_back(current_token);
+                current_set.push_back(std::make_shared<token::token>(current_token));
                 //  We need to find the corresponding right square bracket.
                 unsigned int square_count = 1;
                 while (square_count > 0) {
-                    current_token = *tokens[++sub_index];
-                    current_set.push_back(current_token);
+                    current_token = *tokens[++index];
+                    current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LSQUARE:
                             square_count++;
@@ -127,12 +160,12 @@ namespace parser {
                     }
                 }
             } else if (current_token.type == token::token_type::LCURLY) {
-                current_set.push_back(current_token);
+                current_set.push_back(std::make_shared<token::token>(current_token));
                 //  We need to find the corresponding right curly brace.
                 unsigned int curly_count = 1;
                 while (curly_count > 0) {
-                    current_token = *tokens[++sub_index];
-                    current_set.push_back(current_token);
+                    current_token = *tokens[++index];
+                    current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LCURLY:
                             curly_count++;
@@ -149,12 +182,12 @@ namespace parser {
                     }
                 }
             } else if (std::find(valid_types.begin(), valid_types.end(), current_token.type) != valid_types.end()) {
-                current_set.push_back(current_token);
+                current_set.push_back(std::make_shared<token::token>(current_token));
             } else {
-                split_set.push_back(current_set);
                 break;
             }
         }
+        if (!current_set.empty()) split_set.push_back(current_set);
 
         return split_set;
     }
@@ -180,34 +213,338 @@ namespace parser {
     parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
         //  This one is more involved than the others, due to operators and operator precedence.
         //  First, we split the tokens into different sub-expressions.
-        const std::vector<std::vector<token::token>> subsets = split_tokens(tokens, index);
+        const std::vector<std::vector<std::shared_ptr<token::token>>> subsets = split_tokens(tokens, index);
 
-        //  Next, we evaluate all the operators in order.
+        //  Next, we construct AST nodes for each of the sub-expressions.
+        std::vector<std::shared_ptr<ast_node::expr_node>> expressions;
+        for (const std::vector<std::shared_ptr<token::token>>& subset : subsets) {
+            if (subset.size() == 1 && subset[0]->type == token::token_type::OP) {
+                expressions.emplace_back(std::make_shared<ast_node::op_expr_node>(*subset[0]));
+            } else {
+                parser_return_t result = apply_parsers(subset, expression_parsers, 0);
+                std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
+                        std::get<0>(result));
+                unsigned int subset_index = std::get<1>(result);
+
+                if (expression->type == ast_node::node_type::ARRAY_LOOP_EXPR) {
+                    const std::vector<std::shared_ptr<token::token>> expr_tokens(tokens.begin() + index + subset_index,
+                                                                                 tokens.end());
+                    result = parse_expr(expr_tokens, 0);
+                    std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(expression)->item_expr
+                            = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+                    expressions.emplace_back(expression);
+                    break;
+                }
+                if (expression->type == ast_node::node_type::SUM_LOOP_EXPR) {
+                    const std::vector<std::shared_ptr<token::token>> expr_tokens(tokens.begin() + index + subset_index,
+                                                                                 tokens.end());
+                    result = parse_expr(expr_tokens, 0);
+                    std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(expression)->sum_expr
+                            = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+                    expressions.emplace_back(expression);
+                    break;
+                }
+
+                //  Parse index operations.
+                while (subset_index < subset.size()
+                       && (subset[subset_index]->type == token::token_type::LSQUARE
+                           || subset[subset_index]->type == token::token_type::LCURLY)) {
+                    if (subset[subset_index]->type == token::token_type::LSQUARE) {
+                        result = parse_expr_array_index(expression, subset, subset_index);
+                        expression = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+                        subset_index = std::get<1>(result);
+                    } else {
+                        result = parse_expr_tuple_index(expression, subset, subset_index);
+                        expression = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
+                        subset_index = std::get<1>(result);
+                    }
+                }
+                if (&subset == &subsets[subsets.size() - 1]) index += subset_index - subset.size();
+                expressions.emplace_back(expression);
+            }
+            index += subset.size();
+        }
+
+        //  Now we perform the operations to get the list down to one expression node.
+        //  We do this in order.
 
         //  1: Indexing.
-        //  This is already taken care of in the `split_tokens` method call.
+        //  This is already taken care of above.
 
-        //  2: Unary inverse and negation.
-
-        parser_return_t result = apply_parsers(tokens, expression_parsers, index);
-        std::shared_ptr<ast_node::expr_node> expr = std::reinterpret_pointer_cast<ast_node::expr_node>(
-                std::get<0>(result));
-        index = std::get<1>(result);
-        while (index < tokens.size()
-               && (tokens[index]->type == token::token_type::LSQUARE
-                   || tokens[index]->type == token::token_type::LCURLY)) {
-            if (tokens[index]->type == token::token_type::LSQUARE) {
-                result = parse_expr_array_index(expr, tokens, index);
-                expr = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
-                index = std::get<1>(result);
-            } else {
-                result = parse_expr_tuple_index(expr, tokens, index);
-                expr = std::reinterpret_pointer_cast<ast_node::expr_node>(std::get<0>(result));
-                index = std::get<1>(result);
+        //  2: Unary inverse and negation operators `!` and `-`.
+        std::shared_ptr<ast_node::expr_node> next_expr;
+        for (unsigned int sub_index = 0; sub_index < expressions.size(); sub_index++) {
+            if (expressions[sub_index]->type == ast_node::node_type::OP_EXPR) {
+                const std::shared_ptr<ast_node::op_expr_node> op_expr
+                        = std::reinterpret_pointer_cast<ast_node::op_expr_node>(expressions[sub_index]);
+                switch (op_expr->operator_type) {
+                    case ast_node::op_type::UNOP_INV:
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `!` at the end of an expression");
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index, expressions.begin() + sub_index + 1);
+                        expressions[sub_index] = std::make_shared<ast_node::unop_expr_node>(
+                                token::token {0, "!", token::token_type::OP}, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::UNOP_NEG:
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `-` at the end of an expression");
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index, expressions.begin() + sub_index);
+                        expressions[sub_index] = std::make_shared<ast_node::unop_expr_node>(
+                                token::token {0, "-", token::token_type::OP}, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_MINUS:
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `-` at the end of an expression");
+                        if (sub_index == 0 || expressions[sub_index - 1]->type == ast_node::node_type::OP_EXPR) {
+                            next_expr = expressions[sub_index + 1];
+                            expressions.erase(expressions.begin() + sub_index, expressions.begin() + sub_index + 1);
+                            expressions[sub_index] = std::make_shared<ast_node::unop_expr_node>(
+                                    token::token {0, "-", token::token_type::OP}, next_expr);
+                        }
+                        sub_index--;
+                        continue;
+                    default:
+                        continue;
+                }
             }
         }
 
-        return {expr, index};
+        //  3: Multiplicative operations `*`, `/`, and `%`.
+        std::shared_ptr<ast_node::expr_node> prev_expr;
+        for (unsigned int sub_index = 1; sub_index < expressions.size(); sub_index++) {
+            if (expressions[sub_index]->type == ast_node::node_type::OP_EXPR) {
+                const std::shared_ptr<ast_node::op_expr_node> op_expr
+                        = std::reinterpret_pointer_cast<ast_node::op_expr_node>(expressions[sub_index]);
+                switch (op_expr->operator_type) {
+                    case ast_node::op_type::BINOP_TIMES:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `*` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `*` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "*", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_DIVIDE:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `/` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `/` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "/", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+        }
+
+        //  4: Additive operations `+` and `-`.
+        for (unsigned int sub_index = 1; sub_index < expressions.size(); sub_index++) {
+            if (expressions[sub_index]->type == ast_node::node_type::OP_EXPR) {
+                const std::shared_ptr<ast_node::op_expr_node> op_expr
+                        = std::reinterpret_pointer_cast<ast_node::op_expr_node>(expressions[sub_index]);
+                switch (op_expr->operator_type) {
+                    case ast_node::op_type::BINOP_PLUS:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `+` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `+` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "+", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_DIVIDE:
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `/` at the end of an expression");
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `/` at the beginning of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "/", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+        }
+
+        //  5: Comparison operators `<`, `>`, `<=`, `>=`, `==`, `!=`.
+        for (unsigned int sub_index = 1; sub_index < expressions.size(); sub_index++) {
+            if (expressions[sub_index]->type == ast_node::node_type::OP_EXPR) {
+                const std::shared_ptr<ast_node::op_expr_node> op_expr
+                        = std::reinterpret_pointer_cast<ast_node::op_expr_node>(expressions[sub_index]);
+                switch (op_expr->operator_type) {
+                    case ast_node::op_type::BINOP_LT:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `<` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `<` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "<", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_GT:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `>` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `>` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, ">", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_LEQ:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `<=` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `<=` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "<=", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_GEQ:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `>=` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `>=` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, ">=", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_EQ:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `==` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `==` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "==", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_NEQ:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `!=` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `!=` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "!=", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+        }
+
+        //  6: Boolean operators `&&` and `||`.
+        for (unsigned int sub_index = 1; sub_index < expressions.size(); sub_index++) {
+            if (expressions[sub_index]->type == ast_node::node_type::OP_EXPR) {
+                const std::shared_ptr<ast_node::op_expr_node> op_expr
+                        = std::reinterpret_pointer_cast<ast_node::op_expr_node>(expressions[sub_index]);
+                switch (op_expr->operator_type) {
+                    case ast_node::op_type::BINOP_LEQ:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `<=` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `<=` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "<=", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_AND:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `&&` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `&&` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "&&", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    case ast_node::op_type::BINOP_OR:
+                        if (sub_index == 0)
+                            throw std::runtime_error("Tried to use `||` at the beginning of an expression");
+                        if (sub_index >= expressions.size())
+                            throw std::runtime_error("Tried to use `||` at the end of an expression");
+                        prev_expr = expressions[sub_index - 1];
+                        next_expr = expressions[sub_index + 1];
+                        expressions.erase(expressions.begin() + sub_index - 1, expressions.begin() + sub_index + 1);
+                        expressions[sub_index - 1] = std::make_shared<ast_node::binop_expr_node>(
+                                token::token {0, "||", token::token_type::OP}, prev_expr, next_expr);
+                        sub_index--;
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+        }
+
+        //  7: Prefix operators `array`, `sum`, and `if`.
+        for (unsigned int sub_index = 0; sub_index < expressions.size() - 1; sub_index++) {
+            std::shared_ptr<ast_node::array_loop_expr_node> array_loop_expr;
+            std::shared_ptr<ast_node::sum_loop_expr_node> sum_loop_expr;
+            switch (expressions[sub_index]->type) {
+                case ast_node::node_type::ARRAY_LOOP_EXPR:
+                    array_loop_expr = std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(
+                            expressions[sub_index]);
+                    if (array_loop_expr->item_expr == nullptr) {
+                        expressions.erase(expressions.begin() + sub_index, expressions.begin() + sub_index + 1);
+                        array_loop_expr->item_expr = expressions[sub_index];
+                        expressions[sub_index] = array_loop_expr;
+                    }
+                    break;
+                case ast_node::node_type::SUM_LOOP_EXPR:
+                    sum_loop_expr = std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(expressions[sub_index]);
+                    if (sum_loop_expr->sum_expr == nullptr) {
+                        expressions.erase(expressions.begin() + sub_index, expressions.begin() + sub_index + 1);
+                        sum_loop_expr->sum_expr = expressions[sub_index];
+                        expressions[sub_index] = sum_loop_expr;
+                    }
+                default:
+                    break;
+            }
+        }
+
+        return {expressions[expressions.size() - 1], index};
     }
 
     parser_return_t parse_lvalue(token_vec_t tokens, unsigned int index) {
@@ -874,21 +1211,8 @@ namespace parser {
         if (tokens[index]->type != token::token_type::RSQUARE)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::RSQUARE);
 
-        //  Increment and check.
-        index++;
-        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
-        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
-
-        //  5: `<expr>`.
-        parser_return_t result = parse_expr(tokens, index);
-        const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
-                std::get<0>(result));
-
-        //  Increment and check.
-        index = std::get<1>(result);
-        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
-
-        return {std::make_shared<ast_node::array_loop_expr_node>(bindings, expression), index};
+        return {std::make_shared<ast_node::array_loop_expr_node>(bindings, std::shared_ptr<ast_node::expr_node>()),
+                index + 1};
     }
 
     parser_return_t parse_expr_call(token_vec_t tokens, unsigned int index) {
@@ -1105,21 +1429,7 @@ namespace parser {
         if (tokens[index]->type != token::token_type::RSQUARE)
             throw parser_error_token_mismatch(tokens[index]->start, tokens[index]->type, token::token_type::RSQUARE);
 
-        //  Increment and check.
-        index++;
-        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
-        if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
-
-        //  5: `<expr>`.
-        parser_return_t result = parse_expr(tokens, index);
-        const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
-                std::get<0>(result));
-
-        //  Increment and check.
-        index = std::get<1>(result);
-        if (index >= (unsigned int)(tokens.size())) throw parser_error_eof();
-
-        return {std::make_shared<ast_node::sum_loop_expr_node>(bindings, expression), index};
+        return {std::make_shared<ast_node::sum_loop_expr_node>(bindings, nullptr), index + 1};
     }
 
     parser_return_t parse_expr_true(token_vec_t tokens, unsigned int index) {

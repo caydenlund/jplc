@@ -838,7 +838,7 @@ namespace ast_node {
          * @brief Defines the expression to evaluate for every combination of the bound variables.
          *
          */
-        const std::shared_ptr<expr_node> item_expr;
+        std::shared_ptr<expr_node> item_expr;
 
         /**
          * @brief Class constructor.
@@ -1160,7 +1160,7 @@ namespace ast_node {
          * @brief This node's type.
          *
          */
-        op_type type;
+        op_type operator_type;
 
         /**
          * @brief Class constructor.
@@ -1173,33 +1173,33 @@ namespace ast_node {
         op_expr_node(const token::token op_tok) : expr_node(node_type::OP_EXPR) {
             if (op_tok.type != token::token_type::OP)
                 throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
-            if (op_tok.text == "+") this->type = op_type::BINOP_PLUS;
+            if (op_tok.text == "+") this->operator_type = op_type::BINOP_PLUS;
             else if (op_tok.text == "-")
-                this->type = op_type::BINOP_MINUS;
+                this->operator_type = op_type::BINOP_MINUS;
             else if (op_tok.text == "*")
-                this->type = op_type::BINOP_TIMES;
+                this->operator_type = op_type::BINOP_TIMES;
             else if (op_tok.text == "/")
-                this->type = op_type::BINOP_DIVIDE;
+                this->operator_type = op_type::BINOP_DIVIDE;
             else if (op_tok.text == "%")
-                this->type = op_type::BINOP_MOD;
+                this->operator_type = op_type::BINOP_MOD;
             else if (op_tok.text == "<")
-                this->type = op_type::BINOP_LT;
+                this->operator_type = op_type::BINOP_LT;
             else if (op_tok.text == ">")
-                this->type = op_type::BINOP_GT;
+                this->operator_type = op_type::BINOP_GT;
             else if (op_tok.text == "==")
-                this->type = op_type::BINOP_EQ;
+                this->operator_type = op_type::BINOP_EQ;
             else if (op_tok.text == "!=")
-                this->type = op_type::BINOP_NEQ;
+                this->operator_type = op_type::BINOP_NEQ;
             else if (op_tok.text == "<=")
-                this->type = op_type::BINOP_LEQ;
+                this->operator_type = op_type::BINOP_LEQ;
             else if (op_tok.text == ">=")
-                this->type = op_type::BINOP_GEQ;
+                this->operator_type = op_type::BINOP_GEQ;
             else if (op_tok.text == "&&")
-                this->type = op_type::BINOP_AND;
+                this->operator_type = op_type::BINOP_AND;
             else if (op_tok.text == "||")
-                this->type = op_type::BINOP_OR;
+                this->operator_type = op_type::BINOP_OR;
             else if (op_tok.text == "!")
-                this->type = op_type::UNOP_INV;
+                this->operator_type = op_type::UNOP_INV;
             else
                 throw std::runtime_error("Attempted to construct an `op_expr_node` without an `<op>` argument");
         }
@@ -1233,7 +1233,7 @@ namespace ast_node {
          * @brief Defines the expression to evaluate for every combination of the bound variables.
          *
          */
-        const std::shared_ptr<expr_node> sum_expr;
+        std::shared_ptr<expr_node> sum_expr;
 
         /**
          * @brief Class constructor.
