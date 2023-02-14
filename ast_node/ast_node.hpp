@@ -60,12 +60,14 @@ namespace ast_node {
         ARRAY_LOOP_EXPR,     //  AST node `array_loop_expr_node`.
         BINOP_EXPR,          //  AST node `binop_expr_node`.
         CALL_EXPR,           //  AST node `call_expr_node`.
+        ELSE_TOK_EXPR,       //  AST node `else_tok_expr_node`.
         FALSE_EXPR,          //  AST node `false_expr_node`.
         FLOAT_EXPR,          //  AST node `float_expr_node`.
         IF_EXPR,             //  AST node `if_expr_node`.
         INTEGER_EXPR,        //  AST node `integer_expr_node`.
         OP_EXPR,             //  AST node `op_expr_node`.
         SUM_LOOP_EXPR,       //  AST node `sum_loop_expr_node`.
+        THEN_TOK_EXPR,       //  AST node `then_tok_expr_node`.
         TRUE_EXPR,           //  AST node `true_expr_node`.
         TUPLE_INDEX_EXPR,    //  AST node `tuple_index_expr_node`.
         TUPLE_LITERAL_EXPR,  //  AST node `tuple_literal_expr_node`.
@@ -340,11 +342,11 @@ namespace ast_node {
          * @param vars The set of variable dimensions for the main variable.
          */
         array_argument_node(const token::token main_var, const std::vector<token::token> vars)
-            : argument_node(node_type::ARRAY_ARGUMENT), main_var(main_var), vars(vars) {
+                : argument_node(node_type::ARRAY_ARGUMENT), main_var(main_var), vars(vars) {
             if (main_var.type != token::token_type::VARIABLE)
                 throw std::runtime_error(
                         "Attempted to construct an `array_argument_node` without a `<variable>` token");
-            for (const token::token& tok : vars) {
+            for (const token::token &tok: vars) {
                 if (tok.type != token::token_type::VARIABLE)
                     throw std::runtime_error("Attempted to construct an `array_argument_node` without a valid set of "
                                              "`<variable>` tokens");
@@ -376,7 +378,7 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<variable>`) argument.
          */
-        variable_argument_node(const token::token& arg_1) : argument_node(node_type::VARIABLE_ARGUMENT), arg_1(arg_1) {
+        variable_argument_node(const token::token &arg_1) : argument_node(node_type::VARIABLE_ARGUMENT), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
                 throw std::runtime_error(
                         "Attempted to construct a `variable_argument_node` without a `<variable>` argument");
@@ -410,7 +412,7 @@ namespace ast_node {
          * @param args The binding arguments in the tuple sequence.
          */
         tuple_binding_node(const std::vector<std::shared_ptr<binding_node>> args)
-            : binding_node(node_type::TUPLE_BINDING), args(args) {}
+                : binding_node(node_type::TUPLE_BINDING), args(args) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -445,7 +447,7 @@ namespace ast_node {
          * @param type_arg The `<type>` of the binding.
          */
         var_binding_node(const std::shared_ptr<argument_node> arg_arg, const std::shared_ptr<type_node> type_arg)
-            : binding_node(node_type::VAR_BINDING), arg_arg(arg_arg), type_arg(type_arg) {}
+                : binding_node(node_type::VAR_BINDING), arg_arg(arg_arg), type_arg(type_arg) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -482,8 +484,8 @@ namespace ast_node {
          * @param arg_1 The first (`<expr>`) argument.
          * @param arg_2 The second (`<string>`) argument.
          */
-        assert_cmd_node(const std::shared_ptr<expr_node>& arg_1, const token::string_token& arg_2)
-            : cmd_node(node_type::ASSERT_CMD), arg_1(arg_1), arg_2(arg_2) {}
+        assert_cmd_node(const std::shared_ptr<expr_node> &arg_1, const token::string_token &arg_2)
+                : cmd_node(node_type::ASSERT_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -535,8 +537,8 @@ namespace ast_node {
         fn_cmd_node(const token::token name, const std::vector<std::shared_ptr<binding_node>> bindings,
                     const std::shared_ptr<type_node> return_type,
                     const std::vector<std::shared_ptr<stmt_node>> statements)
-            : cmd_node(node_type::FN_CMD), name(name), bindings(bindings), return_type(return_type),
-              statements(statements) {
+                : cmd_node(node_type::FN_CMD), name(name), bindings(bindings), return_type(return_type),
+                  statements(statements) {
             if (name.type != token::token_type::VARIABLE)
                 throw std::runtime_error("Attempted to construct a `fn_cmd_node` without a `<variable>` argument");
         }
@@ -574,8 +576,8 @@ namespace ast_node {
          * @param arg_1 The first (`<lvalue>`) node.
          * @param arg_2 The second (`<expr>`) node.
          */
-        let_cmd_node(const std::shared_ptr<lvalue_node>& arg_1, const std::shared_ptr<expr_node>& arg_2)
-            : cmd_node(node_type::LET_CMD), arg_1(arg_1), arg_2(arg_2) {}
+        let_cmd_node(const std::shared_ptr<lvalue_node> &arg_1, const std::shared_ptr<expr_node> &arg_2)
+                : cmd_node(node_type::LET_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -603,7 +605,7 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<string>`) argument.
          */
-        print_cmd_node(const std::string& arg_1) : cmd_node(node_type::PRINT_CMD), arg_1(arg_1) {}
+        print_cmd_node(const std::string &arg_1) : cmd_node(node_type::PRINT_CMD), arg_1(arg_1) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -638,8 +640,8 @@ namespace ast_node {
          * @param arg_1 The first (`<string>`) argument.
          * @param arg_2 The second (`<argument>`) argument.
          */
-        read_cmd_node(const token::string_token& arg_1, std::shared_ptr<argument_node> arg_2)
-            : cmd_node(node_type::READ_CMD), arg_1(arg_1), arg_2(arg_2) {}
+        read_cmd_node(const token::string_token &arg_1, std::shared_ptr<argument_node> arg_2)
+                : cmd_node(node_type::READ_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -667,7 +669,7 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<expr>`) argument.
          */
-        show_cmd_node(const std::shared_ptr<expr_node>& arg_1) : cmd_node(node_type::SHOW_CMD), arg_1(arg_1) {}
+        show_cmd_node(const std::shared_ptr<expr_node> &arg_1) : cmd_node(node_type::SHOW_CMD), arg_1(arg_1) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -729,8 +731,8 @@ namespace ast_node {
          * @param arg_1 The first (`<variable>`) argument.
          * @param arg_2 The second (`<type>`) argument.
          */
-        type_cmd_node(const token::token& arg_1, const std::shared_ptr<type_node>& arg_2)
-            : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
+        type_cmd_node(const token::token &arg_1, const std::shared_ptr<type_node> &arg_2)
+                : cmd_node(node_type::TYPE_CMD), arg_1(arg_1), arg_2(arg_2) {
             if (arg_1.type != token::token_type::VARIABLE)
                 throw std::runtime_error("Attempted to construct a `type_cmd_node` without a `<variable>` argument");
         }
@@ -768,8 +770,8 @@ namespace ast_node {
          * @param arg_1 The first (`<expr>`) argument.
          * @param arg_2 The second (`<string>`) argument.
          */
-        write_cmd_node(const std::shared_ptr<expr_node>& arg_1, const token::string_token& arg_2)
-            : cmd_node(node_type::WRITE_CMD), arg_1(arg_1), arg_2(arg_2) {}
+        write_cmd_node(const std::shared_ptr<expr_node> &arg_1, const token::string_token &arg_2)
+                : cmd_node(node_type::WRITE_CMD), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -807,7 +809,7 @@ namespace ast_node {
          */
         array_index_expr_node(const std::shared_ptr<expr_node> array,
                               const std::vector<std::shared_ptr<expr_node>> params)
-            : expr_node(node_type::ARRAY_INDEX_EXPR), array(array), params(params) {}
+                : expr_node(node_type::ARRAY_INDEX_EXPR), array(array), params(params) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -848,8 +850,8 @@ namespace ast_node {
          * @param item_expr The expression to evaluate and store for every combination of the bound variables.
          */
         array_loop_expr_node(std::vector<binding_pair_t> binding_pairs, const std::shared_ptr<expr_node> item_expr)
-            : expr_node(node_type::ARRAY_LOOP_EXPR), binding_pairs(binding_pairs), item_expr(item_expr) {
-            for (const binding_pair_t& binding : binding_pairs) {
+                : expr_node(node_type::ARRAY_LOOP_EXPR), binding_pairs(binding_pairs), item_expr(item_expr) {
+            for (const binding_pair_t &binding: binding_pairs) {
                 if (std::get<0>(binding).type != token::token_type::VARIABLE)
                     throw std::runtime_error(
                             "Attempted to construct an `array_loop_expr_node` without a `<variable>` argument");
@@ -882,7 +884,7 @@ namespace ast_node {
          * @param expressions The set of expressions composing the array literal.
          */
         array_literal_expr_node(const std::vector<std::shared_ptr<expr_node>> expressions)
-            : expr_node(node_type::ARRAY_LITERAL_EXPR), expressions(expressions) {}
+                : expr_node(node_type::ARRAY_LITERAL_EXPR), expressions(expressions) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -939,7 +941,7 @@ namespace ast_node {
          */
         binop_expr_node(const token::token binop, const std::shared_ptr<expr_node> left_operand,
                         const std::shared_ptr<expr_node> right_operand)
-            : expr_node(node_type::BINOP_EXPR), left_operand(left_operand), right_operand(right_operand) {
+                : expr_node(node_type::BINOP_EXPR), left_operand(left_operand), right_operand(right_operand) {
             if (binop.type != token::token_type::OP)
                 throw std::runtime_error("Attempted to construct a `binop_expr_node` without a `<binop>` argument");
             if (binop.text == "+") this->type = op_type::BINOP_PLUS;
@@ -1004,7 +1006,28 @@ namespace ast_node {
          * @param call_args The arguments in the function call.
          */
         call_expr_node(const token::token name, const std::vector<std::shared_ptr<expr_node>> call_args)
-            : expr_node(node_type::CALL_EXPR), name(name), call_args(call_args) {}
+                : expr_node(node_type::CALL_EXPR), name(name), call_args(call_args) {}
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `"else"` token expression.
+     * @details This is a temporary token used in parsing that should not be included in the final AST node tree.
+     *
+     */
+    struct else_tok_expr_node : public expr_node {
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::ELSE_TOK_EXPR`.
+         *
+         */
+        else_tok_expr_node() : expr_node(node_type::ELSE_TOK_EXPR) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1051,12 +1074,12 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<float>`) argument.
          */
-        float_expr_node(const token::token& arg_1) : expr_node(node_type::FLOAT_EXPR) {
+        float_expr_node(const token::token &arg_1) : expr_node(node_type::FLOAT_EXPR) {
             if (arg_1.type != token::token_type::FLOATVAL)
                 throw std::runtime_error("Attempted to construct a `float_expr_node` without a `<float>` argument");
             try {
                 value = std::stod(arg_1.text);
-            } catch (const std::exception& err) { throw std::runtime_error("Floating-point literal overflow"); }
+            } catch (const std::exception &err) { throw std::runtime_error("Floating-point literal overflow"); }
         }
 
         /**
@@ -1084,12 +1107,12 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<integer>`) argument.
          */
-        integer_expr_node(const token::token& arg_1) : expr_node(node_type::INTEGER_EXPR) {
+        integer_expr_node(const token::token &arg_1) : expr_node(node_type::INTEGER_EXPR) {
             if (arg_1.type != token::token_type::INTVAL)
                 throw std::runtime_error("Attempted to construct an `int_expr_node` without an `<integer>` argument");
             try {
                 value = std::stol(arg_1.text);
-            } catch (const std::exception& err) { throw std::runtime_error("Integer literal overflow"); }
+            } catch (const std::exception &err) { throw std::runtime_error("Integer literal overflow"); }
         }
 
         /**
@@ -1111,7 +1134,7 @@ namespace ast_node {
          *     Determines whether to evaluate the affirmative or the negative expression.
          *
          */
-        const std::shared_ptr<expr_node> conditional_expr;
+        std::shared_ptr<expr_node> conditional_expr;
 
         /**
          * @brief The affirmative expression.
@@ -1119,7 +1142,7 @@ namespace ast_node {
          *     Evaluated when the condition is true.
          *
          */
-        const std::shared_ptr<expr_node> affirmative_expr;
+        std::shared_ptr<expr_node> affirmative_expr;
 
         /**
          * @brief The negative expression.
@@ -1127,7 +1150,7 @@ namespace ast_node {
          *     Evaluated when the conditional is false.
          *
          */
-        const std::shared_ptr<expr_node> negative_expr;
+        std::shared_ptr<expr_node> negative_expr;
 
         /**
          * @brief Class constructor.
@@ -1140,8 +1163,8 @@ namespace ast_node {
          */
         if_expr_node(const std::shared_ptr<expr_node> conditional_expr,
                      const std::shared_ptr<expr_node> affirmative_expr, const std::shared_ptr<expr_node> negative_expr)
-            : expr_node(node_type::IF_EXPR), conditional_expr(conditional_expr), affirmative_expr(affirmative_expr),
-              negative_expr(negative_expr) {}
+                : expr_node(node_type::IF_EXPR), conditional_expr(conditional_expr), affirmative_expr(affirmative_expr),
+                  negative_expr(negative_expr) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1243,13 +1266,34 @@ namespace ast_node {
          * @param sum_expr The expression to evaluate and sum for every combination of the bound variables.
          */
         sum_loop_expr_node(std::vector<binding_pair_t> binding_pairs, const std::shared_ptr<expr_node> sum_expr)
-            : expr_node(node_type::SUM_LOOP_EXPR), binding_pairs(binding_pairs), sum_expr(sum_expr) {
-            for (const binding_pair_t& binding : binding_pairs) {
+                : expr_node(node_type::SUM_LOOP_EXPR), binding_pairs(binding_pairs), sum_expr(sum_expr) {
+            for (const binding_pair_t &binding: binding_pairs) {
                 if (std::get<0>(binding).type != token::token_type::VARIABLE)
                     throw std::runtime_error(
                             "Attempted to construct a `sum_loop_expr_node` without a `<variable>` argument");
             }
         }
+
+        /**
+         * @brief Returns the s-expression string for this AST node.
+         *
+         * @return The s-expression string for this AST node.
+         */
+        std::string s_expression() const override;
+    };
+
+    /**
+     * @brief The `"then"` token expression.
+     * @details This is a temporary token used in parsing that should not be included in the final AST node tree.
+     *
+     */
+    struct then_tok_expr_node : public expr_node {
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::THEN_TOK_EXPR`.
+         *
+         */
+        then_tok_expr_node() : expr_node(node_type::THEN_TOK_EXPR) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1304,7 +1348,7 @@ namespace ast_node {
          * @param expr The `<integer>` node index.
          */
         tuple_index_expr_node(const std::shared_ptr<expr_node> expr, std::shared_ptr<integer_expr_node> index)
-            : expr_node(node_type::TUPLE_INDEX_EXPR), expr(expr), index(index) {}
+                : expr_node(node_type::TUPLE_INDEX_EXPR), expr(expr), index(index) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1332,7 +1376,7 @@ namespace ast_node {
          * @param exprs The set of `expr_node`s that compose the tuple.
          */
         tuple_literal_expr_node(const std::vector<std::shared_ptr<expr_node>> exprs)
-            : expr_node(node_type::TUPLE_LITERAL_EXPR), exprs(exprs) {}
+                : expr_node(node_type::TUPLE_LITERAL_EXPR), exprs(exprs) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1370,7 +1414,7 @@ namespace ast_node {
          * @param operand The operand of this operator.
          */
         unop_expr_node(const token::token unop, const std::shared_ptr<expr_node> operand)
-            : expr_node(node_type::UNOP_EXPR), operand(operand) {
+                : expr_node(node_type::UNOP_EXPR), operand(operand) {
             if (unop.type != token::token_type::OP)
                 throw std::runtime_error("Attempted to construct a `unop_expr_node` without a `<unop>` argument");
             if (unop.text == "!") this->type = op_type::UNOP_INV;
@@ -1405,7 +1449,7 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<variable>`) argument.
          */
-        variable_expr_node(const token::token& arg_1) : expr_node(node_type::VARIABLE_EXPR), arg_1(arg_1) {
+        variable_expr_node(const token::token &arg_1) : expr_node(node_type::VARIABLE_EXPR), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
                 throw std::runtime_error(
                         "Attempted to construct a `variable_expr_node` without a `<variable>` argument");
@@ -1438,8 +1482,8 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<argument>`) argument.
          */
-        argument_lvalue_node(const std::shared_ptr<argument_node>& arg_1)
-            : lvalue_node(node_type::ARGUMENT_LVALUE), arg_1(arg_1) {}
+        argument_lvalue_node(const std::shared_ptr<argument_node> &arg_1)
+                : lvalue_node(node_type::ARGUMENT_LVALUE), arg_1(arg_1) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1467,7 +1511,7 @@ namespace ast_node {
          * @param lvalues The set of lvalues in the lvalue tuple.
          */
         tuple_lvalue_node(const std::vector<std::shared_ptr<lvalue_node>> lvalues)
-            : lvalue_node(node_type::TUPLE_LVALUE), lvalues(lvalues) {}
+                : lvalue_node(node_type::TUPLE_LVALUE), lvalues(lvalues) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1504,7 +1548,7 @@ namespace ast_node {
          * @param arg_2 The `<string>` node argument.
          */
         assert_stmt_node(const std::shared_ptr<expr_node> arg_1, const token::string_token arg_2)
-            : stmt_node(node_type::ASSERT_STMT), arg_1(arg_1), arg_2(arg_2) {}
+                : stmt_node(node_type::ASSERT_STMT), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1540,8 +1584,8 @@ namespace ast_node {
          */
         let_stmt_node(const std::shared_ptr<lvalue_node> arg_1, const std::shared_ptr<expr_node> arg_2
 
-                      )
-            : stmt_node(node_type::LET_STMT), arg_1(arg_1), arg_2(arg_2) {}
+        )
+                : stmt_node(node_type::LET_STMT), arg_1(arg_1), arg_2(arg_2) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1569,7 +1613,7 @@ namespace ast_node {
          * @param return_val The return value.
          */
         return_stmt_node(const std::shared_ptr<expr_node> return_val)
-            : stmt_node(node_type::RETURN_STMT), return_val(return_val) {}
+                : stmt_node(node_type::RETURN_STMT), return_val(return_val) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1608,7 +1652,7 @@ namespace ast_node {
          * @param dimensions The number of dimensions in the array.
          */
         array_type_node(const std::shared_ptr<type_node> main_type, const unsigned long dimensions)
-            : type_node(node_type::ARRAY_TYPE), main_type(main_type), dimensions(dimensions) {}
+                : type_node(node_type::ARRAY_TYPE), main_type(main_type), dimensions(dimensions) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1696,7 +1740,7 @@ namespace ast_node {
          * @param types The set of types in the tuple.
          */
         tuple_type_node(const std::vector<std::shared_ptr<type_node>> types)
-            : type_node(node_type::TUPLE_TYPE), types(types) {}
+                : type_node(node_type::TUPLE_TYPE), types(types) {}
 
         /**
          * @brief Returns the s-expression string for this AST node.
@@ -1723,7 +1767,7 @@ namespace ast_node {
          *
          * @param arg_1 The first (`<variable>`) argument.
          */
-        variable_type_node(const token::token& arg_1) : type_node(node_type::VARIABLE_TYPE), arg_1(arg_1) {
+        variable_type_node(const token::token &arg_1) : type_node(node_type::VARIABLE_TYPE), arg_1(arg_1) {
             if (arg_1.type != token::token_type::VARIABLE)
                 throw std::runtime_error(
                         "Attempted to construct a `variable_type_node` without a `<variable>` argument");
