@@ -7,6 +7,9 @@
  *
  */
 
+//  TODO: Remove.
+#include <iostream>
+
 #include "parser.hpp"
 
 namespace parser {
@@ -73,7 +76,7 @@ namespace parser {
                 token::token_type::TRUE, token::token_type::VARIABLE,
                 //  Punctuation:
                 //  ------------
-                token::token_type::COLON, token::token_type::COMMA, token::token_type::LCURLY,
+                token::token_type::COLON, token::token_type::LCURLY,
                 token::token_type::RCURLY, token::token_type::LPAREN, token::token_type::RPAREN,
                 token::token_type::LSQUARE, token::token_type::RSQUARE};
         for (; index < (unsigned int) tokens.size(); index++) {
@@ -211,11 +214,25 @@ namespace parser {
 
     //  TODO: Create header.
     std::shared_ptr<ast_node::expr_node> combine_exprs(std::vector<std::shared_ptr<ast_node::expr_node>> expressions) {
+        //  std::cout << "    - Combining expressions:" << std::endl;
+
         using single_op_rule
                 = const std::function<unsigned int(std::vector<std::shared_ptr<ast_node::expr_node>> &, unsigned int)>;
 
+        const std::function<void(unsigned int,
+                                 const std::vector<std::shared_ptr<ast_node::expr_node>> &)> print_expressions = [](
+                //  unsigned int step, const std::vector<std::shared_ptr<ast_node::expr_node>> &expressions) {
+                unsigned int, const std::vector<std::shared_ptr<ast_node::expr_node>> &) {
+            //  std::cout << "        - " << step << ":" << std::endl;
+            //  for (const auto &expression: expressions) {
+            //  std::cout << "            - " << expression->s_expression() << std::endl;
+            //  }
+        };
+
         //  1: Indexing.
         //  This is already taken care of above.
+
+        print_expressions(1, expressions);
 
         //  2: Unary inverse and negation operators `!` and `-`.
         single_op_rule parse_unop = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -227,20 +244,37 @@ namespace parser {
                 const ast_node::op_type type = op_expr->operator_type;
                 std::shared_ptr<ast_node::expr_node> prev_expr;
                 if (index > 0) prev_expr = expressions[index - 1];
-                const bool prev_is_not_expr
-                        = index == 0
-                          || (expressions[index - 1]->type == ast_node::node_type::OP_EXPR)
-                          || (prev_expr->type == ast_node::node_type::ARRAY_LOOP_EXPR
-                              && std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(prev_expr)->item_expr
-                                 == nullptr)
-                          || (prev_expr->type == ast_node::node_type::SUM_LOOP_EXPR
-                              && std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(prev_expr)->sum_expr
-                                 == nullptr)
-                          || (prev_expr->type == ast_node::node_type::IF_EXPR &&
-                              std::reinterpret_pointer_cast<ast_node::if_expr_node>(prev_expr)->negative_expr ==
-                              nullptr)
-                          || (prev_expr->type == ast_node::node_type::THEN_TOK_EXPR)
-                          || (prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR);
+                const std::function<bool(const std::shared_ptr<ast_node::expr_node> &)> is_expr = [&](
+                        const std::shared_ptr<ast_node::expr_node> &node) {
+                    std::shared_ptr<ast_node::if_expr_node> if_node;
+                    switch (node->type) {
+                        case ast_node::node_type::OP_EXPR:
+                            return false;
+                        case ast_node::node_type::ARRAY_LOOP_EXPR:
+                            return std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(node)->item_expr !=
+                                   nullptr;
+                        case ast_node::node_type::SUM_LOOP_EXPR:
+                            return std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(node)->sum_expr !=
+                                   nullptr;
+                        case ast_node::node_type::UNOP_EXPR:
+                            return is_expr(std::reinterpret_pointer_cast<ast_node::unop_expr_node>(node)->operand);
+                        case ast_node::node_type::BINOP_EXPR:
+                            return is_expr(
+                                    std::reinterpret_pointer_cast<ast_node::binop_expr_node>(node)->right_operand);
+                        case ast_node::node_type::IF_EXPR:
+                            if_node = std::reinterpret_pointer_cast<ast_node::if_expr_node>(node);
+                            if (if_node->negative_expr != nullptr) {
+                                return is_expr(if_node->negative_expr);
+                            }
+                            return false;
+                        case ast_node::node_type::ELSE_TOK_EXPR:
+                        case ast_node::node_type::THEN_TOK_EXPR:
+                            return false;
+                        default:
+                            return true;
+                    }
+                };
+                const bool prev_is_not_expr = index == 0 || !is_expr(expressions[index - 1]);
                 if (type == ast_node::op_type::UNOP_INV || type == ast_node::op_type::UNOP_NEG
                     || (type == ast_node::op_type::BINOP_MINUS && prev_is_not_expr)) {
                     if (index == (unsigned int) expressions.size() - 1)
@@ -260,7 +294,6 @@ namespace parser {
                             token::token{0, (type == ast_node::op_type::UNOP_INV) ? "!" : "-", token::token_type::OP},
                             next_expr);
                     expressions.erase(expressions.begin() + index + 1, expressions.begin() + index + 2);
-                    return index + 2;
                 }
             }
             return index + 1;
@@ -269,6 +302,8 @@ namespace parser {
         for (unsigned int sub_index = 0; sub_index < expressions.size() - 1;) {
             sub_index = parse_unop(expressions, sub_index);
         }
+
+        print_expressions(2, expressions);
 
         //  3: Multiplicative operations `*`, `/`, and `%`.
         single_op_rule parse_mult = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -321,7 +356,9 @@ namespace parser {
             sub_index = parse_mult(expressions, sub_index);
         }
 
-        //  3: Additive operations `+` and `-`.
+        print_expressions(3, expressions);
+
+        //  4: Additive operations `+` and `-`.
         single_op_rule parse_add = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
                                        unsigned int index) {
             std::shared_ptr<ast_node::expr_node> prev_expr;
@@ -360,6 +397,8 @@ namespace parser {
         for (unsigned int sub_index = 1; sub_index < expressions.size();) {
             sub_index = parse_add(expressions, sub_index);
         }
+
+        print_expressions(4, expressions);
 
         //  5: Comparison operators `<`, `>`, `<=`, `>=`, `==`, `!=`.
         single_op_rule parse_compare = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -445,6 +484,8 @@ namespace parser {
             sub_index = parse_compare(expressions, sub_index);
         }
 
+        print_expressions(5, expressions);
+
         //  6: Boolean operators `&&` and `||`.
         single_op_rule parse_bool = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
                                         unsigned int index) {
@@ -484,6 +525,8 @@ namespace parser {
         for (unsigned int sub_index = 1; sub_index < expressions.size();) {
             sub_index = parse_bool(expressions, sub_index);
         }
+
+        print_expressions(6, expressions);
 
         //  7: Prefix operators `array`, `sum`, and `if`.
         single_op_rule parse_prefix = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -534,7 +577,7 @@ namespace parser {
                         unsigned int num_needed_else = 1;
                         for (unsigned int sub_index = index + 1;
                              sub_index < (unsigned int) expressions.size(); sub_index++) {
-                            std::shared_ptr<ast_node::expr_node> current_expr = expressions[sub_index];
+                            const std::shared_ptr<ast_node::expr_node> current_expr = expressions[sub_index];
                             if (current_expr->type == ast_node::node_type::IF_EXPR) {
                                 const std::shared_ptr<ast_node::if_expr_node> inner_if_expr = std::reinterpret_pointer_cast<ast_node::if_expr_node>(
                                         current_expr);
@@ -577,13 +620,30 @@ namespace parser {
             sub_index = parse_prefix(expressions, sub_index);
         }
 
+        print_expressions(7, expressions);
+
         return expressions[0];
     }
 
     parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
+        //  std::cout << "Parsing expression ";
+        for (unsigned int i = index; i < tokens.size(); i++) {
+            //  std::cout << ((i == index) ? "\"" : " ") << tokens[i]->text;
+        }
+        //  std::cout << "\":" << std::endl;
+
         //  This one is more involved than the others, due to operators and operator precedence.
         //  First, we split the tokens into different sub-expressions.
         const std::vector<std::vector<std::shared_ptr<token::token>>> subsets = split_tokens(tokens, index);
+        if (subsets.empty()) throw parser_error_eof();
+
+        //  std::cout << "    - Subsets:" << std::endl;
+        for (const auto &subset: subsets) {
+            for (unsigned int i = 0; i < subset.size(); i++) {
+                //  std::cout << ((i == 0) ? "        - \"" : " ") << subset[i]->text;
+            }
+            //  std::cout << "\"" << std::endl;
+        }
 
         //  Next, we construct AST nodes for each of the sub-expressions.
         std::vector<std::shared_ptr<ast_node::expr_node>> expressions;
@@ -615,6 +675,8 @@ namespace parser {
             }
             index += subset.size();
         }
+
+        if (expressions.empty()) throw parser_error_eof();
 
         return {combine_exprs(expressions), index};
     }
@@ -1274,16 +1336,7 @@ namespace parser {
             if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
 
             //  3.3: `<expr>`.
-            unsigned int end_position;
-            unsigned int square_count = 1;
-            for (end_position = index; end_position < (unsigned int) tokens.size(); end_position++) {
-                if (tokens[end_position]->type == token::token_type::LSQUARE) square_count++;
-                if (tokens[end_position]->type == token::token_type::RSQUARE) square_count--;
-                if (tokens[end_position]->type == token::token_type::COMMA || square_count == 0) { break; }
-            }
-            const std::vector<std::shared_ptr<token::token>> expr_tokens(tokens.begin() + index,
-                                                                         tokens.begin() + end_position);
-            const parser_return_t result = parse_expr(expr_tokens, 0);
+            const parser_return_t result = parse_expr(tokens, index);
             const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
                     std::get<0>(result));
 
@@ -1291,7 +1344,7 @@ namespace parser {
             bindings.emplace_back(variable, expression);
 
             //  Increment and check.
-            index += std::get<1>(result);
+            index = std::get<1>(result);
             if (index >= (unsigned int) (tokens.size())) throw parser_error_eof();
             if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
             if (tokens[index]->type != token::token_type::COMMA &&
@@ -1464,16 +1517,7 @@ namespace parser {
             if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
 
             //  3.3: `<expr>`.
-            unsigned int end_position;
-            unsigned int square_count = 1;
-            for (end_position = index; end_position < (unsigned int) tokens.size(); end_position++) {
-                if (tokens[end_position]->type == token::token_type::LSQUARE) square_count++;
-                if (tokens[end_position]->type == token::token_type::RSQUARE) square_count--;
-                if (tokens[end_position]->type == token::token_type::COMMA || square_count == 0) { break; }
-            }
-            const std::vector<std::shared_ptr<token::token>> expr_tokens(tokens.begin() + index,
-                                                                         tokens.begin() + end_position);
-            const parser_return_t result = parse_expr(expr_tokens, 0);
+            const parser_return_t result = parse_expr(tokens, index);
             const std::shared_ptr<ast_node::expr_node> expression = std::reinterpret_pointer_cast<ast_node::expr_node>(
                     std::get<0>(result));
 
@@ -1481,7 +1525,7 @@ namespace parser {
             bindings.emplace_back(variable, expression);
 
             //  Increment and check.
-            index += std::get<1>(result);
+            index = std::get<1>(result);
             if (index >= (unsigned int) (tokens.size())) throw parser_error_eof();
             if (tokens[index]->type == token::token_type::NEWLINE) throw parser_error_newline(tokens[index]->start);
             if (tokens[index]->type != token::token_type::COMMA &&
