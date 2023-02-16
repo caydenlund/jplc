@@ -7,9 +7,6 @@
  *
  */
 
-//  TODO: Remove.
-#include <iostream>
-
 #include "parser.hpp"
 
 namespace parser {
@@ -194,45 +191,12 @@ namespace parser {
         return split_set;
     }
 
-
-    /*
-    ==============================
-    ||  AST Node Superclasses:  ||
-    ==============================
-    */
-    parser_return_t parse_argument(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(tokens, argument_parsers, index);
-    }
-
-    parser_return_t parse_binding(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(tokens, binding_parsers, index);
-    }
-
-    parser_return_t parse_cmd(token_vec_t tokens, unsigned int index) {
-        return apply_parsers(tokens, command_parsers, index);
-    }
-
-    //  TODO: Create header.
     std::shared_ptr<ast_node::expr_node> combine_exprs(std::vector<std::shared_ptr<ast_node::expr_node>> expressions) {
-        //  std::cout << "    - Combining expressions:" << std::endl;
-
         using single_op_rule
                 = const std::function<unsigned int(std::vector<std::shared_ptr<ast_node::expr_node>> &, unsigned int)>;
 
-        const std::function<void(unsigned int,
-                                 const std::vector<std::shared_ptr<ast_node::expr_node>> &)> print_expressions = [](
-                //  unsigned int step, const std::vector<std::shared_ptr<ast_node::expr_node>> &expressions) {
-                unsigned int, const std::vector<std::shared_ptr<ast_node::expr_node>> &) {
-            //  std::cout << "        - " << step << ":" << std::endl;
-            //  for (const auto &expression: expressions) {
-            //  std::cout << "            - " << expression->s_expression() << std::endl;
-            //  }
-        };
-
         //  1: Indexing.
         //  This is already taken care of above.
-
-        print_expressions(1, expressions);
 
         //  2: Unary inverse and negation operators `!` and `-`.
         single_op_rule parse_unop = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -303,8 +267,6 @@ namespace parser {
             sub_index = parse_unop(expressions, sub_index);
         }
 
-        print_expressions(2, expressions);
-
         //  3: Multiplicative operations `*`, `/`, and `%`.
         single_op_rule parse_mult = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
                                         unsigned int index) {
@@ -356,8 +318,6 @@ namespace parser {
             sub_index = parse_mult(expressions, sub_index);
         }
 
-        print_expressions(3, expressions);
-
         //  4: Additive operations `+` and `-`.
         single_op_rule parse_add = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
                                        unsigned int index) {
@@ -397,8 +357,6 @@ namespace parser {
         for (unsigned int sub_index = 1; sub_index < expressions.size();) {
             sub_index = parse_add(expressions, sub_index);
         }
-
-        print_expressions(4, expressions);
 
         //  5: Comparison operators `<`, `>`, `<=`, `>=`, `==`, `!=`.
         single_op_rule parse_compare = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -484,8 +442,6 @@ namespace parser {
             sub_index = parse_compare(expressions, sub_index);
         }
 
-        print_expressions(5, expressions);
-
         //  6: Boolean operators `&&` and `||`.
         single_op_rule parse_bool = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
                                         unsigned int index) {
@@ -525,8 +481,6 @@ namespace parser {
         for (unsigned int sub_index = 1; sub_index < expressions.size();) {
             sub_index = parse_bool(expressions, sub_index);
         }
-
-        print_expressions(6, expressions);
 
         //  7: Prefix operators `array`, `sum`, and `if`.
         single_op_rule parse_prefix = [&](std::vector<std::shared_ptr<ast_node::expr_node>> &expressions,
@@ -620,30 +574,32 @@ namespace parser {
             sub_index = parse_prefix(expressions, sub_index);
         }
 
-        print_expressions(7, expressions);
-
         return expressions[0];
     }
 
-    parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
-        //  std::cout << "Parsing expression ";
-        for (unsigned int i = index; i < tokens.size(); i++) {
-            //  std::cout << ((i == index) ? "\"" : " ") << tokens[i]->text;
-        }
-        //  std::cout << "\":" << std::endl;
 
+    /*
+    ==============================
+    ||  AST Node Superclasses:  ||
+    ==============================
+    */
+    parser_return_t parse_argument(token_vec_t tokens, unsigned int index) {
+        return apply_parsers(tokens, argument_parsers, index);
+    }
+
+    parser_return_t parse_binding(token_vec_t tokens, unsigned int index) {
+        return apply_parsers(tokens, binding_parsers, index);
+    }
+
+    parser_return_t parse_cmd(token_vec_t tokens, unsigned int index) {
+        return apply_parsers(tokens, command_parsers, index);
+    }
+
+    parser_return_t parse_expr(token_vec_t tokens, unsigned int index) {
         //  This one is more involved than the others, due to operators and operator precedence.
         //  First, we split the tokens into different sub-expressions.
         const std::vector<std::vector<std::shared_ptr<token::token>>> subsets = split_tokens(tokens, index);
         if (subsets.empty()) throw parser_error_eof();
-
-        //  std::cout << "    - Subsets:" << std::endl;
-        for (const auto &subset: subsets) {
-            for (unsigned int i = 0; i < subset.size(); i++) {
-                //  std::cout << ((i == 0) ? "        - \"" : " ") << subset[i]->text;
-            }
-            //  std::cout << "\"" << std::endl;
-        }
 
         //  Next, we construct AST nodes for each of the sub-expressions.
         std::vector<std::shared_ptr<ast_node::expr_node>> expressions;

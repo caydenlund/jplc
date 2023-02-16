@@ -207,6 +207,14 @@ namespace parser {
      */
     std::vector<std::vector<std::shared_ptr<token::token>>> split_tokens(token_vec_t tokens, unsigned int index);
 
+    /**
+     * @brief Given a set of expressions, combines them down into a single expression (through operators).
+     *
+     * @param expressions The set of expressions to combine.
+     * @return A single expression assembled from the given set of expressions.
+     */
+    std::shared_ptr<ast_node::expr_node> combine_exprs(std::vector<std::shared_ptr<ast_node::expr_node>> expressions);
+
     /*
     ==============================
     ||  AST Node Superclasses:  ||
