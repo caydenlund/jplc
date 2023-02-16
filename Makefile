@@ -3,8 +3,6 @@ TEST=test.jpl
 CXX=clang++
 CXXFLAGS=-Og -std=c++17 -Werror -Wall -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -I.
 
-RUN_FLAGS=-p
-
 OBJS=main.o ast_node.o file.o lexer.o parser.o
 
 all: run
@@ -30,7 +28,7 @@ parser.o: parser/parser.cpp
 	$(CXX) $(CXXFLAGS) -c parser/parser.cpp -o parser.o
 
 run: jplc
-	./jplc $(RUN_FLAGS) $(TEST)
+	./jplc $(TEST) $(FLAGS)
 
 clean:
 	rm -f *.o ./jplc
