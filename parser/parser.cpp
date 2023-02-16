@@ -95,7 +95,8 @@ namespace parser {
                 //  We need to find the corresponding right square bracket.
                 unsigned int square_count = 1;
                 while (square_count > 0) {
-                    current_token = *tokens[++index];
+                    if (++index >= tokens.size()) throw parser_error_newline(tokens[index - 1]->start);
+                    current_token = *tokens[index];
                     current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LSQUARE:
@@ -119,7 +120,8 @@ namespace parser {
                 //  We need to find the corresponding right parenthesis.
                 unsigned int paren_count = 1;
                 while (paren_count > 0) {
-                    current_token = *tokens[++index];
+                    if (++index >= tokens.size()) throw parser_error_newline(tokens[index - 1]->start);
+                    current_token = *tokens[index];
                     current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LPAREN:
@@ -141,7 +143,8 @@ namespace parser {
                 //  We need to find the corresponding right square bracket.
                 unsigned int square_count = 1;
                 while (square_count > 0) {
-                    current_token = *tokens[++index];
+                    if (++index >= tokens.size()) throw parser_error_newline(tokens[index - 1]->start);
+                    current_token = *tokens[index];
                     current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LSQUARE:
@@ -163,7 +166,8 @@ namespace parser {
                 //  We need to find the corresponding right curly brace.
                 unsigned int curly_count = 1;
                 while (curly_count > 0) {
-                    current_token = *tokens[++index];
+                    if (++index >= tokens.size()) throw parser_error_newline(tokens[index - 1]->start);
+                    current_token = *tokens[index];
                     current_set.push_back(std::make_shared<token::token>(current_token));
                     switch (current_token.type) {
                         case token::token_type::LCURLY:
@@ -281,6 +285,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `*` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "*", token::token_type::OP}, prev_expr, next_expr);
@@ -292,6 +304,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `/` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "/", token::token_type::OP}, prev_expr, next_expr);
@@ -303,6 +323,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `%` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "%", token::token_type::OP}, prev_expr, next_expr);
@@ -332,6 +360,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `+` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "+", token::token_type::OP}, prev_expr, next_expr);
@@ -343,6 +379,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `-` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "-", token::token_type::OP}, prev_expr, next_expr);
@@ -372,6 +416,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `<` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "<", token::token_type::OP}, prev_expr, next_expr);
@@ -383,6 +435,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `>` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, ">", token::token_type::OP}, prev_expr, next_expr);
@@ -394,6 +454,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `<=` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "<=", token::token_type::OP}, prev_expr, next_expr);
@@ -405,6 +473,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `>=` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, ">=", token::token_type::OP}, prev_expr, next_expr);
@@ -416,6 +492,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `==` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "==", token::token_type::OP}, prev_expr, next_expr);
@@ -427,6 +511,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `!=` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "!=", token::token_type::OP}, prev_expr, next_expr);
@@ -456,6 +548,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `&&` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "&&", token::token_type::OP}, prev_expr, next_expr);
@@ -467,6 +567,14 @@ namespace parser {
                             throw std::runtime_error("Tried to use `||` at the end of an expression");
                         prev_expr = expressions[index - 1];
                         next_expr = expressions[index + 1];
+                        if (prev_expr->type == ast_node::node_type::OP_EXPR ||
+                            prev_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            prev_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
+                        if (next_expr->type == ast_node::node_type::OP_EXPR ||
+                            next_expr->type == ast_node::node_type::THEN_TOK_EXPR ||
+                            next_expr->type == ast_node::node_type::ELSE_TOK_EXPR)
+                            throw parser_error_unrecoverable("Invalid expression");
                         expressions.erase(expressions.begin() + index, expressions.begin() + index + 2);
                         expressions[index - 1] = std::make_shared<ast_node::binop_expr_node>(
                                 token::token{0, "||", token::token_type::OP}, prev_expr, next_expr);
@@ -559,6 +667,7 @@ namespace parser {
                                 expressions.erase(expressions.begin() + index + 1, expressions.begin() + sub_index + 1);
                                 const std::vector<std::shared_ptr<ast_node::expr_node>> negative_nodes(
                                         expressions.begin() + index + 1, expressions.end());
+                                if (negative_nodes.empty()) throw parser_error_eof();
                                 if_expr->negative_expr = combine_exprs(negative_nodes);
                                 expressions.erase(expressions.begin() + index + 1, expressions.end());
                                 break;
