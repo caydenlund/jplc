@@ -42,6 +42,9 @@ namespace parser {
             }
         } catch (const parser_error_unrecoverable &err) {}
 
+        if (index > 0 && tokens[index - 1]->type == token::token_type::COMMA)
+            throw parser_error_unrecoverable("Trailing comma");
+
         return {node_list, index};
     }
 
@@ -198,6 +201,8 @@ namespace parser {
     std::shared_ptr<ast_node::expr_node> combine_exprs(std::vector<std::shared_ptr<ast_node::expr_node>> expressions) {
         using single_op_rule
                 = const std::function<unsigned int(std::vector<std::shared_ptr<ast_node::expr_node>> &, unsigned int)>;
+
+        if (expressions.empty()) throw parser_error_unrecoverable("Empty expression");
 
         //  1: Indexing.
         //  This is already taken care of above.
@@ -682,6 +687,8 @@ namespace parser {
         for (unsigned int sub_index = 0; sub_index < expressions.size() - 1;) {
             sub_index = parse_prefix(expressions, sub_index);
         }
+
+        if (expressions.size() > 1) throw parser_error_unrecoverable("Trailing expressions");
 
         return expressions[0];
     }
