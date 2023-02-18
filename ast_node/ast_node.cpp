@@ -6,8 +6,9 @@
  *
  */
 
-#include "ast_node.hpp"
 #include <sstream>
+
+#include "ast_node.hpp"
 
 namespace ast_node {
     /*
@@ -66,7 +67,7 @@ namespace ast_node {
     std::string array_argument_node::s_expression() const {
         std::stringstream result;
         result << "(ArrayArgument " << this->main_var.text;
-        for (const token::token &tok: vars) { result << " " << tok.text; }
+        for (const token::token& tok : vars) { result << " " << tok.text; }
         result << ")";
         return result.str();
     }
@@ -78,7 +79,7 @@ namespace ast_node {
     std::string tuple_binding_node::s_expression() const {
         std::stringstream result;
         result << "(TupleBinding";
-        for (const std::shared_ptr<binding_node> &binding: args) { result << " " << binding->s_expression(); }
+        for (const std::shared_ptr<binding_node>& binding : args) { result << " " << binding->s_expression(); }
         result << ")";
         return result.str();
     }
@@ -103,7 +104,7 @@ namespace ast_node {
             result << this->bindings[this->bindings.size() - 1]->s_expression();
         }
         result << ") " << this->return_type->s_expression();
-        for (const std::shared_ptr<stmt_node> &stmt: this->statements) { result << " " << stmt->s_expression(); }
+        for (const std::shared_ptr<stmt_node>& stmt : this->statements) { result << " " << stmt->s_expression(); }
         result << ")";
         return result.str();
     }
@@ -134,8 +135,10 @@ namespace ast_node {
     //  ------------
     std::string array_index_expr_node::s_expression() const {
         std::stringstream result;
-        result << "(ArrayIndexExpr " << this->array->s_expression();
-        for (const std::shared_ptr<expr_node> &param: this->params) { result << " " << param->s_expression(); }
+        result << "(ArrayIndexExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << this->array->s_expression();
+        for (const std::shared_ptr<expr_node>& param : this->params) { result << " " << param->s_expression(); }
         result << ")";
         return result.str();
     }
@@ -143,7 +146,8 @@ namespace ast_node {
     std::string array_literal_expr_node::s_expression() const {
         std::stringstream result;
         result << "(ArrayLiteralExpr";
-        for (const std::shared_ptr<expr_node> &expr: this->expressions) { result << " " << expr->s_expression(); }
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        for (const std::shared_ptr<expr_node>& expr : this->expressions) { result << " " << expr->s_expression(); }
         result << ")";
         return result.str();
     }
@@ -151,7 +155,8 @@ namespace ast_node {
     std::string array_loop_expr_node::s_expression() const {
         std::stringstream result;
         result << "(ArrayLoopExpr";
-        for (const array_loop_expr_node::binding_pair_t &binding: this->binding_pairs) {
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        for (const array_loop_expr_node::binding_pair_t& binding : this->binding_pairs) {
             result << " " << std::get<0>(binding).text << " " << std::get<1>(binding)->s_expression();
         }
         if (this->item_expr != nullptr) result << " " << this->item_expr->s_expression();
@@ -161,7 +166,9 @@ namespace ast_node {
 
     std::string binop_expr_node::s_expression() const {
         std::stringstream result;
-        result << "(BinopExpr " << this->left_operand->s_expression() << " ";
+        result << "(BinopExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << this->left_operand->s_expression() << " ";
         switch (this->type) {
             case op_type::BINOP_PLUS:
                 result << "+";
@@ -211,37 +218,46 @@ namespace ast_node {
 
     std::string call_expr_node::s_expression() const {
         std::stringstream result;
-        result << "(CallExpr " << this->name.text;
-        for (const std::shared_ptr<expr_node> &arg: this->call_args) { result << " " << arg->s_expression(); }
+        result << "(CallExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << this->name.text;
+        for (const std::shared_ptr<expr_node>& arg : this->call_args) { result << " " << arg->s_expression(); }
         result << ")";
         return result.str();
     }
 
-    std::string false_expr_node::s_expression() const { return "(FalseExpr)"; }
+    std::string false_expr_node::s_expression() const {
+        return "(FalseExpr" + ((this->r_type != nullptr) ? (" " + this->r_type->s_expression()) : "") + ")";
+    }
 
     std::string else_tok_expr_node::s_expression() const { return ""; }
 
     std::string float_expr_node::s_expression() const {
-        return "(FloatExpr " + std::to_string((long) this->value) + ")";
+        std::stringstream result;
+        result << "(FloatExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << (long)this->value << ")";
+        return result.str();
     }
 
     std::string if_expr_node::s_expression() const {
         std::stringstream result;
         result << "(IfExpr";
-        if (this->conditional_expr != nullptr) {
-            result << " " << this->conditional_expr->s_expression();
-        }
-        if (this->affirmative_expr != nullptr) {
-            result << " " << this->affirmative_expr->s_expression();
-        }
-        if (this->negative_expr != nullptr) {
-            result << " " << this->negative_expr->s_expression();
-        }
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        if (this->conditional_expr != nullptr) { result << " " << this->conditional_expr->s_expression(); }
+        if (this->affirmative_expr != nullptr) { result << " " << this->affirmative_expr->s_expression(); }
+        if (this->negative_expr != nullptr) { result << " " << this->negative_expr->s_expression(); }
         result << ")";
         return result.str();
     }
 
-    std::string integer_expr_node::s_expression() const { return "(IntExpr " + std::to_string(this->value) + ")"; }
+    std::string integer_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(IntExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << this->value << ")";
+        return result.str();
+    }
 
     std::string op_expr_node::s_expression() const {
         switch (this->operator_type) {
@@ -283,7 +299,8 @@ namespace ast_node {
     std::string sum_loop_expr_node::s_expression() const {
         std::stringstream result;
         result << "(SumLoopExpr";
-        for (const array_loop_expr_node::binding_pair_t &binding: this->binding_pairs) {
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        for (const array_loop_expr_node::binding_pair_t& binding : this->binding_pairs) {
             result << " " << std::get<0>(binding).text << " " << std::get<1>(binding)->s_expression();
         }
         if (this->sum_expr != nullptr) result << " " << this->sum_expr->s_expression();
@@ -293,16 +310,23 @@ namespace ast_node {
 
     std::string then_tok_expr_node::s_expression() const { return ""; }
 
-    std::string true_expr_node::s_expression() const { return "(TrueExpr)"; }
+    std::string true_expr_node::s_expression() const {
+        return "(TrueExpr" + ((this->r_type != nullptr) ? (" " + this->r_type->s_expression()) : "") + ")";
+    }
 
     std::string tuple_index_expr_node::s_expression() const {
-        return "(TupleIndexExpr " + this->expr->s_expression() + " " + std::to_string(index->value) + ")";
+        std::stringstream result;
+        result << "(TupleIndexExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << this->expr->s_expression() << " " << index->value << ")";
+        return result.str();
     }
 
     std::string tuple_literal_expr_node::s_expression() const {
         std::stringstream result;
         result << "(TupleLiteralExpr";
-        for (const std::shared_ptr<expr_node> &expr: this->exprs) { result << " " << expr->s_expression(); }
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        for (const std::shared_ptr<expr_node>& expr : this->exprs) { result << " " << expr->s_expression(); }
         result << ")";
         return result.str();
     }
@@ -310,6 +334,7 @@ namespace ast_node {
     std::string unop_expr_node::s_expression() const {
         std::stringstream result;
         result << "(UnopExpr ";
+        if (this->r_type != nullptr) result << this->r_type->s_expression() << " ";
         switch (this->type) {
             case op_type::UNOP_INV:
                 result << "!";
@@ -324,7 +349,13 @@ namespace ast_node {
         return result.str();
     }
 
-    std::string variable_expr_node::s_expression() const { return "(VarExpr " + this->arg_1.text + ")"; }
+    std::string variable_expr_node::s_expression() const {
+        std::stringstream result;
+        result << "(VarExpr";
+        if (this->r_type != nullptr) result << " " << this->r_type->s_expression();
+        result << " " << this->arg_1.text << ")";
+        return result.str();
+    }
 
     //  LValues:
     //  --------
@@ -333,7 +364,7 @@ namespace ast_node {
     std::string tuple_lvalue_node::s_expression() const {
         std::stringstream result;
         result << "(TupleLValue";
-        for (const std::shared_ptr<lvalue_node> &lvalue: this->lvalues) { result << " " << lvalue->s_expression(); }
+        for (const std::shared_ptr<lvalue_node>& lvalue : this->lvalues) { result << " " << lvalue->s_expression(); }
         result << ")";
         return result.str();
     }
@@ -367,7 +398,7 @@ namespace ast_node {
     std::string tuple_type_node::s_expression() const {
         std::stringstream result;
         result << "(TupleType";
-        for (const std::shared_ptr<type_node> &type: this->types) { result << " " << type->s_expression(); }
+        for (const std::shared_ptr<type_node>& type : this->types) { result << " " << type->s_expression(); }
         result << ")";
         return result.str();
     }

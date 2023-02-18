@@ -13,6 +13,7 @@
 #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
 #include "token/token.hpp"
+#include "type_checker/type_checker.hpp"
 
 /**
  * @brief Only lexes the input file.
@@ -59,9 +60,16 @@ int lex_and_parse_only(const std::string& filename) {
  * @param filename The file to read.
  * @return 0 on success; an exception is thrown otherwise.
  */
-int lex_parse_and_check_only(const std::string&) {
-    std::cout << "Compilation failed\n";
-    return 1;
+int lex_parse_and_check_only(const std::string& filename) {
+    const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
+    const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
+    type_checker::check(nodes);
+
+    for (const parser::node_ptr_t& node : nodes) { std::cout << node->s_expression() << "\n"; }
+
+    std::cout << "Compilation succeeded: parsing complete\n";
+
+    return 0;
 }
 
 /**
