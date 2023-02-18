@@ -258,10 +258,14 @@ namespace type_checker {
                 break;
             case ast_node::BINOP_LT:
             case ast_node::BINOP_GT:
-            case ast_node::BINOP_EQ:
-            case ast_node::BINOP_NEQ:
             case ast_node::BINOP_LEQ:
             case ast_node::BINOP_GEQ:
+                if (left_type->type != resolved_type::INT_TYPE && left_type->type != resolved_type::FLOAT_TYPE)
+                    throw type_check_exception("`check_expr_binop`: not valid operands: " + expression->s_expression());
+                r_type = std::make_shared<resolved_type::resolved_type>(resolved_type::BOOL_TYPE);
+                break;
+            case ast_node::BINOP_EQ:
+            case ast_node::BINOP_NEQ:
                 if (left_type->type != resolved_type::BOOL_TYPE && left_type->type != resolved_type::INT_TYPE
                     && left_type->type != resolved_type::FLOAT_TYPE)
                     throw type_check_exception("`check_expr_binop`: not valid operands: " + expression->s_expression());
