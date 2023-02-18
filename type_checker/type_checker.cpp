@@ -14,6 +14,7 @@ namespace type_checker {
         scope_t global_scope;
 
         //  TODO (HW7): Remove this hardcoded initial state.
+        //  TODO (HW8): Add `args` and `argnum` to the symbol table.
         const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::FLOAT_TYPE);
         const std::vector<std::shared_ptr<resolved_type::resolved_type>> floats = {float_type, float_type, float_type,
@@ -114,7 +115,7 @@ namespace type_checker {
     }
 
     void check_stmt(const std::shared_ptr<ast_node::stmt_node>&, const scopes_t&) {
-        //  TODO (HW7): Implement.
+        //  TODO (HW8): Implement.
     }
 
     /*
@@ -127,11 +128,12 @@ namespace type_checker {
     //  ---------
 
     void check_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command, scope_t& global_scope) {
-        check_expr(command->arg_1, {global_scope});
+        if (check_expr(command->arg_1, {global_scope})->type != resolved_type::BOOL_TYPE)
+            throw type_check_exception("`check_cmd_assert`: non-boolean expression: " + command->arg_1->s_expression());
     }
 
     void check_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>&, scope_t&) {
-        //  TODO (HW7): Implement.
+        //  TODO (HW8): Implement.
     }
 
     void check_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>&, scope_t&) {
@@ -143,7 +145,7 @@ namespace type_checker {
     }
 
     void check_cmd_read(const std::shared_ptr<ast_node::read_cmd_node>&, scope_t&) {
-        //  There are no expressions in a `read` command. No type-checking to be done here.
+        //  TODO (HW7): Implement.
     }
 
     void check_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command, scope_t& global_scope) {
@@ -155,11 +157,28 @@ namespace type_checker {
     }
 
     void check_cmd_type(const std::shared_ptr<ast_node::type_cmd_node>&, scope_t&) {
-        //  TODO (HW7): Implement.
+        //  TODO (HW8): Implement.
     }
 
     void check_cmd_write(const std::shared_ptr<ast_node::write_cmd_node>& command, scope_t& global_scope) {
-        check_expr(command->arg_1, {global_scope});
+        const std::shared_ptr<resolved_type::resolved_type> expr_type = check_expr(command->arg_1, {global_scope});
+        if (expr_type->type != resolved_type::ARRAY_TYPE)
+            throw type_check_exception("`check_cmd_write`: not an array: " + command->arg_1->s_expression());
+
+        const std::shared_ptr<resolved_type::array_resolved_type> array_type
+                = std::reinterpret_pointer_cast<resolved_type::array_resolved_type>(expr_type);
+        if (array_type->rank != 2)
+            throw type_check_exception("`check_cmd_write`: not a rank-2 array: " + command->arg_1->s_expression());
+
+        const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
+                resolved_type::FLOAT_TYPE);
+        const std::vector<std::shared_ptr<resolved_type::resolved_type>> four_floats = {float_type, float_type,
+                                                                                        float_type, float_type};
+        const std::shared_ptr<resolved_type::resolved_type> pixel_type
+                = std::make_shared<resolved_type::tuple_resolved_type>(four_floats);
+        if (*(array_type->element_type) != *pixel_type)
+            throw type_check_exception("`check_cmd_write`: not a rank-2 array of {float, float, float, float}: "
+                                       + command->arg_1->s_expression());
     }
 
     //  Expressions:
@@ -266,6 +285,7 @@ namespace type_checker {
     std::shared_ptr<resolved_type::resolved_type> check_expr_call(const std::shared_ptr<ast_node::call_expr_node>&,
                                                                   const scopes_t&) {
         //  TODO (HW7): Implement.
+
         return {};
     }
 
