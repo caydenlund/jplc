@@ -46,15 +46,15 @@ namespace name_info {
          * @brief The resolved type of the variable.
          *
          */
-        const resolved_type::resolved_type r_type;
+        const std::shared_ptr<resolved_type::resolved_type> r_type;
 
         /**
          * @brief Class constructor.
          * @details Initializes `name_info_type` to `name_info_class::VARIABLE_INFO`.
          *
          */
-        variable_info(const resolved_type::resolved_type &r_type) : name_info(name_info_class::VARIABLE_INFO),
-                                                                    r_type(r_type) {}
+        variable_info(const std::shared_ptr<resolved_type::resolved_type>& r_type)
+            : name_info(name_info_class::VARIABLE_INFO), r_type(r_type) {}
     };
 }  //  namespace name_info
 

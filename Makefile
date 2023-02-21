@@ -3,7 +3,7 @@ TEST=test.jpl
 CXX=clang++
 CXXFLAGS=-Og -std=c++17 -Werror -Wall -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -I.
 
-OBJS=main.o ast_node.o file.o lexer.o parser.o resolved_type.o type_checker.o
+OBJS=main.o ast_node.o file.o lexer.o parser.o resolved_type.o symbol_table.o type_checker.o
 
 all: run
 
@@ -26,6 +26,9 @@ lexer.o: lexer/lexer.cpp
 
 parser.o: parser/parser.cpp
 	$(CXX) $(CXXFLAGS) -c parser/parser.cpp -o parser.o
+
+symbol_table.o: symbol_table/symbol_table.cpp
+	$(CXX) $(CXXFLAGS) -c symbol_table/symbol_table.cpp -o symbol_table.o
 
 resolved_type.o: resolved_type/resolved_type.cpp
 	$(CXX) $(CXXFLAGS) -c resolved_type/resolved_type.cpp -o resolved_type.o

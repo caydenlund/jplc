@@ -11,7 +11,7 @@
 
 namespace type_checker {
     void check(const parser::node_list_t& nodes) {
-        scope_t global_scope;
+        symbol_table::symbol_table global_symbol_table;
 
         //  TODO (HW7): Remove this hardcoded initial state.
         //  TODO (HW8): Add `args` and `argnum` to the symbol table.
@@ -24,44 +24,44 @@ namespace type_checker {
         const std::shared_ptr<resolved_type::array_resolved_type> array_r_type
                 = std::make_shared<resolved_type::array_resolved_type>(element_type, 2);
         array_r_type->type = resolved_type::ARRAY_TYPE;
-        global_scope["pict."] = array_r_type;
+        global_symbol_table.add_symbol("pict.", std::make_shared<name_info::variable_info>(array_r_type));
 
         for (const parser::node_ptr_t& node : nodes) {
-            check_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node), global_scope);
+            check_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node), global_symbol_table);
         }
     }
 
     //  Superclasses:
     //  -------------
 
-    void check_cmd(const std::shared_ptr<ast_node::cmd_node>& command, scope_t& global_scope) {
+    void check_cmd(const std::shared_ptr<ast_node::cmd_node>& command, symbol_table::symbol_table& sym_tab) {
         switch (command->type) {
             case ast_node::node_type::ASSERT_CMD:
-                check_cmd_assert(std::reinterpret_pointer_cast<ast_node::assert_cmd_node>(command), global_scope);
+                check_cmd_assert(std::reinterpret_pointer_cast<ast_node::assert_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::FN_CMD:
-                check_cmd_fn(std::reinterpret_pointer_cast<ast_node::fn_cmd_node>(command), global_scope);
+                check_cmd_fn(std::reinterpret_pointer_cast<ast_node::fn_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::LET_CMD:
-                check_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command), global_scope);
+                check_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::PRINT_CMD:
-                check_cmd_print(std::reinterpret_pointer_cast<ast_node::print_cmd_node>(command), global_scope);
+                check_cmd_print(std::reinterpret_pointer_cast<ast_node::print_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::READ_CMD:
-                check_cmd_read(std::reinterpret_pointer_cast<ast_node::read_cmd_node>(command), global_scope);
+                check_cmd_read(std::reinterpret_pointer_cast<ast_node::read_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::SHOW_CMD:
-                check_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command), global_scope);
+                check_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::TIME_CMD:
-                check_cmd_time(std::reinterpret_pointer_cast<ast_node::time_cmd_node>(command), global_scope);
+                check_cmd_time(std::reinterpret_pointer_cast<ast_node::time_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::TYPE_CMD:
-                check_cmd_type(std::reinterpret_pointer_cast<ast_node::type_cmd_node>(command), global_scope);
+                check_cmd_type(std::reinterpret_pointer_cast<ast_node::type_cmd_node>(command), sym_tab);
                 break;
             case ast_node::node_type::WRITE_CMD:
-                check_cmd_write(std::reinterpret_pointer_cast<ast_node::write_cmd_node>(command), global_scope);
+                check_cmd_write(std::reinterpret_pointer_cast<ast_node::write_cmd_node>(command), sym_tab);
                 break;
             default:
                 throw std::runtime_error("Tried to call `type_checker::check()` on non-command node");
@@ -69,52 +69,52 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type> check_expr(const std::shared_ptr<ast_node::expr_node>& expression,
-                                                             const scopes_t& scopes) {
+                                                             const symbol_table::symbol_table& sym_tab) {
         switch (expression->type) {
             case ast_node::node_type::ARRAY_INDEX_EXPR:
                 return check_expr_array_index(
-                        std::reinterpret_pointer_cast<ast_node::array_index_expr_node>(expression), scopes);
+                        std::reinterpret_pointer_cast<ast_node::array_index_expr_node>(expression), sym_tab);
             case ast_node::node_type::ARRAY_LITERAL_EXPR:
                 return check_expr_array_literal(
-                        std::reinterpret_pointer_cast<ast_node::array_literal_expr_node>(expression), scopes);
+                        std::reinterpret_pointer_cast<ast_node::array_literal_expr_node>(expression), sym_tab);
             case ast_node::node_type::ARRAY_LOOP_EXPR:
                 return check_expr_array_loop(std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(expression),
-                                             scopes);
+                                             sym_tab);
             case ast_node::node_type::BINOP_EXPR:
-                return check_expr_binop(std::reinterpret_pointer_cast<ast_node::binop_expr_node>(expression), scopes);
+                return check_expr_binop(std::reinterpret_pointer_cast<ast_node::binop_expr_node>(expression), sym_tab);
             case ast_node::node_type::CALL_EXPR:
-                return check_expr_call(std::reinterpret_pointer_cast<ast_node::call_expr_node>(expression), scopes);
+                return check_expr_call(std::reinterpret_pointer_cast<ast_node::call_expr_node>(expression), sym_tab);
             case ast_node::node_type::FALSE_EXPR:
-                return check_expr_false(std::reinterpret_pointer_cast<ast_node::false_expr_node>(expression), scopes);
+                return check_expr_false(std::reinterpret_pointer_cast<ast_node::false_expr_node>(expression), sym_tab);
             case ast_node::node_type::FLOAT_EXPR:
-                return check_expr_float(std::reinterpret_pointer_cast<ast_node::float_expr_node>(expression), scopes);
+                return check_expr_float(std::reinterpret_pointer_cast<ast_node::float_expr_node>(expression), sym_tab);
             case ast_node::node_type::IF_EXPR:
-                return check_expr_if(std::reinterpret_pointer_cast<ast_node::if_expr_node>(expression), scopes);
+                return check_expr_if(std::reinterpret_pointer_cast<ast_node::if_expr_node>(expression), sym_tab);
             case ast_node::node_type::INTEGER_EXPR:
                 return check_expr_integer(std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression),
-                                          scopes);
+                                          sym_tab);
             case ast_node::node_type::SUM_LOOP_EXPR:
                 return check_expr_sum_loop(std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(expression),
-                                           scopes);
+                                           sym_tab);
             case ast_node::node_type::TRUE_EXPR:
-                return check_expr_true(std::reinterpret_pointer_cast<ast_node::true_expr_node>(expression), scopes);
+                return check_expr_true(std::reinterpret_pointer_cast<ast_node::true_expr_node>(expression), sym_tab);
             case ast_node::node_type::TUPLE_INDEX_EXPR:
                 return check_expr_tuple_index(
-                        std::reinterpret_pointer_cast<ast_node::tuple_index_expr_node>(expression), scopes);
+                        std::reinterpret_pointer_cast<ast_node::tuple_index_expr_node>(expression), sym_tab);
             case ast_node::node_type::TUPLE_LITERAL_EXPR:
                 return check_expr_tuple_literal(
-                        std::reinterpret_pointer_cast<ast_node::tuple_literal_expr_node>(expression), scopes);
+                        std::reinterpret_pointer_cast<ast_node::tuple_literal_expr_node>(expression), sym_tab);
             case ast_node::node_type::UNOP_EXPR:
-                return check_expr_unop(std::reinterpret_pointer_cast<ast_node::unop_expr_node>(expression), scopes);
+                return check_expr_unop(std::reinterpret_pointer_cast<ast_node::unop_expr_node>(expression), sym_tab);
             case ast_node::node_type::VARIABLE_EXPR:
                 return check_expr_variable(std::reinterpret_pointer_cast<ast_node::variable_expr_node>(expression),
-                                           scopes);
+                                           sym_tab);
             default:
                 throw std::runtime_error("Tried to call `type_checker::check_expression()` on non-expression node");
         }
     }
 
-    void check_stmt(const std::shared_ptr<ast_node::stmt_node>&, const scopes_t&) {
+    void check_stmt(const std::shared_ptr<ast_node::stmt_node>&, const symbol_table::symbol_table&) {
         //  TODO (HW8): Implement.
     }
 
@@ -127,41 +127,43 @@ namespace type_checker {
     //  Commands:
     //  ---------
 
-    void check_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command, scope_t& global_scope) {
-        if (check_expr(command->arg_1, {global_scope})->type != resolved_type::BOOL_TYPE)
+    void check_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command,
+                          symbol_table::symbol_table& sym_tab) {
+        if (check_expr(command->arg_1, sym_tab)->type != resolved_type::BOOL_TYPE)
             throw type_check_exception("`check_cmd_assert`: non-boolean expression: " + command->arg_1->s_expression());
     }
 
-    void check_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>&, scope_t&) {
+    void check_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>&, symbol_table::symbol_table&) {
         //  TODO (HW8): Implement.
     }
 
-    void check_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>&, scope_t&) {
+    void check_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>&, symbol_table::symbol_table&) {
         //  TODO (HW7): Implement.
     }
 
-    void check_cmd_print(const std::shared_ptr<ast_node::print_cmd_node>&, scope_t&) {
+    void check_cmd_print(const std::shared_ptr<ast_node::print_cmd_node>&, symbol_table::symbol_table&) {
         //  There are no expressions in a `print` command. No type-checking to be done here.
     }
 
-    void check_cmd_read(const std::shared_ptr<ast_node::read_cmd_node>&, scope_t&) {
+    void check_cmd_read(const std::shared_ptr<ast_node::read_cmd_node>&, symbol_table::symbol_table&) {
         //  TODO (HW7): Implement.
     }
 
-    void check_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command, scope_t& global_scope) {
-        check_expr(command->arg_1, {global_scope});
+    void check_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command, symbol_table::symbol_table& sym_tab) {
+        check_expr(command->arg_1, sym_tab);
     }
 
-    void check_cmd_time(const std::shared_ptr<ast_node::time_cmd_node>& command, scope_t& global_scope) {
-        check_cmd(command->command, {global_scope});
+    void check_cmd_time(const std::shared_ptr<ast_node::time_cmd_node>& command, symbol_table::symbol_table& sym_tab) {
+        check_cmd(command->command, sym_tab);
     }
 
-    void check_cmd_type(const std::shared_ptr<ast_node::type_cmd_node>&, scope_t&) {
+    void check_cmd_type(const std::shared_ptr<ast_node::type_cmd_node>&, symbol_table::symbol_table&) {
         //  TODO (HW8): Implement.
     }
 
-    void check_cmd_write(const std::shared_ptr<ast_node::write_cmd_node>& command, scope_t& global_scope) {
-        const std::shared_ptr<resolved_type::resolved_type> expr_type = check_expr(command->arg_1, {global_scope});
+    void check_cmd_write(const std::shared_ptr<ast_node::write_cmd_node>& command,
+                         symbol_table::symbol_table& sym_tab) {
+        const std::shared_ptr<resolved_type::resolved_type> expr_type = check_expr(command->arg_1, sym_tab);
         if (expr_type->type != resolved_type::ARRAY_TYPE)
             throw type_check_exception("`check_cmd_write`: not an array: " + command->arg_1->s_expression());
 
@@ -185,8 +187,9 @@ namespace type_checker {
     //  ------------
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_array_index(const std::shared_ptr<ast_node::array_index_expr_node>& expression, const scopes_t& scopes) {
-        const std::shared_ptr<resolved_type::resolved_type> array_type = check_expr(expression->array, scopes);
+    check_expr_array_index(const std::shared_ptr<ast_node::array_index_expr_node>& expression,
+                           const symbol_table::symbol_table& sym_tab) {
+        const std::shared_ptr<resolved_type::resolved_type> array_type = check_expr(expression->array, sym_tab);
         if (array_type->type != resolved_type::ARRAY_TYPE)
             throw type_check_exception("`check_expr_array_index`: indexing a non-array: " + expression->s_expression());
 
@@ -197,7 +200,7 @@ namespace type_checker {
                                        + expression->s_expression());
 
         for (const std::shared_ptr<ast_node::expr_node>& param : expression->params) {
-            if (check_expr(param, scopes)->type != resolved_type::INT_TYPE)
+            if (check_expr(param, sym_tab)->type != resolved_type::INT_TYPE)
                 throw type_check_exception("`check_expr_array_index`: index arg not an integer: "
                                            + expression->s_expression());
         }
@@ -211,14 +214,14 @@ namespace type_checker {
 
     std::shared_ptr<resolved_type::resolved_type>
     check_expr_array_literal(const std::shared_ptr<ast_node::array_literal_expr_node>& expression,
-                             const scopes_t& scopes) {
+                             const symbol_table::symbol_table& sym_tab) {
         if (expression->expressions.empty())
             throw type_check_exception("`check_expr_array_literal`: empty arrays not allowed");
         const std::shared_ptr<resolved_type::resolved_type> element_type = check_expr(expression->expressions[0],
-                                                                                      scopes);
+                                                                                      sym_tab);
         for (unsigned int index = 1; index < (unsigned int)expression->expressions.size(); index++) {
             const std::shared_ptr<resolved_type::resolved_type> type = check_expr(expression->expressions[index],
-                                                                                  scopes);
+                                                                                  sym_tab);
             if (*element_type != *type)
                 throw type_check_exception("`check_expr_array_literal`: type mismatch: " + expression->s_expression());
         }
@@ -231,16 +234,17 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_array_loop(const std::shared_ptr<ast_node::array_loop_expr_node>&, const scopes_t&) {
+    check_expr_array_loop(const std::shared_ptr<ast_node::array_loop_expr_node>&, const symbol_table::symbol_table&) {
         //  TODO (HW7): Implement.
 
         return {};
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_binop(const std::shared_ptr<ast_node::binop_expr_node>& expression, const scopes_t& scopes) {
-        const std::shared_ptr<resolved_type::resolved_type> left_type = check_expr(expression->left_operand, scopes);
-        const std::shared_ptr<resolved_type::resolved_type> right_type = check_expr(expression->right_operand, scopes);
+    check_expr_binop(const std::shared_ptr<ast_node::binop_expr_node>& expression,
+                     const symbol_table::symbol_table& sym_tab) {
+        const std::shared_ptr<resolved_type::resolved_type> left_type = check_expr(expression->left_operand, sym_tab);
+        const std::shared_ptr<resolved_type::resolved_type> right_type = check_expr(expression->right_operand, sym_tab);
 
         if (*left_type != *right_type)
             throw type_check_exception("`check_expr_binop`: mismatched types: " + expression->s_expression());
@@ -287,14 +291,14 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type> check_expr_call(const std::shared_ptr<ast_node::call_expr_node>&,
-                                                                  const scopes_t&) {
+                                                                  const symbol_table::symbol_table&) {
         //  TODO (HW7): Implement.
 
         return {};
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_false(const std::shared_ptr<ast_node::false_expr_node>& expression, const scopes_t&) {
+    check_expr_false(const std::shared_ptr<ast_node::false_expr_node>& expression, const symbol_table::symbol_table&) {
         const std::shared_ptr<resolved_type::resolved_type> bool_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::BOOL_TYPE);
 
@@ -304,7 +308,7 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_float(const std::shared_ptr<ast_node::float_expr_node>& expression, const scopes_t&) {
+    check_expr_float(const std::shared_ptr<ast_node::float_expr_node>& expression, const symbol_table::symbol_table&) {
         const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::FLOAT_TYPE);
 
@@ -314,7 +318,7 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_if(const std::shared_ptr<ast_node::if_expr_node>& expression, const scopes_t& scopes) {
+    check_expr_if(const std::shared_ptr<ast_node::if_expr_node>& expression, const symbol_table::symbol_table& scopes) {
         const std::shared_ptr<resolved_type::resolved_type> conditional_type = check_expr(expression->conditional_expr,
                                                                                           scopes);
         if (conditional_type->type != resolved_type::BOOL_TYPE)
@@ -335,7 +339,8 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_integer(const std::shared_ptr<ast_node::integer_expr_node>& expression, const scopes_t&) {
+    check_expr_integer(const std::shared_ptr<ast_node::integer_expr_node>& expression,
+                       const symbol_table::symbol_table&) {
         const std::shared_ptr<resolved_type::resolved_type> int_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::INT_TYPE);
 
@@ -345,14 +350,14 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_sum_loop(const std::shared_ptr<ast_node::sum_loop_expr_node>&, const scopes_t&) {
+    check_expr_sum_loop(const std::shared_ptr<ast_node::sum_loop_expr_node>&, const symbol_table::symbol_table&) {
         //  TODO (HW7): Implement.
 
         return {};
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_true(const std::shared_ptr<ast_node::true_expr_node>& expression, const scopes_t&) {
+    check_expr_true(const std::shared_ptr<ast_node::true_expr_node>& expression, const symbol_table::symbol_table&) {
         const std::shared_ptr<resolved_type::resolved_type> bool_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::BOOL_TYPE);
 
@@ -362,8 +367,9 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_tuple_index(const std::shared_ptr<ast_node::tuple_index_expr_node>& expression, const scopes_t& scopes) {
-        const std::shared_ptr<resolved_type::resolved_type> tuple_type = check_expr(expression->expr, scopes);
+    check_expr_tuple_index(const std::shared_ptr<ast_node::tuple_index_expr_node>& expression,
+                           const symbol_table::symbol_table& sym_tab) {
+        const std::shared_ptr<resolved_type::resolved_type> tuple_type = check_expr(expression->expr, sym_tab);
         if (tuple_type->type != resolved_type::TUPLE_TYPE)
             throw type_check_exception("`check_expr_tuple_index`: indexing a non-tuple: " + expression->s_expression());
 
@@ -383,11 +389,11 @@ namespace type_checker {
 
     std::shared_ptr<resolved_type::resolved_type>
     check_expr_tuple_literal(const std::shared_ptr<ast_node::tuple_literal_expr_node>& expression,
-                             const scopes_t& scopes) {
+                             const symbol_table::symbol_table& sym_tab) {
         std::vector<std::shared_ptr<resolved_type::resolved_type>> r_types;
 
         for (const std::shared_ptr<ast_node::expr_node>& expr : expression->exprs) {
-            r_types.push_back(check_expr(expr, scopes));
+            r_types.push_back(check_expr(expr, sym_tab));
         }
 
         const std::shared_ptr<resolved_type::resolved_type> r_type
@@ -399,8 +405,9 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression, const scopes_t& scopes) {
-        const std::shared_ptr<resolved_type::resolved_type> r_type = check_expr(expression->operand, scopes);
+    check_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression,
+                    const symbol_table::symbol_table& sym_tab) {
+        const std::shared_ptr<resolved_type::resolved_type> r_type = check_expr(expression->operand, sym_tab);
 
         if (expression->type == ast_node::op_type::UNOP_NEG && r_type->type != resolved_type::INT_TYPE
             && r_type->type != resolved_type::FLOAT_TYPE)
@@ -415,19 +422,21 @@ namespace type_checker {
     }
 
     std::shared_ptr<resolved_type::resolved_type>
-    check_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression, const scopes_t& scopes) {
-        std::shared_ptr<resolved_type::resolved_type> r_type;
+    check_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression,
+                        const symbol_table::symbol_table& sym_tab) {
         const std::string variable = expression->arg_1.text;
 
-        for (const scope_t& scope : scopes) {
-            if (scope.count(variable) > 0) {
-                r_type = scope.at(variable);
-                break;
-            }
+        std::shared_ptr<name_info::name_info> info;
+        try {
+            info = sym_tab[variable];
+        } catch (std::runtime_error& err) {
+            throw type_check_exception("`check_expr_variable`: no entry in symbol table: " + variable);
         }
-
-        if (r_type == nullptr)
-            throw type_check_exception("`check_expr_variable`: no variable in scope: " + expression->s_expression());
+        if (info->name_info_type != name_info::name_info_class::VARIABLE_INFO) {
+            throw type_check_exception("`check_expr_variable`: not a variable: " + variable);
+        }
+        const std::shared_ptr<resolved_type::resolved_type> r_type
+                = std::reinterpret_pointer_cast<name_info::variable_info>(info)->r_type;
 
         expression->r_type = r_type;
 
