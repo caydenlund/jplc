@@ -1,6 +1,6 @@
 /**
  * @file type_checker.hpp
- * @package Assignment 6
+ * @package Assignments 6-8
  * @author Cayden Lund (u1182408)
  * @brief Defines the `type_checker` methods.
  *
@@ -29,6 +29,11 @@ namespace type_checker {
      *
      */
     struct type_check_exception : public std::runtime_error {
+        /**
+         * @brief Class constructor.
+         *
+         * @param message The error message to report.
+         */
         type_check_exception(const std::string& message) : std::runtime_error(message.c_str()) {}
     };
 
@@ -42,8 +47,10 @@ namespace type_checker {
      * @brief Type-checks the given list of AST nodes.
      *
      * @param nodes A set of AST command nodes.
+     * @param initialize_hw6 True if the compiler should initialize the `pict.` variable for homework 6.
+     *     Defaults to false.
      */
-    void check(const parser::node_list_t& nodes);
+    void check(const parser::node_list_t& nodes, bool initialize_hw6 = false);
 
     /*
     =====================
