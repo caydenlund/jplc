@@ -405,6 +405,10 @@ namespace type_checker {
     std::shared_ptr<resolved_type::resolved_type>
     check_expr_array_loop(const std::shared_ptr<ast_node::array_loop_expr_node>& expression,
                           const symbol_table::symbol_table& sym_tab) {
+        //  First, make sure that there are array dimension arguments:
+        if (expression->binding_pairs.empty())
+            throw type_check_exception("`check_expr_array_loop`: no array dimension arguments");
+
         symbol_table::symbol_table array_loop_expr_symbols(sym_tab);
 
         for (const ast_node::array_loop_expr_node::binding_pair_t& binding_pair : expression->binding_pairs) {
@@ -486,7 +490,7 @@ namespace type_checker {
                                                                   const symbol_table::symbol_table&) {
         //  TODO (HW8): Implement.
 
-        return {};
+        return std::make_shared<resolved_type::resolved_type>(resolved_type::FLOAT_TYPE);
     }
 
     std::shared_ptr<resolved_type::resolved_type>
@@ -544,6 +548,10 @@ namespace type_checker {
     std::shared_ptr<resolved_type::resolved_type>
     check_expr_sum_loop(const std::shared_ptr<ast_node::sum_loop_expr_node>& expression,
                         const symbol_table::symbol_table& sym_tab) {
+        //  First, make sure that there are sum dimension arguments:
+        if (expression->binding_pairs.empty())
+            throw type_check_exception("`check_expr_sum_loop`: no sum dimension arguments");
+
         symbol_table::symbol_table sum_loop_expr_symbols(sym_tab);
 
         for (const ast_node::sum_loop_expr_node::binding_pair_t& binding_pair : expression->binding_pairs) {
