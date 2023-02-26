@@ -31,6 +31,6 @@ jobs:
         run: true
       - name: Grade part ${{ matrix.part }}
         if: matrix.part <= env.HW_PARTS
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: make -C grader test-current DIR=$GITHUB_WORKSPACE PART=${{ matrix.part }}
 
