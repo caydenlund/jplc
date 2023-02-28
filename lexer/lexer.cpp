@@ -10,139 +10,440 @@
 #include "lexer.hpp"
 
 namespace lexer {
-    lexing_exception::lexing_exception(const std::string& invalid_token, unsigned int line, unsigned int column)
-        : runtime_error("There was an invalid character sequence."),
-          message("There was invalid character sequence: \"" + invalid_token + "\" at " + std::to_string(line) + ":"
-                  + std::to_string(column) + ".") {}
+    lexing_exception::lexing_exception(const std::string& invalid_input, unsigned int index)
+        : runtime_error("There was invalid character sequence: \""
+                        + ((invalid_input.size() - index > max_token_snippet_length)
+                                   ? invalid_input.substr(index, max_token_snippet_length)
+                                   : invalid_input.substr(index, invalid_input.size() - index))
+                        + "\" at " + std::to_string(file::get_line(index)) + ":"
+                        + std::to_string(file::get_column(index)) + ".") {}
 
-    const char* lexing_exception::what() const noexcept { return this->message.c_str(); }
+    result_t lexer::operator()(const std::string&, unsigned int) { return {}; }
 
-    lexer::lexer(const std::string& pattern, token::token_type type) : pattern(pattern), type(type) {}
+    bool lexer::is_valid_char(char byte) { return (byte == '\n' || (' ' <= byte && byte <= '~')); }
 
-    result_t lexer::operator()(const std::string& input, unsigned int index) const {
-        std::smatch match;
+    result_t comment_lexer::operator()(const std::string& input, unsigned int index) {
+        enum state_t {
+            START,                   //  Initial state.
+            ONE_SLASH,               //  We found a single "/" character.
+            IN_SINGLE_LINE_COMMENT,  //  We are inside a single-line comment.
+            IN_MULTI_LINE_COMMENT,   //  We are inside a multi-line comment.
+            STAR                     //  We are inside a multi-line comment, and we found a "*" character.
+        };
 
-        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            //  This creates a smart pointer to a new `token` object.
-            const token_ptr_t new_token = std::make_shared<token::token>(token::token {index, match[0], this->type});
-            return {new_token, index + (unsigned int)match[0].length()};
+        state_t state = START;
+        unsigned int current_index = index;
+        const unsigned int input_size = input.size();
+
+        while (current_index < input_size) {
+            const char current_char = input[current_index];
+            if (!this->is_valid_char(current_char)) throw lexing_exception(input, current_index);
+
+            switch (state) {
+                case START:
+                    if (current_char == '/') {
+                        state = ONE_SLASH;
+                        current_index++;
+                        continue;
+                    }
+                    break;
+                case ONE_SLASH:
+                    if (current_char == '/') {
+                        state = IN_SINGLE_LINE_COMMENT;
+                        current_index++;
+                        continue;
+                    }
+                    if (current_char == '*') {
+                        state = IN_MULTI_LINE_COMMENT;
+                        current_index++;
+                        continue;
+                    }
+                    break;
+                case IN_SINGLE_LINE_COMMENT:
+                    if (current_char == '\n') return {token::token {}, current_index};
+                    current_index++;
+                    continue;
+                case IN_MULTI_LINE_COMMENT:
+                    if (current_char == '*') { state = STAR; }
+                    current_index++;
+                    continue;
+                case STAR:
+                    if (current_char == '/') return {token::token {}, current_index + 1};
+                    state = IN_MULTI_LINE_COMMENT;
+                    current_index++;
+                    continue;
+            }
+            return {token::token {}, index};
         }
 
-        return {std::make_shared<token::token>(), index};
+        throw lexing_exception(input, index);
     }
 
-    string_lexer::string_lexer() : lexer(R"(^"[ !#-~]*")", token::token_type::STRING) {}
+    result_t literal_lexer::operator()(const std::string& input, unsigned int index) {
+        enum state_t {
+            START,              //  Initial state.
+            DIGIT,              //  We have seen a digit.
+            DIGIT_AND_DECIMAL,  //  We have seen both a digit and a period (not necessarily in that order).
+            DECIMAL             //  We have seen a period, but no digit.
+        };
 
-    result_t string_lexer::operator()(const std::string& input, unsigned int index) const {
-        std::smatch match;
+        state_t state = START;
+        unsigned int current_index = index;
+        const unsigned int input_size = input.size();
 
-        if (std::regex_search(input.begin() + index, input.end(), match, this->pattern)) {
-            const std::string value = std::string(match[0]).substr(1, match[0].length() - 2);
-            //  This creates a smart pointer to a new `string_token` object.
-            const token_ptr_t new_token = std::make_shared<token::string_token>(
-                    token::string_token {{index, match[0], this->type}, value});
-            return {new_token, index + (unsigned int)match[0].length()};
+        while (current_index < input_size) {
+            const char current_char = input[current_index];
+            if (!this->is_valid_char(current_char)) throw lexing_exception(input, current_index);
+
+            const bool char_is_digit = ('0' <= current_char && current_char <= '9');
+            switch (state) {
+                case START:
+                    if (char_is_digit) {
+                        state = DIGIT;
+                        current_index++;
+                        continue;
+                    }
+                    if (current_char == '.') {
+                        state = DECIMAL;
+                        current_index++;
+                        continue;
+                    }
+                    break;
+                case DIGIT:
+                    if (char_is_digit) {
+                        current_index++;
+                        continue;
+                    }
+                    if (current_char == '.') {
+                        state = DIGIT_AND_DECIMAL;
+                        current_index++;
+                        continue;
+                    }
+                    return {{index, std::string(input.begin() + index, input.begin() + current_index),
+                             token::token_type::INTVAL},
+                            current_index};
+                case DIGIT_AND_DECIMAL:
+                    if (char_is_digit) {
+                        current_index++;
+                        continue;
+                    }
+                    return {{index, std::string(input.begin() + index, input.begin() + current_index),
+                             token::token_type::FLOATVAL},
+                            current_index};
+                case DECIMAL:
+                    if (char_is_digit) {
+                        state = DIGIT_AND_DECIMAL;
+                        current_index++;
+                        continue;
+                    }
+                    break;
+            }
+            return {token::token {}, index};
         }
 
-        return {std::make_shared<token::token>(), index};
+        return {token::token {}, index};
+    }
+
+    result_t newline_lexer::operator()(const std::string& input, unsigned int index) {
+        enum state_t {
+            START,     //  Initial state.
+            BACKSLASH  //  We saw the '\' character.
+        };
+
+        state_t state = START;
+        unsigned int current_index = index;
+        const unsigned int input_size = input.size();
+
+        while (current_index < input_size) {
+            const char current_char = input[current_index];
+            if (!this->is_valid_char(current_char)) throw lexing_exception(input, current_index);
+
+            switch (state) {
+                case START:
+                    if (current_char == '\\') {
+                        state = BACKSLASH;
+                        current_index++;
+                        continue;
+                    }
+                    if (current_char == '\n') {
+                        return {{current_index, "\n", token::token_type::NEWLINE}, current_index + 1};
+                    }
+                    break;
+                case BACKSLASH:
+                    if (current_char == '\n') { return {token::token {}, current_index + 1}; }
+                    break;
+            }
+            return {token::token {}, index};
+        }
+
+        return {token::token {}, index};
+    }
+
+    result_t operator_lexer::operator()(const std::string& input, unsigned int index) {
+        enum state_t {
+            START,        //  Initial state.
+            LT,           //  We saw the '<' character.
+            GT,           //  We saw the '>' character.
+            EXCLAMATION,  //  We saw the '!' character.
+            EQ,           //  We saw the '=' character.
+            AMP,          //  We saw the '&' character.
+            PIPE          //  We saw the '|' character.
+        };
+
+        state_t state = START;
+        unsigned int current_index = index;
+        const unsigned int input_size = input.size();
+
+        while (current_index < input_size) {
+            const char current_char = input[current_index];
+            if (!this->is_valid_char(current_char)) throw lexing_exception(input, current_index);
+
+            switch (state) {
+                case START:
+                    switch (current_char) {
+                        case '+':
+                            return {{index, "+", token::token_type::OP}, current_index + 1};
+                        case '-':
+                            return {{index, "-", token::token_type::OP}, current_index + 1};
+                        case '*':
+                            return {{index, "*", token::token_type::OP}, current_index + 1};
+                        case '/':
+                            return {{index, "/", token::token_type::OP}, current_index + 1};
+                        case '%':
+                            return {{index, "%", token::token_type::OP}, current_index + 1};
+                        case '<':
+                            state = LT;
+                            current_index++;
+                            continue;
+                        case '>':
+                            state = GT;
+                            current_index++;
+                            continue;
+                        case '!':
+                            state = EXCLAMATION;
+                            current_index++;
+                            continue;
+                        case '=':
+                            state = EQ;
+                            current_index++;
+                            continue;
+                        case '&':
+                            state = AMP;
+                            current_index++;
+                            continue;
+                        case '|':
+                            state = PIPE;
+                            current_index++;
+                            continue;
+                        default:
+                            break;
+                    }
+                    break;
+                case LT:
+                    if (current_char == '=') return {{index, "<=", token::token_type::OP}, current_index + 1};
+                    return {{index, "<", token::token_type::OP}, current_index};
+                case GT:
+                    if (current_char == '=') return {{index, ">=", token::token_type::OP}, current_index + 1};
+                    return {{index, ">", token::token_type::OP}, current_index};
+                case EXCLAMATION:
+                    if (current_char == '=') return {{index, "!=", token::token_type::OP}, current_index + 1};
+                    return {{index, "!", token::token_type::OP}, current_index};
+                case EQ:
+                    if (current_char == '=') return {{index, "==", token::token_type::OP}, current_index + 1};
+                    break;
+                case AMP:
+                    if (current_char == '&') return {{index, "&&", token::token_type::OP}, current_index + 1};
+                    break;
+                case PIPE:
+                    if (current_char == '|') return {{index, "||", token::token_type::OP}, current_index + 1};
+                    break;
+            }
+            return {token::token {}, index};
+        }
+
+        return {token::token {}, index};
+    }
+
+    result_t punctuation_lexer::operator()(const std::string& input, unsigned int index) {
+        const char current_char = input[index];
+        if (!this->is_valid_char(current_char)) throw lexing_exception(input, index);
+
+        switch (current_char) {
+            case ' ':
+                return {token::token {}, index + 1};
+            case ':':
+                return {{index, ":", token::token_type::COLON}, index + 1};
+            case '{':
+                return {{index, "{", token::token_type::LCURLY}, index + 1};
+            case '}':
+                return {{index, "}", token::token_type::RCURLY}, index + 1};
+            case '(':
+                return {{index, "(", token::token_type::LPAREN}, index + 1};
+            case ')':
+                return {{index, ")", token::token_type::RPAREN}, index + 1};
+            case ',':
+                return {{index, ",", token::token_type::COMMA}, index + 1};
+            case '[':
+                return {{index, "[", token::token_type::LSQUARE}, index + 1};
+            case ']':
+                return {{index, "]", token::token_type::RSQUARE}, index + 1};
+            case '=':
+                return {{index, "=", token::token_type::EQUALS}, index + 1};
+            default:
+                break;
+        }
+
+        return {token::token {}, index};
+    }
+
+    result_t string_lexer::operator()(const std::string& input, unsigned int index) {
+        enum state_t {
+            START,     //  Initial state.
+            IN_STRING  //  The first character was '"'; this is a string.
+        };
+
+        state_t state = START;
+        unsigned int current_index = index;
+        const unsigned int input_size = input.size();
+
+        while (current_index < input_size) {
+            const char current_char = input[current_index];
+            if (!this->is_valid_char(current_char)) throw lexing_exception(input, current_index);
+
+            switch (state) {
+                case START:
+                    if (current_char == '"') {
+                        state = IN_STRING;
+                        current_index++;
+                        continue;
+                    }
+                    break;
+                case IN_STRING:
+                    if (current_char == '"') {
+                        return {{index, std::string(input.begin() + index, input.begin() + current_index + 1),
+                                 token::token_type::STRING},
+                                current_index + 1};
+                    }
+                    if (current_char == '\n') return {token::token {}, index};
+                    current_index++;
+                    continue;
+            }
+            return {token::token {}, index};
+        }
+
+        return {token::token {}, index};
+    }
+
+    result_t variable_keyword_lexer::operator()(const std::string& input, unsigned int index) {
+        enum state_t {
+            START,  //  Initial state.
+            LETTER  //  The first character was a letter; this is a valid variable or keyword.
+        };
+
+        state_t state = START;
+        unsigned int current_index = index;
+        const unsigned int input_size = input.size();
+
+        while (current_index < input_size) {
+            const char current_char = input[current_index];
+            if (!this->is_valid_char(current_char)) throw lexing_exception(input, current_index);
+
+            const bool current_is_letter = (('a' <= current_char && current_char <= 'z')
+                                            || ('A' <= current_char && current_char <= 'Z'));
+            const bool current_is_valid_char = current_is_letter || ('0' <= current_char && current_char <= '9')
+                                            || current_char == '_' || current_char == '.';
+            switch (state) {
+                case START:
+                    if (current_is_letter) {
+                        state = LETTER;
+                        current_index++;
+                        continue;
+                    }
+                    break;
+                case LETTER:
+                    if (current_is_valid_char) {
+                        current_index++;
+                        continue;
+                    }
+                    //  Otherwise, this is the end of the keyword or variable.
+                    const std::string whole_word(input.begin() + index, input.begin() + current_index);
+                    token::token_type word_type = token::token_type::VARIABLE;
+                    if (whole_word == "array") {
+                        word_type = token::token_type::ARRAY;
+                    } else if (whole_word == "assert") {
+                        word_type = token::token_type::ASSERT;
+                    } else if (whole_word == "bool") {
+                        word_type = token::token_type::BOOL;
+                    } else if (whole_word == "else") {
+                        word_type = token::token_type::ELSE;
+                    } else if (whole_word == "false") {
+                        word_type = token::token_type::FALSE;
+                    } else if (whole_word == "float") {
+                        word_type = token::token_type::FLOAT;
+                    } else if (whole_word == "fn") {
+                        word_type = token::token_type::FN;
+                    } else if (whole_word == "if") {
+                        word_type = token::token_type::IF;
+                    } else if (whole_word == "image") {
+                        word_type = token::token_type::IMAGE;
+                    } else if (whole_word == "int") {
+                        word_type = token::token_type::INT;
+                    } else if (whole_word == "let") {
+                        word_type = token::token_type::LET;
+                    } else if (whole_word == "print") {
+                        word_type = token::token_type::PRINT;
+                    } else if (whole_word == "read") {
+                        word_type = token::token_type::READ;
+                    } else if (whole_word == "return") {
+                        word_type = token::token_type::RETURN;
+                    } else if (whole_word == "show") {
+                        word_type = token::token_type::SHOW;
+                    } else if (whole_word == "sum") {
+                        word_type = token::token_type::SUM;
+                    } else if (whole_word == "then") {
+                        word_type = token::token_type::THEN;
+                    } else if (whole_word == "time") {
+                        word_type = token::token_type::TIME;
+                    } else if (whole_word == "to") {
+                        word_type = token::token_type::TO;
+                    } else if (whole_word == "true") {
+                        word_type = token::token_type::TRUE;
+                    } else if (whole_word == "type") {
+                        word_type = token::token_type::TYPE;
+                    } else if (whole_word == "write") {
+                        word_type = token::token_type::WRITE;
+                    }
+                    return {{index, whole_word, word_type}, current_index};
+            }
+            return {token::token {}, index};
+        }
+
+        return {token::token {}, index};
     }
 
     std::vector<lexer_ptr_t> assemble_lexers() {
-        //  This is a lambda function that constructs a smart pointer to a new lexer.
-        const auto construct_lexer = [](const std::string& expression, token::token_type type) {
-            return std::make_shared<lexer>(expression, type);
-        };
-
         std::vector<lexer_ptr_t> lexers;
 
-        //  Literals:
-        //  ---------
-        lexers.emplace_back(construct_lexer(R"(^((\d+\.\d*)|(\d*\.\d+)))",
-                                            token::token_type::FLOATVAL));         //  Floating-point literals.
-        lexers.emplace_back(construct_lexer("^\\d+", token::token_type::INTVAL));  //  Integer literals.
-        lexers.emplace_back(std::make_shared<string_lexer>(string_lexer()));       //  String literals.
+        //  Strings.
+        lexers.emplace_back(std::make_shared<string_lexer>(string_lexer()));
 
-        //  Misc. expressions:
-        //  ------------------
-        //  Variables:
-        std::stringstream expression;
-        //      First off, it must not be a keyword:
-        expression << "(?!^(";
-        for (const std::string keyword :
-             {"array", "assert", "bool",   "else", "false", "float", "fn",   "if", "image", "int", "let",
-              "print", "read",   "return", "show", "sum",   "then",  "time", "to", "true",  "type"}) {
-            expression << keyword << "|";
-        }
-        expression << "write)"
-                   << R"(([^\w\.]|$)))";
-        //      Next, the first character must be a letter:
-        expression << "^[a-zA-Z]";
-        //      After that, any sequence of letters, numbers, underscores, and periods:
-        expression << R"([\w\.]*)";
-        lexers.emplace_back(construct_lexer(expression.str(), token::token_type::VARIABLE));  //  Variables.
+        //  Newlines.
+        lexers.emplace_back(std::make_shared<newline_lexer>(newline_lexer()));
 
-        //  Newlines:
-        //      If the newline is preceded by a backslash, then escape it:
-        lexers.emplace_back(construct_lexer("^\\\\\n", token::token_type::SPACE));  //  An escaped newline.
+        //  Comments.
+        lexers.emplace_back(std::make_shared<comment_lexer>(comment_lexer()));
 
-        //  Single-line comments:
-        lexers.emplace_back(
-                construct_lexer(R"(^\/\/.*?(?=(\\\n|\n|$)))", token::token_type::SPACE));  //  A single-line comment.
+        //  Operators.
+        lexers.emplace_back(std::make_shared<operator_lexer>(operator_lexer()));
 
-        //  Multi-line comments:
-        lexers.emplace_back(
-                construct_lexer(R"(^\/\*[\S \n]*?\*\/)", token::token_type::SPACE));  //  A multi-line comment.
+        //  Punctuation.
+        lexers.emplace_back(std::make_shared<punctuation_lexer>(punctuation_lexer()));
 
-        //  Operators:
-        expression.str("");
-        expression << "^(";
-        for (const std::string ope : {"&&", "\\|\\|", "<=", ">=", "==", "<", ">", "!=", "\\+", "-",
-                                      R"((\*(?!\/)))",     //  A '*' that doesn't come before a '/'.
-                                      R"((\/(?!\*|\/)))",  //  A '/' that doesn't come before a '/' or '*'.
-                                      "%"}) {
-            expression << ope << "|";
-        }
-        expression << "!)";
-        lexers.emplace_back(construct_lexer(expression.str(), token::token_type::OP));
+        //  Integer and floating-point literals.
+        lexers.emplace_back(std::make_shared<literal_lexer>(literal_lexer()));
 
-        //  Characters:
-        //  -----------
-        lexers.emplace_back(construct_lexer("^ ", token::token_type::SPACE));      //  The character ' '.
-        lexers.emplace_back(construct_lexer("^:", token::token_type::COLON));      //  The character ':'.
-        lexers.emplace_back(construct_lexer("^,", token::token_type::COMMA));      //  The character ','.
-        lexers.emplace_back(construct_lexer("^=", token::token_type::EQUALS));     //  The character '='.
-        lexers.emplace_back(construct_lexer("^\\{", token::token_type::LCURLY));   //  The character '{'.
-        lexers.emplace_back(construct_lexer("^\\}", token::token_type::RCURLY));   //  The character '}'.
-        lexers.emplace_back(construct_lexer("^\\(", token::token_type::LPAREN));   //  The character '('.
-        lexers.emplace_back(construct_lexer("^\\)", token::token_type::RPAREN));   //  The character ')'.
-        lexers.emplace_back(construct_lexer("^\\[", token::token_type::LSQUARE));  //  The character '['.
-        lexers.emplace_back(construct_lexer("^\\]", token::token_type::RSQUARE));  //  The character ']'.
-        lexers.emplace_back(construct_lexer("^\n", token::token_type::NEWLINE));   //  The character '\n'.
-
-        //  Keywords:
-        //  ---------
-        lexers.emplace_back(construct_lexer("^array", token::token_type::ARRAY));    //  The keyword "array".
-        lexers.emplace_back(construct_lexer("^assert", token::token_type::ASSERT));  //  The keyword "assert".
-        lexers.emplace_back(construct_lexer("^bool", token::token_type::BOOL));      //  The keyword "bool".
-        lexers.emplace_back(construct_lexer("^else", token::token_type::ELSE));      //  The keyword "else".
-        lexers.emplace_back(construct_lexer("^false", token::token_type::FALSE));    //  The keyword "false".
-        lexers.emplace_back(construct_lexer("^float", token::token_type::FLOAT));    //  The keyword "float".
-        lexers.emplace_back(construct_lexer("^fn", token::token_type::FN));          //  The keyword "fn".
-        lexers.emplace_back(construct_lexer("^if", token::token_type::IF));          //  The keyword "if".
-        lexers.emplace_back(construct_lexer("^image", token::token_type::IMAGE));    //  The keyword "image".
-        lexers.emplace_back(construct_lexer("^int", token::token_type::INT));        //  The keyword "int".
-        lexers.emplace_back(construct_lexer("^let", token::token_type::LET));        //  The keyword "let".
-        lexers.emplace_back(construct_lexer("^print", token::token_type::PRINT));    //  The keyword "print".
-        lexers.emplace_back(construct_lexer("^read", token::token_type::READ));      //  The keyword "read".
-        lexers.emplace_back(construct_lexer("^return", token::token_type::RETURN));  //  The keyword "return".
-        lexers.emplace_back(construct_lexer("^show", token::token_type::SHOW));      //  The keyword "show".
-        lexers.emplace_back(construct_lexer("^sum", token::token_type::SUM));        //  The keyword "sum".
-        lexers.emplace_back(construct_lexer("^then", token::token_type::THEN));      //  The keyword "then".
-        lexers.emplace_back(construct_lexer("^time", token::token_type::TIME));      //  The keyword "time".
-        lexers.emplace_back(construct_lexer("^to", token::token_type::TO));          //  The keyword "to".
-        lexers.emplace_back(construct_lexer("^true", token::token_type::TRUE));      //  The keyword "true".
-        lexers.emplace_back(construct_lexer("^type", token::token_type::TYPE));      //  The keyword "type".
-        lexers.emplace_back(construct_lexer("^write", token::token_type::WRITE));    //  The keyword "write".
+        //  Variables and keywords.
+        lexers.emplace_back(std::make_shared<variable_keyword_lexer>(variable_keyword_lexer()));
 
         return lexers;
     }
@@ -165,13 +466,12 @@ namespace lexer {
                 const unsigned int new_start = std::get<1>(result);
                 if (new_start != start) {
                     //  The lexer succeeded.
-                    //  Add the new token to the vector, unless the token is a space.
+                    //  Add the new token to the vector, unless the token is empty.
                     //  Also, don't add a second consecutive newline.
-                    //  The first token should not be a newline, either.
-                    const token_ptr_t new_token = std::get<0>(result);
-                    if (new_token->type != token::token_type::SPACE
-                        && (new_token->type != token::token_type::NEWLINE
-                            || (!tokens.empty() && tokens[tokens.size() - 1]->type != token::token_type::NEWLINE)))
+                    const token::token new_token = std::get<0>(result);
+                    if (!new_token.text.empty()
+                        && (new_token.type != token::token_type::NEWLINE || tokens.empty()
+                            || tokens[tokens.size() - 1].type != token::token_type::NEWLINE))
                         tokens.push_back(new_token);
 
                     valid_token = true;
@@ -182,18 +482,11 @@ namespace lexer {
             }
 
             //  If we tried every lexer and weren't able to move on, then we need to throw an exception.
-            if (!valid_token) {
-                const unsigned int token_length = input.length() - start;
-                const std::string invalid_token
-                        = (token_length > lexing_exception::max_token_snippet_length)
-                                ? (input.substr(start, lexing_exception::max_token_snippet_length) + "...")
-                                : (input.substr(start, token_length));
-                throw lexing_exception(invalid_token, file::get_line(start), file::get_column(start));
-            }
+            if (!valid_token) throw lexing_exception(input, start);
         }
 
         //  Add the final token:
-        tokens.push_back(std::make_shared<token::token>(token::token {start, "", token::token_type::END_OF_FILE}));
+        tokens.push_back({start, "", token::token_type::END_OF_FILE});
 
         return tokens;
     }

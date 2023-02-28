@@ -24,10 +24,10 @@
 int lex_only(const std::string& filename) {
     const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
 
-    for (const lexer::token_ptr_t& token : tokens) {
-        std::cout << token::token_type_to_string(token->type);
-        if (token->type != token::token_type::NEWLINE && token->type != token::token_type::END_OF_FILE)
-            std::cout << " '" << token->text << "'";
+    for (const token::token& tok : tokens) {
+        std::cout << token::token_type_to_string(tok.type);
+        if (tok.type != token::token_type::NEWLINE && tok.type != token::token_type::END_OF_FILE)
+            std::cout << " '" << tok.text << "'";
         std::cout << "\n";
     }
 
@@ -67,6 +67,7 @@ int lex_parse_and_check_only(const std::string& filename) {
 
     for (const parser::node_ptr_t& node : nodes) { std::cout << node->s_expression() << "\n"; }
 
+    //  TODO: Update this to say, "Compilation succeeded: type analysis complete"?
     std::cout << "Compilation succeeded: parsing complete\n";
 
     return 0;

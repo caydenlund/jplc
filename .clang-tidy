@@ -3,6 +3,7 @@ Checks: '
     -altera-id-dependent-backward-branch,
     -altera-unroll-loops,
     -altera-struct-pack-align,
+    -bugprone-easily-swappable-parameters,
     -cppcoreguidelines-avoid-const-or-ref-data-members,
     -cppcoreguidelines-init-variables,
     -cppcoreguidelines-non-private-member-variables-in-classes,

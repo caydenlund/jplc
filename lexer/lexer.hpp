@@ -20,25 +20,18 @@
 
 namespace lexer {
     /**
-     * @brief Defines the type of a pointer to a token.
-     * @details Uses a reference-counting smart pointer.
-     *
-     */
-    using token_ptr_t = std::shared_ptr<token::token>;
-
-    /**
      * @brief Defines the type of a list of tokens.
      * @details The list of tokens is a vector of smart pointers, to allow for subclasses in the list.
      *
      */
-    using token_list_t = std::vector<token_ptr_t>;
+    using token_list_t = std::vector<token::token>;
 
     /**
      * @brief Defines the result of a lexer call.
      * @details A tuple of the lexed token and the new starting position.
      *
      */
-    using result_t = std::tuple<token_ptr_t, unsigned int>;
+    using result_t = std::tuple<token::token, unsigned int>;
 
     /**
      * @brief This exception is thrown when there is not a lexer that can lex the input string.
@@ -64,48 +57,20 @@ namespace lexer {
         /**
          * @brief Constructor.
          *
-         * @param invalid_token The invalid character sequence causing the exception.
-         * @param line The line number of the invalid character sequence.
-         * @param column The column number of the invalid character sequence.
+         * @param invalid_input The invalid character sequence causing the exception.
+         * @param index The byte position in the invalid input string.
          */
-        lexing_exception(const std::string& invalid_token, unsigned int line, unsigned int column);
-
-        /**
-         * @brief Returns a C-style string describing the exception cause.
-         *
-         * @return A C-style string describing the exception cause.
-         */
-        [[nodiscard]] const char* what() const noexcept override;
+        lexing_exception(const std::string& invalid_input, unsigned int index);
     };
 
     /**
-     * @brief Defines the `lexer` functor class.
-     * @details An instance is used to lex a particular case of input.
+     * @brief Defines a single lexer.
+     * @details A lexer is a functor that accepts an input string and an index in that string, and returns a tuple of
+     *     the corresponding token and the updated index.
      *
      */
     class lexer {
-    protected:
-        /**
-         * @brief The regular expression used to match input.
-         *
-         */
-        const std::regex pattern;
-
-        /**
-         * @brief The token type to match.
-         *
-         */
-        const token::token_type type;
-
     public:
-        /**
-         * @brief Class constructor.
-         *
-         * @param pattern The regular expression used to match input.
-         * @param type The token type that the lexer matches.
-         */
-        lexer(const std::string& pattern, token::token_type type);
-
         /**
          * @brief Class destructor.
          *
@@ -113,104 +78,131 @@ namespace lexer {
         virtual ~lexer() = default;
 
         /**
-         * @brief Copy constructor.
-         *
-         * @param other The other lexer to copy.
-         */
-        lexer(const lexer& other) = default;
-
-        /**
-         * @brief Move constructor.
-         *
-         * @param other The other lexer to move.
-         */
-        lexer(lexer&& other) = default;
-
-        /**
-         * @brief Assignment operator.
-         *
-         * @param other The other lexer to move.
-         */
-        lexer& operator=(const lexer& other) = delete;
-
-        /**
-         * @brief Move assignment operator.
-         *
-         * @param other The other lexer to move.
-         */
-        lexer& operator=(lexer&& other) = delete;
-
-        /**
          * @brief Function call operator.
-         * @details Call the instance as a function.
          *
-         * @param input The input string to read.
-         * @param index The starting position from which to read.
-         * @return A pair of the lexed token and the new starting position.
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
          */
-        virtual result_t operator()(const std::string& input, unsigned int index) const;
+        virtual result_t operator()(const std::string& input, unsigned int index);
+
+        /**
+         * @brief Reports whether the given byte is a valid character in JPL.
+         * @details Valid characters include integer value 10 ('\n') and 32-126, inclusive.
+         *
+         * @param byte The character to test.
+         * @return True when the given byte is a valid character.
+         */
+        static bool is_valid_char(char byte);
     };
 
     /**
-     * @brief A lexer that can lex string literals.
+     * @brief A lexer for comments.
+     *
+     */
+    class comment_lexer : public lexer {
+        /**
+         * @brief Function call operator.
+         *
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
+         */
+        result_t operator()(const std::string& input, unsigned int index) override;
+    };
+
+    /**
+     * @brief A lexer for integer and floating-point literals.
+     *
+     */
+    class literal_lexer : public lexer {
+        /**
+         * @brief Function call operator.
+         *
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
+         */
+        result_t operator()(const std::string& input, unsigned int index) override;
+    };
+
+    /**
+     * @brief A lexer for newlines.
+     *
+     */
+    class newline_lexer : public lexer {
+        /**
+         * @brief Function call operator.
+         *
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
+         */
+        result_t operator()(const std::string& input, unsigned int index) override;
+    };
+
+    /**
+     * @brief A lexer for operators.
+     *
+     */
+    class operator_lexer : public lexer {
+        /**
+         * @brief Function call operator.
+         *
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
+         */
+        result_t operator()(const std::string& input, unsigned int index) override;
+    };
+
+    /**
+     * @brief A lexer for punctuation.
+     *
+     */
+    class punctuation_lexer : public lexer {
+        /**
+         * @brief Function call operator.
+         *
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
+         */
+        result_t operator()(const std::string& input, unsigned int index) override;
+    };
+
+    /**
+     * @brief A lexer for strings.
      *
      */
     class string_lexer : public lexer {
-    public:
-        /**
-         * @brief Class constructor.
-         *
-         */
-        string_lexer();
-
-        /**
-         * @brief Class destructor.
-         *
-         */
-        ~string_lexer() override = default;
-
-        /**
-         * @brief Copy constructor.
-         *
-         * @param other The other lexer to copy.
-         */
-        string_lexer(const string_lexer& other) = default;
-
-        /**
-         * @brief Move constructor.
-         *
-         * @param other The other lexer to move.
-         */
-        string_lexer(string_lexer&& other) = default;
-
-        /**
-         * @brief Assignment operator.
-         *
-         * @param other The other lexer to move.
-         */
-        string_lexer& operator=(const string_lexer& other) = delete;
-
-        /**
-         * @brief Move assignment operator.
-         *
-         * @param other The other lexer to move.
-         */
-        string_lexer& operator=(string_lexer&& other) = delete;
-
         /**
          * @brief Function call operator.
-         * @details Call the instance as a function.
          *
-         * @param input The input string to read.
-         * @param index The starting position from which to read.
-         * @return A pair of the lexed token and the new starting position.
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
          */
-        result_t operator()(const std::string& input, unsigned int index) const override;
+        result_t operator()(const std::string& input, unsigned int index) override;
     };
 
     /**
-     * @brief Defines the type of a pointer to a lexer.
-     * @details Uses a reference-counting smart pointer.
+     * @brief A lexer for variables and keywords.
+     *
+     */
+    class variable_keyword_lexer : public lexer {
+        /**
+         * @brief Function call operator.
+         *
+         * @param input The input string.
+         * @param index The index in the input string.
+         * @return A tuple of a new token and the new index.
+         */
+        result_t operator()(const std::string& input, unsigned int index) override;
+    };
+
+    /**
+     * @brief This type is a smart pointer to a lexer.
      *
      */
     using lexer_ptr_t = std::shared_ptr<lexer>;

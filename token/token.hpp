@@ -67,10 +67,9 @@ namespace token {
         //  ======================
         //  ||  Miscellaneous:  ||
         //  ======================
-        OP,           //  All arithmetic and boolean operators ('+', '-', etc.).
-        NEWLINE,      //  '\n'
-        END_OF_FILE,  //  The end of the file.
-        SPACE         //  ' '
+        OP,          //  All arithmetic and boolean operators ('+', '-', etc.).
+        NEWLINE,     //  '\n'
+        END_OF_FILE  //  The end of the file.
     };
 
     /**
@@ -114,18 +113,6 @@ namespace token {
          * @return True if the two tokens are not equal.
          */
         bool operator!=(const token& other) const { return !(*this == other); }
-    };
-
-    /**
-     * @brief Represents a string literal.
-     *
-     */
-    struct string_token : token {
-        /**
-         * @brief The (string) value of the token.
-         *
-         */
-        std::string value;
     };
 
     /**
@@ -216,6 +203,20 @@ namespace token {
             default:
                 return "MISSING_TOKEN";
         }
+    }
+
+    /**
+     * @brief Returns the contents between the quotation marks in a string token.
+     *
+     * @param string_tok The string token.
+     * @return The contents between the quotation marks in a string token.
+     */
+    inline std::string string_value(const token& tok) {
+        if (tok.type != token_type::STRING || tok.text.empty() || tok.text[0] != '"'
+            || tok.text[tok.text.size() - 1] != '"')
+            throw std::runtime_error("Not a string token: \"" + tok.text + "\"");
+
+        return tok.text.substr(1, tok.text.size() - 2);
     }
 }  //  namespace token
 
