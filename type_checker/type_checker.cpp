@@ -25,7 +25,7 @@ namespace type_checker {
         //  It initializes the `pict.` variable to a rank-2 array of tuples of four floating-point numbers.
         //  I'm not removing this yet, because I still want to be able to go back and run HW6's tests to make sure that
         //  I haven't broken any of my previous work.
-        //  TODO (HW7): Remove this initialization.
+        //  TODO: Remove this initialization.
         if (initialize_hw6) {
             const std::shared_ptr<resolved_type::resolved_type> float_type
                     = std::make_shared<resolved_type::resolved_type>(resolved_type::FLOAT_TYPE);

@@ -55,15 +55,15 @@ int lex_and_parse_only(const std::string& filename) {
 
 /**
  * @brief Only lexes, parses, and type-checks the input file.
- * @details TODO: Implement.
  *
  * @param filename The file to read.
+ * @param hw6_flag Whether to perform the homework 6 initialization.
  * @return 0 on success; an exception is thrown otherwise.
  */
-int lex_parse_and_check_only(const std::string& filename) {
+int lex_parse_and_check_only(const std::string& filename, bool hw6_flag = false) {
     const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
     const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
-    type_checker::check(nodes);
+    type_checker::check(nodes, hw6_flag);
 
     for (const parser::node_ptr_t& node : nodes) { std::cout << node->s_expression() << "\n"; }
 
@@ -84,6 +84,7 @@ int main(int argc, char** argv) {
     bool lex_only_flag = false;
     bool lex_and_parse_only_flag = false;
     bool lex_parse_and_check_only_flag = false;
+    bool hw6_flag = false;
     for (unsigned int index = 1; index < (unsigned int)argc; index++) {
         const std::string arg(argv[index]);
         if (arg == "-l") lex_only_flag = true;
@@ -93,6 +94,8 @@ int main(int argc, char** argv) {
             lex_parse_and_check_only_flag = true;
         else if (arg == "--debug")
             debug = true;
+        else if (arg == "--hw6")
+            hw6_flag = true;
         else
             filename = arg;
     }
@@ -104,7 +107,7 @@ int main(int argc, char** argv) {
     }
 
     try {
-        if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename);
+        if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename, hw6_flag);
         if (lex_and_parse_only_flag) return lex_and_parse_only(filename);
         if (lex_only_flag) return lex_only(filename);
 
