@@ -67,8 +67,7 @@ int lex_parse_and_check_only(const std::string& filename, bool hw6_flag = false)
 
     for (const parser::node_ptr_t& node : nodes) { std::cout << node->s_expression() << "\n"; }
 
-    //  TODO: Update this to say, "Compilation succeeded: type analysis complete"?
-    std::cout << "Compilation succeeded: parsing complete\n";
+    std::cout << "Compilation succeeded: type analysis complete\n";
 
     return 0;
 }

@@ -18,7 +18,7 @@ namespace symbol_table {
         }
 
         if (this->parent == nullptr)
-            throw std::runtime_error("Symbol \"" + name + "\" is not in symbol table");  //  TODO: Use better exception.
+            throw std::runtime_error("Symbol \"" + name + "\" is not in symbol table");
 
         return (*this->parent)[name];
     }
@@ -26,7 +26,7 @@ namespace symbol_table {
     void symbol_table::add_symbol(const std::string &name, const std::shared_ptr<name_info::name_info> &info) {
         if (this->has_symbol(name))
             throw std::runtime_error(
-                    "Symbol \"" + name + "\" is already in symbol table");  //  TODO: Use better exception.
+                    "Symbol \"" + name + "\" is already in symbol table");
 
         this->table[name] = info;
     }

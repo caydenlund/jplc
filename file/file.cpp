@@ -13,7 +13,6 @@ namespace file {
     /**
      * @brief Holds the line numbers of the read file.
      * @details Line 0 starts at byte 0, etc.
-     *     TODO: Find a more elegant way to avoid a global variable.
      *
      */
     std::vector<unsigned int>  //  NOLINT(fuchsia-statically-constructed-objects)

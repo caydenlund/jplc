@@ -867,7 +867,6 @@ namespace parser {
             result = parse_argument(tokens, index);
             argument = std::reinterpret_pointer_cast<ast_node::argument_node>(std::get<0>(result));
         } catch (const parser_error& err) { throw parser_error_recoverable(); }
-        //  const token::token& variable = tokens[index];  //  TODO: Remove?
 
         //  Increment and check.
         index = std::get<1>(result);
