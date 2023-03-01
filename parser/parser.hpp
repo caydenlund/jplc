@@ -29,7 +29,7 @@ namespace parser {
      * @brief A const reference to a vector of smart pointers to tokens.
      *
      */
-    using token_vec_t = const std::vector<std::shared_ptr<token::token>>&;
+    using token_vec_t = const std::vector<token::token>&;
 
     /**
      * @brief A pointer to an AST node.
@@ -205,7 +205,7 @@ namespace parser {
      * @param index The index from which to read tokens.
      * @return A vector of vectors of pointers to tokens.
      */
-    std::vector<std::vector<std::shared_ptr<token::token>>> split_tokens(token_vec_t tokens, unsigned int index);
+    std::vector<std::vector<token::token>> split_tokens(token_vec_t tokens, unsigned int index);
 
     /**
      * @brief Given a set of expressions, combines them down into a single expression (through operators).
@@ -443,7 +443,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    parser_return_t parse_expr_array_index(const std::shared_ptr<ast_node::expr_node> array, token_vec_t tokens,
+    parser_return_t parse_expr_array_index(const std::shared_ptr<ast_node::expr_node>& array, token_vec_t tokens,
                                            unsigned int index);
 
     /**
@@ -555,7 +555,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    parser_return_t parse_expr_tuple_index(std::shared_ptr<ast_node::expr_node> tuple, token_vec_t tokens,
+    parser_return_t parse_expr_tuple_index(std::shared_ptr<ast_node::expr_node>& tuple, token_vec_t tokens,
                                            unsigned int index);
 
     /**
@@ -643,7 +643,7 @@ namespace parser {
      * @param index The index in the tokens vector from which to parse.
      * @return A parsed AST node.
      */
-    parser_return_t parse_type_array(const std::shared_ptr<ast_node::type_node> type, token_vec_t tokens,
+    parser_return_t parse_type_array(const std::shared_ptr<ast_node::type_node>& type, token_vec_t tokens,
                                      unsigned int index);
 
     /**
