@@ -142,8 +142,9 @@ namespace type_checker {
 
     void check_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command,
                           symbol_table::symbol_table& sym_tab) {
-        if (check_expr(command->arg_1, sym_tab)->type != resolved_type::BOOL_TYPE)
-            throw type_check_exception("`check_cmd_assert`: non-boolean expression: " + command->arg_1->s_expression());
+        if (check_expr(command->condition, sym_tab)->type != resolved_type::BOOL_TYPE)
+            throw type_check_exception("`check_cmd_assert`: non-boolean expression: "
+                                       + command->condition->s_expression());
     }
 
     void check_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>&, symbol_table::symbol_table&) {
@@ -166,15 +167,15 @@ namespace type_checker {
                     if (lvalue->type == ast_node::node_type::ARGUMENT_LVALUE) {
                         const std::shared_ptr<ast_node::argument_lvalue_node> argument_lvalue
                                 = std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(lvalue);
-                        if (argument_lvalue->arg_1->type == ast_node::node_type::ARRAY_ARGUMENT) {
+                        if (argument_lvalue->argument->type == ast_node::node_type::ARRAY_ARGUMENT) {
                             //  Check array arguments (e.g., `let img[H, W] = ...`):
                             //  ----------------------------------------------------
                             const std::shared_ptr<ast_node::array_argument_node> array_argument
                                     = std::reinterpret_pointer_cast<ast_node::array_argument_node>(
-                                            argument_lvalue->arg_1);
+                                            argument_lvalue->argument);
 
                             //  Check that the variable isn't already in the symbol table.
-                            const std::string variable = array_argument->main_var.text;
+                            const std::string variable = array_argument->name;
                             if (sym_tab.has_symbol(variable))
                                 throw type_check_exception("`check_cmd_let`: symbol table already has entry for \""
                                                            + variable + "\"");
@@ -182,7 +183,7 @@ namespace type_checker {
                             //  Check each of the binding dimension variables.
                             const std::shared_ptr<resolved_type::resolved_type> int_type
                                     = std::make_shared<resolved_type::resolved_type>(resolved_type::INT_TYPE);
-                            for (const token::token& var : array_argument->vars) {
+                            for (const token::token& var : array_argument->dimension_vars) {
                                 //  If the symbol is not already in the symbol table, add it.
                                 if (sym_tab.has_symbol(var.text))
                                     throw type_check_exception("`check_cmd_let`: symbol table already has entry for \""
@@ -200,20 +201,21 @@ namespace type_checker {
                             //  Make sure that the array sizes match.
                             const std::shared_ptr<resolved_type::array_resolved_type> array_r_type
                                     = std::reinterpret_pointer_cast<resolved_type::array_resolved_type>(r_type);
-                            if ((unsigned int)array_argument->vars.size() != array_r_type->rank)
+                            if ((unsigned int)array_argument->dimension_vars.size() != array_r_type->rank)
                                 throw type_check_exception("`check_cmd_let`: attempting to bind a rank-"
                                                            + std::to_string(array_r_type->rank) + " array to a rank-"
-                                                           + std::to_string(array_argument->vars.size()) + " lvalue: ");
+                                                           + std::to_string(array_argument->dimension_vars.size())
+                                                           + " lvalue: ");
 
                             //  Finally, save the type to the symbol table.
                             sym_tab.add_symbol(variable, std::make_shared<name_info::variable_info>(r_type));
-                        } else if (argument_lvalue->arg_1->type == ast_node::node_type::VARIABLE_ARGUMENT) {
+                        } else if (argument_lvalue->argument->type == ast_node::node_type::VARIABLE_ARGUMENT) {
                             //  Check simple variable lvalues:
                             //  ------------------------------
                             const std::shared_ptr<ast_node::variable_argument_node> variable_argument
                                     = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(
-                                            argument_lvalue->arg_1);
-                            const std::string variable = variable_argument->arg_1.text;
+                                            argument_lvalue->argument);
+                            const std::string variable = variable_argument->name;
 
                             //  Check that the variable isn't already in the symbol table.
                             if (sym_tab.has_symbol(variable))
@@ -224,7 +226,7 @@ namespace type_checker {
                             sym_tab.add_symbol(variable, std::make_shared<name_info::variable_info>(r_type));
                         } else {
                             throw type_check_exception("`check_cmd_let`: not an argument lvalue: "
-                                                       + argument_lvalue->arg_1->s_expression());
+                                                       + argument_lvalue->argument->s_expression());
                         }
                     } else if (lvalue->type == ast_node::node_type::TUPLE_LVALUE) {
                         //  Check tuple lvalues:
@@ -254,8 +256,8 @@ namespace type_checker {
                     }
                 };
 
-        const std::shared_ptr<resolved_type::resolved_type> r_type = check_expr(command->arg_2, sym_tab);
-        bind_lvalue(command->arg_1, r_type);
+        const std::shared_ptr<resolved_type::resolved_type> r_type = check_expr(command->expr, sym_tab);
+        bind_lvalue(command->lvalue, r_type);
     }
 
     void check_cmd_print(const std::shared_ptr<ast_node::print_cmd_node>&, symbol_table::symbol_table&) {
@@ -275,21 +277,21 @@ namespace type_checker {
         const std::shared_ptr<resolved_type::resolved_type> img_type
                 = std::make_shared<resolved_type::array_resolved_type>(pixel_type, 2);
 
-        if (command->arg_2->type == ast_node::node_type::ARRAY_ARGUMENT) {
+        if (command->read_dest->type == ast_node::node_type::ARRAY_ARGUMENT) {
             //  Check array arguments:
             //  ----------------------
             const std::shared_ptr<ast_node::array_argument_node> array_argument
-                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(command->arg_2);
+                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(command->read_dest);
 
             //  Make sure that it's a rank-2 array.
-            if (array_argument->vars.size() != 2)
+            if (array_argument->dimension_vars.size() != 2)
                 throw type_check_exception("`check_cmd_read`: can't bind an image to a rank-"
-                                           + std::to_string(array_argument->vars.size()) + " array");
+                                           + std::to_string(array_argument->dimension_vars.size()) + " array");
 
             //  Add each dimension variable to the symbol table.
             const std::shared_ptr<resolved_type::resolved_type> int_type
                     = std::make_shared<resolved_type::resolved_type>(resolved_type::INT_TYPE);
-            for (const token::token& var : array_argument->vars) {
+            for (const token::token& var : array_argument->dimension_vars) {
                 if (sym_tab.has_symbol(var.text))
                     throw type_check_exception("`check_cmd_read`: symbol table already has entry for \"" + var.text
                                                + "\"");
@@ -297,29 +299,29 @@ namespace type_checker {
             }
 
             //  Add the main variable to the symbol table.
-            const std::string variable = array_argument->main_var.text;
+            const std::string variable = array_argument->name;
             if (sym_tab.has_symbol(variable))
                 throw type_check_exception("`check_cmd_read`: symbol table already has entry for \"" + variable + "\"");
             sym_tab.add_symbol(variable, std::make_shared<name_info::variable_info>(img_type));
-        } else if (command->arg_2->type == ast_node::node_type::VARIABLE_ARGUMENT) {
+        } else if (command->read_dest->type == ast_node::node_type::VARIABLE_ARGUMENT) {
             //  Check variable arguments:
             //  -------------------------
             const std::shared_ptr<ast_node::variable_argument_node> variable_argument
-                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(command->arg_2);
+                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(command->read_dest);
 
             //  Add the variable to the symbol table.
-            const std::string variable = variable_argument->arg_1.text;
+            const std::string variable = variable_argument->name;
             if (sym_tab.has_symbol(variable))
                 throw type_check_exception("`check_cmd_read`: symbol table already has entry for \"" + variable + "\"");
             sym_tab.add_symbol(variable, std::make_shared<name_info::variable_info>(img_type));
         } else {
             throw type_check_exception("`check_cmd_read`: not an argument lvalue command: \""
-                                       + command->arg_2->s_expression() + "\"");
+                                       + command->read_dest->s_expression() + "\"");
         }
     }
 
     void check_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command, symbol_table::symbol_table& sym_tab) {
-        check_expr(command->arg_1, sym_tab);
+        check_expr(command->expr, sym_tab);
     }
 
     void check_cmd_time(const std::shared_ptr<ast_node::time_cmd_node>& command, symbol_table::symbol_table& sym_tab) {
@@ -332,14 +334,14 @@ namespace type_checker {
 
     void check_cmd_write(const std::shared_ptr<ast_node::write_cmd_node>& command,
                          symbol_table::symbol_table& sym_tab) {
-        const std::shared_ptr<resolved_type::resolved_type> expr_type = check_expr(command->arg_1, sym_tab);
+        const std::shared_ptr<resolved_type::resolved_type> expr_type = check_expr(command->expr, sym_tab);
         if (expr_type->type != resolved_type::ARRAY_TYPE)
-            throw type_check_exception("`check_cmd_write`: not an array: " + command->arg_1->s_expression());
+            throw type_check_exception("`check_cmd_write`: not an array: " + command->expr->s_expression());
 
         const std::shared_ptr<resolved_type::array_resolved_type> array_type
                 = std::reinterpret_pointer_cast<resolved_type::array_resolved_type>(expr_type);
         if (array_type->rank != 2)
-            throw type_check_exception("`check_cmd_write`: not a rank-2 array: " + command->arg_1->s_expression());
+            throw type_check_exception("`check_cmd_write`: not a rank-2 array: " + command->expr->s_expression());
 
         const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::FLOAT_TYPE);
@@ -349,7 +351,7 @@ namespace type_checker {
                 = std::make_shared<resolved_type::tuple_resolved_type>(four_floats);
         if (*(array_type->element_type) != *pixel_type)
             throw type_check_exception("`check_cmd_write`: not a rank-2 array of {float, float, float, float}: "
-                                       + command->arg_1->s_expression());
+                                       + command->expr->s_expression());
     }
 
     //  Expressions:
@@ -446,7 +448,7 @@ namespace type_checker {
             throw type_check_exception("`check_expr_binop`: mismatched types: " + expression->s_expression());
 
         std::shared_ptr<resolved_type::resolved_type> r_type;
-        switch (expression->type) {
+        switch (expression->operator_type) {
             case ast_node::BINOP_PLUS:
             case ast_node::BINOP_MINUS:
             case ast_node::BINOP_TIMES:
@@ -632,11 +634,11 @@ namespace type_checker {
                     const symbol_table::symbol_table& sym_tab) {
         const std::shared_ptr<resolved_type::resolved_type> r_type = check_expr(expression->operand, sym_tab);
 
-        if (expression->type == ast_node::op_type::UNOP_NEG && r_type->type != resolved_type::INT_TYPE
+        if (expression->operator_type == ast_node::op_type::UNOP_NEG && r_type->type != resolved_type::INT_TYPE
             && r_type->type != resolved_type::FLOAT_TYPE)
             throw type_check_exception("`check_expr_unop`: not a number: " + expression->s_expression());
 
-        if (expression->type == ast_node::op_type::UNOP_INV && r_type->type != resolved_type::BOOL_TYPE)
+        if (expression->operator_type == ast_node::op_type::UNOP_INV && r_type->type != resolved_type::BOOL_TYPE)
             throw type_check_exception("`check_expr_unop`: not a boolean: " + expression->s_expression());
 
         expression->r_type = r_type;
@@ -647,7 +649,7 @@ namespace type_checker {
     std::shared_ptr<resolved_type::resolved_type>
     check_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression,
                         const symbol_table::symbol_table& sym_tab) {
-        const std::string variable = expression->arg_1.text;
+        const std::string variable = expression->name;
 
         if (!sym_tab.has_symbol(variable))
             throw type_check_exception("`check_expr_variable`: no entry in symbol table: " + variable);
