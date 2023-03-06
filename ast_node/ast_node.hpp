@@ -168,6 +168,12 @@ namespace ast_node {
      */
     struct argument_node : public ast_node {
         /**
+         * @brief The resolved type of this argument.
+         *
+         */
+        mutable std::shared_ptr<resolved_type::resolved_type> r_type;
+
+        /**
          * @brief Class constructor.
          * @details Initializes `type` to the given type.
          *

@@ -94,7 +94,9 @@ namespace ast_node {
 
     std::string array_argument_node::s_expression() const {
         std::stringstream result;
-        result << "(ArrayArgument " << this->name;
+        result << "(ArrayArgument ";
+        if (this->r_type != nullptr) result << this->r_type->s_expression() << " ";
+        result << this->name;
         for (const token::token& dimension_var : dimension_vars) { result << " " << dimension_var.text; }
         result << ")";
         return result.str();
@@ -106,7 +108,13 @@ namespace ast_node {
             throw std::runtime_error("`variable_argument_node`: not a variable: " + var_tok.text);
     }
 
-    std::string variable_argument_node::s_expression() const { return "(VarArgument " + this->name + ")"; }
+    std::string variable_argument_node::s_expression() const {
+        std::stringstream result;
+        result << "(VarArgument ";
+        if (this->r_type != nullptr) result << this->r_type->s_expression() << " ";
+        result << this->name << ")";
+        return result.str();
+    }
 
     //  Bindings:
     //  ---------

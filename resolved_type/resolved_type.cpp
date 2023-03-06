@@ -12,14 +12,6 @@
 #include "resolved_type.hpp"
 
 namespace resolved_type {
-    bool resolved_type::operator==(const resolved_type& other) const {
-        if (this->type != other.type) return false;
-
-        return this->s_expression() == other.s_expression();
-    }
-
-    bool resolved_type::operator!=(const resolved_type& other) const { return !(*this == other); }
-
     std::string resolved_type::s_expression() const {
         switch (type) {
             case BOOL_TYPE:
@@ -48,4 +40,4 @@ namespace resolved_type {
         result << ")";
         return result.str();
     }
-}  //  namespace resolved_type
+}  // namespace resolved_type

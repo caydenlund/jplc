@@ -57,20 +57,6 @@ namespace resolved_type {
         virtual ~resolved_type() = default;
 
         /**
-         * @brief Equality operator.
-         *
-         * @param other The other `resolved_type` against which to compare.
-         */
-        bool operator==(const resolved_type& other) const;
-
-        /**
-         * @brief Inequality operator.
-         *
-         * @param other The other `resolved_type` against which to compare.
-         */
-        bool operator!=(const resolved_type& other) const;
-
-        /**
          * @brief Returns the s-expression of this type.
          *
          * @return The s-expression of this type.
