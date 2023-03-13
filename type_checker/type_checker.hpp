@@ -47,9 +47,8 @@ namespace type_checker {
      * @brief Initializes a new symbol table with the built-in methods and variables.
      *
      * @param sym_tab The symbol table to initialize.
-     * @param initialize_hw6 Whether to add the extra initialization for homework 6.
      */
-    void initialize_symbol_table(symbol_table::symbol_table& sym_tab, bool initialize_hw6 = false);
+    void initialize_symbol_table(symbol_table::symbol_table& sym_tab);
 
     /**
      * @brief Binds the given resolved type to the given lvalue in the given symbol table.
@@ -95,10 +94,8 @@ namespace type_checker {
      * @brief Type-checks the given list of AST nodes.
      *
      * @param nodes A set of AST command nodes.
-     * @param initialize_hw6 True if the compiler should initialize the `pict.` variable for homework 6.
-     *     Defaults to false.
      */
-    void check(const parser::node_list_t& nodes, bool initialize_hw6 = false);
+    void check(const parser::node_list_t& nodes);
 
     /*
     =====================

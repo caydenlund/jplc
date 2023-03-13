@@ -173,7 +173,7 @@ namespace type_checker {
         throw type_check_exception("`add_binding`: invalid binding: \"" + binding->s_expression() + "\"");
     }
 
-    void initialize_symbol_table(symbol_table::symbol_table& sym_tab, bool initialize_hw6) {
+    void initialize_symbol_table(symbol_table::symbol_table& sym_tab) {
         //  Command-line arguments:
         //  -----------------------
         const std::shared_ptr<resolved_type::resolved_type> int_type = std::make_shared<resolved_type::resolved_type>(
@@ -214,19 +214,6 @@ namespace type_checker {
         const std::shared_ptr<name_info::function_info> one_int_ret_float = std::make_shared<name_info::function_info>(
                 std::vector<std::shared_ptr<resolved_type::resolved_type>> {int_type}, float_type);
         sym_tab.add_symbol("to_float", one_int_ret_float);
-
-        //  Initialization for homework 6:
-        //  ------------------------------
-        if (initialize_hw6) {
-            const std::vector<std::shared_ptr<resolved_type::resolved_type>> floats = {float_type, float_type,
-                                                                                       float_type, float_type};
-            const std::shared_ptr<resolved_type::resolved_type> element_type
-                    = std::make_shared<resolved_type::tuple_resolved_type>(floats);
-            const std::shared_ptr<resolved_type::array_resolved_type> array_r_type
-                    = std::make_shared<resolved_type::array_resolved_type>(element_type, 2);
-            array_r_type->type = resolved_type::ARRAY_TYPE;
-            sym_tab.add_symbol("pict.", std::make_shared<name_info::variable_info>(array_r_type));
-        }
     }
 
     std::shared_ptr<resolved_type::resolved_type> resolve_type(const std::shared_ptr<ast_node::type_node>& type,
@@ -300,9 +287,9 @@ namespace type_checker {
         return true;
     }
 
-    void check(const parser::node_list_t& nodes, bool initialize_hw6) {
+    void check(const parser::node_list_t& nodes) {
         symbol_table::symbol_table global_symbol_table;
-        initialize_symbol_table(global_symbol_table, initialize_hw6);
+        initialize_symbol_table(global_symbol_table);
 
         for (const parser::node_ptr_t& node : nodes) {
             check_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node), global_symbol_table);
