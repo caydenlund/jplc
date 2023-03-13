@@ -10,6 +10,7 @@
 
 #include "ast_node/ast_node.hpp"
 #include "file/file.hpp"
+#include "generator/generator.hpp"
 #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
 #include "token/token.hpp"
@@ -57,7 +58,6 @@ int lex_and_parse_only(const std::string& filename) {
  * @brief Only lexes, parses, and type-checks the input file.
  *
  * @param filename The file to read.
- * @param hw6_flag Whether to perform the homework 6 initialization.
  * @return 0 on success; an exception is thrown otherwise.
  */
 int lex_parse_and_check_only(const std::string& filename) {
@@ -73,6 +73,24 @@ int lex_parse_and_check_only(const std::string& filename) {
 }
 
 /**
+ * @brief Lexes, parses, type-checks, and generates assembly for the input file.
+ *
+ * @param filename The file to read.
+ * @param debug Whether to include extra debugging output.
+ * @return 0 on success; an exception is thrown otherwise.
+ */
+int lex_parse_check_and_generate_only(const std::string& filename, bool debug) {
+    const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
+    const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
+    type_checker::check(nodes);
+    std::cout << generator::generate(nodes, debug);
+
+    std::cout << "Compilation succeeded: assembly complete\n";
+
+    return 0;
+}
+
+/**
  * @brief Main program entry point.
  *
  * @return 0 on success; 1 on error.
@@ -83,6 +101,7 @@ int main(int argc, char** argv) {
     bool lex_only_flag = false;
     bool lex_and_parse_only_flag = false;
     bool lex_parse_and_check_only_flag = false;
+    bool lex_parse_check_and_generate_only_flag = false;
     for (unsigned int index = 1; index < (unsigned int)argc; index++) {
         const std::string arg(argv[index]);
         if (arg == "-l") lex_only_flag = true;
@@ -90,6 +109,8 @@ int main(int argc, char** argv) {
             lex_and_parse_only_flag = true;
         else if (arg == "-t")
             lex_parse_and_check_only_flag = true;
+        else if (arg == "-s")
+            lex_parse_check_and_generate_only_flag = true;
         else if (arg == "--debug")
             debug = true;
         else
@@ -103,6 +124,7 @@ int main(int argc, char** argv) {
     }
 
     try {
+        if (lex_parse_check_and_generate_only_flag) return lex_parse_check_and_generate_only(filename, debug);
         if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename);
         if (lex_and_parse_only_flag) return lex_and_parse_only(filename);
         if (lex_only_flag) return lex_only(filename);

@@ -10,4 +10,4 @@ add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 
 include_directories(".")
 
-add_executable(jplc main.cpp ast_node/ast_node.cpp file/file.cpp lexer/lexer.cpp parser/parser.cpp resolved_type/resolved_type.cpp symbol_table/symbol_table.cpp type_checker/type_checker.cpp)
+add_executable(jplc main.cpp ast_node/ast_node.cpp file/file.cpp generator/generator.cpp lexer/lexer.cpp parser/parser.cpp resolved_type/resolved_type.cpp symbol_table/symbol_table.cpp type_checker/type_checker.cpp)
