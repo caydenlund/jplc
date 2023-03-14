@@ -31,16 +31,21 @@ namespace generator {
     }
 
     std::string const_table::table_entry::assem() const {
-        switch (this->type) {
-            case INT_ENTRY:
-                return "dq " + std::to_string(this->int_value);
-            case FLOAT_ENTRY:
-                return "dq " + std::to_string(this->float_value);
-            case STRING_ENTRY:
-                return "db `" + this->string_value + "`, 0";
-            default:
-                throw std::runtime_error("Invalid table entry type");
+        if (this->type == INT_ENTRY) { return "dq " + std::to_string(this->int_value); }
+
+        if (this->type == FLOAT_ENTRY) {
+            const std::string format = "dq %.10g";
+            constexpr unsigned int buf_size = 100;
+            const std::unique_ptr<char[]> buf(new char[buf_size]);
+            const unsigned int result_size = std::snprintf(buf.get(), buf_size, format.c_str(), this->float_value);
+            std::string result(buf.get(), buf.get() + result_size);
+
+            if (result.find('.') == std::string::npos && result.find('e') == std::string::npos) result += ".0";
+
+            return result;
         }
+
+        return "db `" + this->string_value + "`, 0";
     }
 
     size_t const_table::table_entry_hash::operator()(const table_entry& entry) const {
@@ -48,7 +53,7 @@ namespace generator {
              + std::hash<std::string>()(entry.string_value);
     }
 
-    const_table::const_table() { this->assembly << ".data\n"; }
+    const_table::const_table() { this->assembly << "section .data\n"; }
 
     std::string const_table::operator[](const const_table::table_entry& entry) {
         if (this->constants.count(entry) > 0) return this->constants[entry];
@@ -112,7 +117,7 @@ namespace generator {
         std::stringstream text_section;
         std::stringstream main_section;
 
-        text_section << ".text\n";
+        text_section << "section .text\n";
         main_section << "jpl_main:\n"
                      << "_jpl_main:\n"
                      << "\tpush rbp\n"
@@ -124,8 +129,7 @@ namespace generator {
             main_section << generate_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node), constants, debug);
         }
 
-        main_section << "\tadd rsp, 0\n"
-                     << "\tpop r12\n"
+        main_section << "\tpop r12\n"
                      << "\tpop rbp\n"
                      << "\tret\n";
 
@@ -180,12 +184,13 @@ namespace generator {
             case ast_node::ARRAY_LOOP_EXPR:
             case ast_node::BINOP_EXPR:
             case ast_node::CALL_EXPR:
-            case ast_node::ELSE_TOK_EXPR:
-            case ast_node::FALSE_EXPR:
                 throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+            case ast_node::FALSE_EXPR:
+                return generate_expr_false(std::reinterpret_pointer_cast<ast_node::false_expr_node>(expression),
+                                           constants, debug);
             case ast_node::FLOAT_EXPR:
                 return generate_expr_float(std::reinterpret_pointer_cast<ast_node::float_expr_node>(expression),
-                                             constants, debug);
+                                           constants, debug);
             case ast_node::IF_EXPR:
                 throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
             case ast_node::INTEGER_EXPR:
@@ -193,16 +198,36 @@ namespace generator {
                                              constants, debug);
             case ast_node::OP_EXPR:
             case ast_node::SUM_LOOP_EXPR:
-            case ast_node::THEN_TOK_EXPR:
+                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
             case ast_node::TRUE_EXPR:
+                return generate_expr_true(std::reinterpret_pointer_cast<ast_node::true_expr_node>(expression),
+                                          constants, debug);
             case ast_node::TUPLE_INDEX_EXPR:
             case ast_node::TUPLE_LITERAL_EXPR:
+                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
             case ast_node::UNOP_EXPR:
+                return generate_expr_unop(std::reinterpret_pointer_cast<ast_node::unop_expr_node>(expression),
+                                          constants, debug);
             case ast_node::VARIABLE_EXPR:
                 throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
             default:
                 throw std::runtime_error("Invalid expression: \"" + expression->s_expression() + "\"");
         }
+    }
+
+    expr_ret_t generate_expr_false(const std::shared_ptr<ast_node::false_expr_node>&, const_table& constants,
+                                   bool debug) {
+        std::stringstream result;
+        constexpr unsigned int bool_size = 8;
+
+        if (debug) result << "\t;  START generate_expr_false\n";
+
+        result << "\tmov rax, [rel " << constants[(long)0] << "] ; False\n"
+               << "\tpush rax\n";
+
+        if (debug) result << "\t;  END generate_expr_false (stack size: " << bool_size << ")\n";
+
+        return {result.str(), bool_size};
     }
 
     expr_ret_t generate_expr_float(const std::shared_ptr<ast_node::float_expr_node>& expression, const_table& constants,
@@ -233,5 +258,53 @@ namespace generator {
         if (debug) result << "\t;  END generate_expr_integer (stack size: " << int_size << ")\n";
 
         return {result.str(), int_size};
+    }
+
+    expr_ret_t generate_expr_true(const std::shared_ptr<ast_node::true_expr_node>&, const_table& constants,
+                                  bool debug) {
+        std::stringstream result;
+        constexpr unsigned int bool_size = 8;
+
+        if (debug) result << "\t;  START generate_expr_true\n";
+
+        result << "\tmov rax, [rel " << constants[(long)1] << "] ; True\n"
+               << "\tpush rax\n";
+
+        if (debug) result << "\t;  END generate_expr_true (stack size: " << bool_size << ")\n";
+
+        return {result.str(), bool_size};
+    }
+
+    expr_ret_t generate_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression, const_table& constants,
+                                  bool debug) {
+        std::stringstream result;
+
+        if (debug) result << "\t;  START generate_expr_unop\n";
+
+        const expr_ret_t expr_result = generate_expr(expression->operand, constants, debug);
+        result << std::get<0>(expr_result);
+
+        if (expression->operator_type == ast_node::UNOP_INV) {
+            result << "\tpop rax\n"
+                   << "\txor rax, 1\n"
+                   << "\tpush rax\n";
+        } else {
+            if (expression->r_type->type == resolved_type::resolved_type_type::INT_TYPE) {
+                result << "\tpop rax\n"
+                       << "\tneg rax\n"
+                       << "\tpush rax\n";
+            } else {
+                result << "\tmovsd xmm1, [rsp]\n"
+                       << "\tadd rsp, 8\n"
+                       << "\tpxor xmm0, xmm0\n"
+                       << "\tsubsd xmm0, xmm1\n"
+                       << "\tsub rsp, 8\n"
+                       << "\tmovsd [rsp], xmm0\n";
+            }
+        }
+
+        if (debug) result << "\t;  END generate_expr_unop (stack size: " << std::get<1>(expr_result) << ")\n";
+
+        return {result.str(), std::get<1>(expr_result)};
     }
 }  //  namespace generator

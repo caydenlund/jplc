@@ -228,6 +228,17 @@ namespace generator {
                              bool debug);
 
     /**
+     * @brief Generates assembly for a single `false` expression AST node.
+     *
+     * @param expression The false expression AST node.
+     * @param constants The set of global constants.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    expr_ret_t generate_expr_false(const std::shared_ptr<ast_node::false_expr_node>& expression, const_table& constants,
+                                   bool debug);
+
+    /**
      * @brief Generates assembly for a single floating-point expression AST node.
      *
      * @param expression The float expression AST node.
@@ -248,6 +259,28 @@ namespace generator {
      */
     expr_ret_t generate_expr_integer(const std::shared_ptr<ast_node::integer_expr_node>& expression,
                                      const_table& constants, bool debug);
+
+    /**
+     * @brief Generates assembly for a single `true` expression AST node.
+     *
+     * @param expression The true expression AST node.
+     * @param constants The set of global constants.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    expr_ret_t generate_expr_true(const std::shared_ptr<ast_node::true_expr_node>& expression, const_table& constants,
+                                   bool debug);
+
+    /**
+     * @brief Generates assembly for a single unary operation expression AST node.
+     *
+     * @param expression The unary operation expression AST node.
+     * @param constants The set of global constants.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    expr_ret_t generate_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression, const_table& constants,
+                                  bool debug);
 }  //  namespace generator
 
 #endif

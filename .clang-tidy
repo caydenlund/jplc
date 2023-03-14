@@ -1,5 +1,7 @@
 Checks: '
     *,
+    -*-avoid-c-arrays,
+    -*-vararg,
     -altera-id-dependent-backward-branch,
     -altera-unroll-loops,
     -altera-struct-pack-align,
