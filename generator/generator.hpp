@@ -128,6 +128,12 @@ namespace generator {
          */
         std::unordered_map<table_entry, std::string, table_entry_hash> constants;
 
+        /**
+         * @brief The number of the next jump label.
+         *
+         */
+        unsigned int next_jump_number;
+
     public:
         /**
          * @brief Class constructor.
@@ -151,14 +157,109 @@ namespace generator {
          * @return The string assembly code of the constants table.
          */
         [[nodiscard]] std::string assem() const;
+
+        /**
+         * @brief Returns a unique label for a new jump instruction.
+         *
+         * @return A unique label for a new jump instruction.
+         */
+        std::string next_jump();
     };
 
     /**
-     * @brief The return value of a generated expression.
-     * @details Contains both the assembly code of the generated expression and the stack size that must be later added.
+     * @brief Records information about the stack.
      *
      */
-    using expr_ret_t = std::tuple<std::string, unsigned int>;
+    class stack_info {
+    private:
+        class int_stack {
+        private:
+            struct node {
+                std::unique_ptr<node> last;
+                const unsigned int value;
+            };
+
+            /**
+             * @brief A pointer to the top of the stack.
+             *
+             */
+            std::unique_ptr<node> last;
+
+            /**
+             * @brief The total of the elements in the stack.
+             *
+             */
+            unsigned int total;
+
+        public:
+            /**
+             * @brief Class constructor.
+             *
+             */
+            int_stack();
+
+            /**
+             * @brief Reports the total of the elements in the stack.
+             *
+             * @return The total of the elements in the stack.
+             */
+            [[nodiscard]] unsigned int get_total() const;
+
+            /**
+             * @brief Pops the top element from the stack.
+             *
+             * @return The value of the top element on the stack.
+             */
+            unsigned int pop();
+
+            /**
+             * @brief Pushes a value onto the stack.
+             *
+             * @param value The value to push onto the stack.
+             */
+            void push(unsigned int value);
+        };
+
+        /**
+         * @brief The default number of bytes to push onto the stack.
+         *
+         */
+        static constexpr unsigned int default_num_bytes = 8;
+
+        /**
+         * @brief The stack must be aligned to this many bytes to call a function.
+         *
+         */
+        static constexpr unsigned int stack_alignment = 16;
+
+        /**
+         * @brief The stack of integers.
+         *
+         */
+        int_stack stack;
+
+    public:
+        /**
+         * @brief Reports whether the stack needs to be 16-byte aligned.
+         *
+         * @return True if the stack needs to be 16-byte aligned.
+         */
+        [[nodiscard]] bool needs_alignment() const;
+
+        /**
+         * @brief Pops the top value from the stack.
+         *
+         * @return The top value on the stack.
+         */
+        unsigned int pop();
+
+        /**
+         * @brief Pushes the given number of bytes onto the stack.
+         *
+         * @param num_bytes The number of bytes to push onto the stack. Defaults to 8.
+         */
+        void push(unsigned int num_bytes = default_num_bytes);
+    };
 
     //  ================
     //  ||  Methods:  ||
@@ -197,21 +298,24 @@ namespace generator {
      *
      * @param command The command AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given command.
      */
-    std::string generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command, const_table& constants, bool debug);
+    std::string generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command, const_table& constants,
+                             stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single `show` command AST node.
      *
      * @param command The show command AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given show command.
      */
     std::string generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command, const_table& constants,
-                                  bool debug);
+                                  stack_info& stack, bool debug);
 
     //  Expressions:
     //  ------------
@@ -221,66 +325,96 @@ namespace generator {
      *
      * @param expression The expression AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given expression.
      */
-    expr_ret_t generate_expr(const std::shared_ptr<ast_node::expr_node>& expression, const_table& constants,
-                             bool debug);
+    std::string generate_expr(const std::shared_ptr<ast_node::expr_node>& expression, const_table& constants,
+                              stack_info& stack, bool debug);
+
+    /**
+     * @brief Generates assembly for a single binary operation expression AST node.
+     *
+     * @param expression The binary operation expression AST node.
+     * @param constants The set of global constants.
+     * @param stack Information about the stack.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    std::string generate_expr_binop(const std::shared_ptr<ast_node::binop_expr_node>& expression,
+                                    const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single `false` expression AST node.
      *
      * @param expression The false expression AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given expression.
      */
-    expr_ret_t generate_expr_false(const std::shared_ptr<ast_node::false_expr_node>& expression, const_table& constants,
-                                   bool debug);
+    std::string generate_expr_false(const std::shared_ptr<ast_node::false_expr_node>& expression,
+                                    const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single floating-point expression AST node.
      *
      * @param expression The float expression AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given expression.
      */
-    expr_ret_t generate_expr_float(const std::shared_ptr<ast_node::float_expr_node>& expression, const_table& constants,
-                                   bool debug);
+    std::string generate_expr_float(const std::shared_ptr<ast_node::float_expr_node>& expression,
+                                    const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single integer expression AST node.
      *
      * @param expression The integer expression AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given expression.
      */
-    expr_ret_t generate_expr_integer(const std::shared_ptr<ast_node::integer_expr_node>& expression,
-                                     const_table& constants, bool debug);
+    std::string generate_expr_integer(const std::shared_ptr<ast_node::integer_expr_node>& expression,
+                                      const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single `true` expression AST node.
      *
      * @param expression The true expression AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given expression.
      */
-    expr_ret_t generate_expr_true(const std::shared_ptr<ast_node::true_expr_node>& expression, const_table& constants,
-                                   bool debug);
+    std::string generate_expr_true(const std::shared_ptr<ast_node::true_expr_node>& expression, const_table& constants,
+                                   stack_info& stack, bool debug);
+
+    /**
+     * @brief Generates assembly for a single tuple literal expression AST node.
+     *
+     * @param expression The tuple literal expression AST node.
+     * @param constants The set of global constants.
+     * @param stack Information about the stack.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    std::string generate_expr_tuple_literal(const std::shared_ptr<ast_node::tuple_literal_expr_node>& expression,
+                                            const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single unary operation expression AST node.
      *
      * @param expression The unary operation expression AST node.
      * @param constants The set of global constants.
+     * @param stack Information about the stack.
      * @param debug Whether to generate extra comments for debugging.
      * @return The string assembly for the given expression.
      */
-    expr_ret_t generate_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression, const_table& constants,
-                                  bool debug);
+    std::string generate_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression, const_table& constants,
+                                   stack_info& stack, bool debug);
 }  //  namespace generator
 
 #endif
