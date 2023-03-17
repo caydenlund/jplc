@@ -2,7 +2,7 @@
  * @file generator.hpp
  * @package Assignment 9
  * @author Cayden Lund (u1182408)
- * @brief Defines the assembly generation functions.
+ * @brief Defines the assembly generation functions and classes.
  *
  */
 
@@ -331,6 +331,18 @@ namespace generator {
      */
     std::string generate_expr(const std::shared_ptr<ast_node::expr_node>& expression, const_table& constants,
                               stack_info& stack, bool debug);
+
+    /**
+     * @brief Generates assembly for a single array literal expression AST node.
+     *
+     * @param expression The array literal expression AST node.
+     * @param constants The set of global constants.
+     * @param stack Information about the stack.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    std::string generate_expr_array_literal(const std::shared_ptr<ast_node::array_literal_expr_node>& expression,
+                                    const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single binary operation expression AST node.

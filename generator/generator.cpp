@@ -2,7 +2,7 @@
  * @file generator.cpp
  * @package Assignment 9
  * @author Cayden Lund (u1182408)
- * @brief Implements the assembly generation functions.
+ * @brief Implements the assembly generation functions and classes.
  * @details See the header file for documentation.
  *
  */
@@ -34,7 +34,7 @@ namespace generator {
         if (this->type == INT_ENTRY) { return "dq " + std::to_string(this->int_value); }
 
         if (this->type == FLOAT_ENTRY) {
-            const std::string format = "dq %.10g";
+            const std::string format = "dq %g";
             constexpr unsigned int buf_size = 100;
             const std::unique_ptr<char[]> buf(new char[buf_size]);
             const unsigned int result_size = std::snprintf(buf.get(), buf_size, format.c_str(), this->float_value);
@@ -80,6 +80,8 @@ namespace generator {
         const std::unique_ptr<stack_info::int_stack::node> last_node = std::move(this->last);
         if (last_node->last != nullptr) this->last = std::move(last_node->last);
 
+        this->total -= last_node->value;
+
         return last_node->value;
     }
 
@@ -87,11 +89,10 @@ namespace generator {
         std::unique_ptr<stack_info::int_stack::node> new_node = std::make_unique<node>(node {nullptr, value});
         if (this->last != nullptr) new_node->last = std::move(this->last);
         this->last = std::move(new_node);
+        this->total += value;
     }
 
-    bool stack_info::needs_alignment() const {
-        return (this->stack.get_total() + stack_info::default_num_bytes) % stack_alignment > 0;
-    }
+    bool stack_info::needs_alignment() const { return this->stack.get_total() % stack_alignment > 0; }
 
     unsigned int stack_info::pop() { return this->stack.pop(); }
 
@@ -150,9 +151,8 @@ namespace generator {
         text_section << "section .text\n";
         main_section << "jpl_main:\n"
                      << "_jpl_main:\n"
-                     << "\tpush rbp\n";
-        stack.push();
-        main_section << "\tmov rbp, rsp\n"
+                     << "\tpush rbp\n"
+                     << "\tmov rbp, rsp\n"
                      << "\tpush r12\n";
         stack.push();
         main_section << "\tmov r12, rbp\n";
@@ -170,6 +170,9 @@ namespace generator {
 
         return constants.assem() + "\n" + text_section.str() + main_section.str();
     }
+
+    //  Commands:
+    //  ---------
 
     std::string generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command, const_table& constants,
                              stack_info& stack, bool debug) {
@@ -198,25 +201,45 @@ namespace generator {
 
         if (debug) assembly << "\t;  START generate_cmd_show\n";
 
-        assembly << generate_expr(command->expr, constants, stack, debug);
+        //  We need to know the size of the expression on the stack in order to align the stack,
+        //  so we push it onto the stack and then pop it again before generating the expression.
+        stack.push(command->expr->r_type->size());
+        const bool needs_alignment = stack.needs_alignment();
+        stack.pop();
+        if (needs_alignment) {
+            assembly << "\tsub rsp, 8 ; Align stack\n";
+            stack.push();
+        }
 
-        assembly << "\tlea rdi, [rel " << constants[command->expr->r_type->s_expression()] << "] ; "
-                 << command->expr->r_type->s_expression() << "\n"
+        assembly << generate_expr(command->expr, constants, stack, debug) << "\tlea rdi, [rel "
+                 << constants[command->expr->r_type->s_expression()] << "] ; " << command->expr->r_type->s_expression()
+                 << "\n"
                  << "\tlea rsi, [rsp]\n"
                  << "\tcall _show\n"
                  << "\tadd rsp, " << stack.pop() << "\n";
+
+        if (needs_alignment) {
+            assembly << "\tadd rsp, 8 ; Remove alignment\n";
+            stack.pop();
+        }
 
         if (debug) assembly << "\t;  END generate_cmd_show\n";
 
         return assembly.str();
     }
 
+    //  Expressions:
+    //  ------------
+
     std::string generate_expr(const std::shared_ptr<ast_node::expr_node>& expression, const_table& constants,
                               stack_info& stack, bool debug) {
         switch (expression->type) {
             case ast_node::ARRAY_INDEX_EXPR:
+                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
             case ast_node::ARRAY_LITERAL_EXPR:
-                //  TODO (HW9): Implement.
+                return generate_expr_array_literal(
+                        std::reinterpret_pointer_cast<ast_node::array_literal_expr_node>(expression), constants, stack,
+                        debug);
             case ast_node::ARRAY_LOOP_EXPR:
                 throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
             case ast_node::BINOP_EXPR:
@@ -258,6 +281,54 @@ namespace generator {
         }
     }
 
+    std::string generate_expr_array_literal(const std::shared_ptr<ast_node::array_literal_expr_node>& expression,
+                                            const_table& constants, stack_info& stack, bool debug) {
+        std::stringstream assembly;
+        constexpr unsigned int reg_size = 8;
+
+        if (debug) assembly << "\t;  START generate_expr_array_literal\n";
+
+        //  Generate assembly from right to left.
+        unsigned int total = 0;
+        for (int index = (int)(expression->expressions.size() - 1); index >= 0; index--) {
+            assembly << generate_expr(expression->expressions[index], constants, stack, debug);
+            total += stack.pop();
+        }
+        stack.push(total);
+
+        assembly << "\tmov rdi, " << total << "\n";
+
+        const bool needs_alignment = stack.needs_alignment();
+        if (needs_alignment) assembly << "\tsub rsp, 8 ; Align stack\n";
+
+        assembly << "\tcall _jpl_alloc\n";
+
+        if (needs_alignment) assembly << "\tadd rsp, 8 ; Remove alignment\n";
+
+        if (debug) assembly << "\t;  Moving " << total << " bytes from rsp to rax\n";
+
+        for (unsigned int offset = reg_size; offset <= total; offset += reg_size) {
+            //  Extra indentation for debug mode.
+            if (debug) assembly << "\t";
+            assembly << "\tmov r10, [rsp + " << total - offset << "]\n";
+
+            if (debug) assembly << "\t";
+            assembly << "\tmov [rax + " << total - offset << "], r10\n";
+        }
+
+        assembly << "\tadd rsp, " << total << "\n";
+        stack.pop();
+        assembly << "\tpush rax\n";
+        //  NOTE: This will probably need to be updated for a rank-2 array.
+        assembly << "\tmov rax, " << expression->expressions.size() << "\n"
+                 << "\tpush rax\n";
+        stack.push(expression->r_type->size());
+
+        if (debug) assembly << "\t;  END generate_expr_array_literal\n";
+
+        return assembly.str();
+    }
+
     std::string generate_expr_binop(const std::shared_ptr<ast_node::binop_expr_node>& expression,
                                     const_table& constants, stack_info& stack, bool debug) {
         std::stringstream assembly;
@@ -268,6 +339,9 @@ namespace generator {
                  << generate_expr(expression->left_operand, constants, stack, debug);
 
         const resolved_type::resolved_type_type operand_type = expression->left_operand->r_type->type;
+
+        //  Because we're popping twice and then pushing once before making a function call, we invert the stack needing
+        //  alignment.
         const bool needs_alignment = stack.needs_alignment();
 
         std::string next_jump;
@@ -374,28 +448,33 @@ namespace generator {
             switch (expression->operator_type) {
                 case ast_node::BINOP_PLUS:
                     assembly << "\taddsd xmm0, xmm1\n"
-                             << "\tsub rsp, 8\n"
-                             << "\tmovsd [rsp], xmm0\n";
+                             << "\tsub rsp, 8\n";
+                    stack.push();
+                    assembly << "\tmovsd [rsp], xmm0\n";
                     break;
                 case ast_node::BINOP_MINUS:
                     assembly << "\tsubsd xmm0, xmm1\n"
-                             << "\tsub rsp, 8\n"
-                             << "\tmovsd [rsp], xmm0\n";
+                             << "\tsub rsp, 8\n";
+                    stack.push();
+                    assembly << "\tmovsd [rsp], xmm0\n";
                     break;
                 case ast_node::BINOP_TIMES:
                     assembly << "\tmulsd xmm0, xmm1\n"
-                             << "\tsub rsp, 8\n"
-                             << "\tmovsd [rsp], xmm0\n";
+                             << "\tsub rsp, 8\n";
+                    stack.push();
+                    assembly << "\tmovsd [rsp], xmm0\n";
                     break;
                 case ast_node::BINOP_DIVIDE:
                     assembly << "\tdivsd xmm0, xmm1\n"
-                             << "\tsub rsp, 8\n"
-                             << "\tmovsd [rsp], xmm0\n";
+                             << "\tsub rsp, 8\n";
+                    stack.push();
+                    assembly << "\tmovsd [rsp], xmm0\n";
                     break;
                 case ast_node::BINOP_MOD:
                     assembly << "\tcall _fmod\n"
-                             << "\tsub rsp, 8\n"
-                             << "\tmovsd [rsp], xmm0\n";
+                             << "\tsub rsp, 8\n";
+                    stack.push();
+                    assembly << "\tmovsd [rsp], xmm0\n";
                     break;
                 case ast_node::BINOP_LT:
                     assembly << "\tcmpltsd xmm0, xmm1\n"
@@ -543,15 +622,17 @@ namespace generator {
 
     std::string generate_expr_tuple_literal(const std::shared_ptr<ast_node::tuple_literal_expr_node>& expression,
                                             const_table& constants, stack_info& stack, bool debug) {
-        //  TODO (HW9): Implement.
         std::stringstream assembly;
 
         if (debug) assembly << "\t;  START generate_expr_tuple_literal\n";
 
         //  Generate assembly from right to left.
-        for (unsigned int index = expression->exprs.size() - 1; index >= 0; index--) {
+        for (int index = (int)(expression->exprs.size() - 1); index >= 0; index--) {
             assembly << generate_expr(expression->exprs[index], constants, stack, debug);
+            stack.pop();
         }
+
+        stack.push(expression->r_type->size());
 
         if (debug) assembly << "\t;  END generate_expr_tuple_literal\n";
 
@@ -567,23 +648,27 @@ namespace generator {
         assembly << generate_expr(expression->operand, constants, stack, debug);
 
         if (expression->operator_type == ast_node::UNOP_INV) {
-            assembly << "\tpop rax\n"
-                     << "\txor rax, 1\n"
+            assembly << "\tpop rax\n";
+            stack.pop();
+            assembly << "\txor rax, 1\n"
                      << "\tpush rax\n";
             stack.push();
         } else {
             if (expression->r_type->type == resolved_type::resolved_type_type::INT_TYPE) {
-                assembly << "\tpop rax\n"
-                         << "\tneg rax\n"
+                assembly << "\tpop rax\n";
+                stack.pop();
+                assembly << "\tneg rax\n"
                          << "\tpush rax\n";
                 stack.push();
             } else {
                 assembly << "\tmovsd xmm1, [rsp]\n"
-                         << "\tadd rsp, 8\n"
-                         << "\tpxor xmm0, xmm0\n"
+                         << "\tadd rsp, 8\n";
+                stack.pop();
+                assembly << "\tpxor xmm0, xmm0\n"
                          << "\tsubsd xmm0, xmm1\n"
-                         << "\tsub rsp, 8\n"
-                         << "\tmovsd [rsp], xmm0\n";
+                         << "\tsub rsp, 8\n";
+                stack.push();
+                assembly << "\tmovsd [rsp], xmm0\n";
             }
         }
 

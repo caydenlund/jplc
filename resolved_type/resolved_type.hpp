@@ -62,6 +62,13 @@ namespace resolved_type {
          * @return The s-expression of this type.
          */
         [[nodiscard]] virtual std::string s_expression() const;
+
+        /**
+         * @brief Returns the size of this type.
+         *
+         * @return The size of this type.
+         */
+        [[nodiscard]] virtual unsigned int size() const;
     };
 
     /**
@@ -94,6 +101,13 @@ namespace resolved_type {
          * @return The s-expression of this type.
          */
         [[nodiscard]] std::string s_expression() const override;
+
+        /**
+         * @brief Returns the size of this type.
+         *
+         * @return The size of this type.
+         */
+        [[nodiscard]] virtual unsigned int size() const override;
     };
 
     /**
@@ -120,6 +134,13 @@ namespace resolved_type {
          * @return The s-expression of this type.
          */
         [[nodiscard]] std::string s_expression() const override;
+
+        /**
+         * @brief Returns the size of this type.
+         *
+         * @return The size of this type.
+         */
+        [[nodiscard]] virtual unsigned int size() const override;
     };
 }  //  namespace resolved_type
 
