@@ -265,8 +265,9 @@ namespace generator {
                 return generate_expr_true(std::reinterpret_pointer_cast<ast_node::true_expr_node>(expression),
                                           constants, stack, debug);
             case ast_node::TUPLE_INDEX_EXPR:
-                //  TODO (HW9): Implement.
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                return generate_expr_tuple_index(
+                        std::reinterpret_pointer_cast<ast_node::tuple_index_expr_node>(expression), constants, stack,
+                        debug);
             case ast_node::TUPLE_LITERAL_EXPR:
                 return generate_expr_tuple_literal(
                         std::reinterpret_pointer_cast<ast_node::tuple_literal_expr_node>(expression), constants, stack,
@@ -289,14 +290,17 @@ namespace generator {
         if (debug) assembly << "\t;  START generate_expr_array_literal\n";
 
         //  Generate assembly from right to left.
-        unsigned int total = 0;
-        for (int index = (int)(expression->expressions.size() - 1); index >= 0; index--) {
+        for (long index = (long)(expression->expressions.size() - 1); index >= 0; index--) {
             assembly << generate_expr(expression->expressions[index], constants, stack, debug);
-            total += stack.pop();
         }
-        stack.push(total);
 
-        assembly << "\tmov rdi, " << total << "\n";
+        //  We don't pop from the stack as we go, because sub-expressions need to know the status of the stack.
+        //  We need to pop it all now, though, and replace it with one number.
+        unsigned long total_size = 0;
+        for (long index = 0; index < (long)expression->expressions.size(); index++) { total_size += stack.pop(); }
+        stack.push(total_size);
+
+        assembly << "\tmov rdi, " << total_size << "\n";
 
         const bool needs_alignment = stack.needs_alignment();
         if (needs_alignment) assembly << "\tsub rsp, 8 ; Align stack\n";
@@ -305,18 +309,18 @@ namespace generator {
 
         if (needs_alignment) assembly << "\tadd rsp, 8 ; Remove alignment\n";
 
-        if (debug) assembly << "\t;  Moving " << total << " bytes from rsp to rax\n";
+        if (debug) assembly << "\t;  Moving " << total_size << " bytes from rsp to rax\n";
 
-        for (unsigned int offset = reg_size; offset <= total; offset += reg_size) {
+        for (unsigned int offset = reg_size; offset <= total_size; offset += reg_size) {
             //  Extra indentation for debug mode.
             if (debug) assembly << "\t";
-            assembly << "\tmov r10, [rsp + " << total - offset << "]\n";
+            assembly << "\tmov r10, [rsp + " << total_size - offset << "]\n";
 
             if (debug) assembly << "\t";
-            assembly << "\tmov [rax + " << total - offset << "], r10\n";
+            assembly << "\tmov [rax + " << total_size - offset << "], r10\n";
         }
 
-        assembly << "\tadd rsp, " << total << "\n";
+        assembly << "\tadd rsp, " << total_size << "\n";
         stack.pop();
         assembly << "\tpush rax\n";
         //  NOTE: This will probably need to be updated for a rank-2 array.
@@ -620,6 +624,44 @@ namespace generator {
         return assembly.str();
     }
 
+    std::string generate_expr_tuple_index(const std::shared_ptr<ast_node::tuple_index_expr_node>& expression,
+                                          const_table& constants, stack_info& stack, bool debug) {
+        std::stringstream assembly;
+
+        constexpr unsigned int reg_size = 8;
+
+        if (debug) assembly << "\t;  START generate_expr_tuple_index\n";
+
+        assembly << generate_expr(expression->expr, constants, stack, debug);
+
+        const unsigned int element_index = expression->index->value;
+        const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_type
+                = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(expression->expr->r_type);
+        const unsigned int element_size = tuple_type->element_types[element_index]->size();
+        const unsigned int element_offset = tuple_type->offset(element_index);
+        const unsigned int destination = tuple_type->size() - element_size;
+
+        if (debug)
+            assembly << "\t;  Moving " << element_size << " bytes from rsp + " << element_offset << " to rsp + "
+                     << destination << "\n";
+
+        for (int mov_offset = (int)(element_size - reg_size); mov_offset >= 0; mov_offset -= reg_size) {
+            if (debug) assembly << "\t";
+            assembly << "\tmov r10, [rsp + " << element_offset << " + " << mov_offset << "]\n";
+
+            if (debug) assembly << "\t";
+            assembly << "\tmov [rsp + " << destination << " + " << mov_offset << "], r10\n";
+        }
+
+        assembly << "\tadd rsp, " << tuple_type->size() - element_size << "\n";
+        stack.pop();
+        stack.push(element_size);
+
+        if (debug) assembly << "\t;  END generate_expr_tuple_index\n";
+
+        return assembly.str();
+    }
+
     std::string generate_expr_tuple_literal(const std::shared_ptr<ast_node::tuple_literal_expr_node>& expression,
                                             const_table& constants, stack_info& stack, bool debug) {
         std::stringstream assembly;
@@ -627,11 +669,13 @@ namespace generator {
         if (debug) assembly << "\t;  START generate_expr_tuple_literal\n";
 
         //  Generate assembly from right to left.
-        for (int index = (int)(expression->exprs.size() - 1); index >= 0; index--) {
+        for (long index = (long)(expression->exprs.size() - 1); index >= 0; index--) {
             assembly << generate_expr(expression->exprs[index], constants, stack, debug);
-            stack.pop();
         }
 
+        //  We don't pop from the stack as we go, because sub-expressions need to know the status of the stack.
+        //  We need to pop it all now, though, and replace it with one number.
+        for (long index = 0; index < (long)(expression->exprs.size()); index++) { stack.pop(); }
         stack.push(expression->r_type->size());
 
         if (debug) assembly << "\t;  END generate_expr_tuple_literal\n";

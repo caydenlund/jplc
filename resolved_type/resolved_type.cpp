@@ -50,6 +50,12 @@ namespace resolved_type {
         return result;
     }
 
+    unsigned int tuple_resolved_type::offset(unsigned int index) const {
+        unsigned int offset_total = 0;
+        for (unsigned int ind = 0; ind < index; ind++) { offset_total += this->element_types[ind]->size(); }
+        return offset_total;
+    }
+
     std::string tuple_resolved_type::s_expression() const {
         std::stringstream result;
         result << "(TupleType";

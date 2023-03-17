@@ -107,7 +107,7 @@ namespace resolved_type {
          *
          * @return The size of this type.
          */
-        [[nodiscard]] virtual unsigned int size() const override;
+        [[nodiscard]] unsigned int size() const override;
     };
 
     /**
@@ -129,6 +129,14 @@ namespace resolved_type {
             : resolved_type(resolved_type_type::TUPLE_TYPE), element_types(element_types) {}
 
         /**
+         * @brief Returns the number of offset bytes to access the given element in the tuple.
+         *
+         * @param index The index of the element to access.
+         * @return The number of offset bytes to access the given element.
+         */
+        [[nodiscard]] unsigned int offset(unsigned int index) const;
+
+        /**
          * @brief Returns the s-expression of this type.
          *
          * @return The s-expression of this type.
@@ -140,7 +148,7 @@ namespace resolved_type {
          *
          * @return The size of this type.
          */
-        [[nodiscard]] virtual unsigned int size() const override;
+        [[nodiscard]] unsigned int size() const override;
     };
 }  //  namespace resolved_type
 

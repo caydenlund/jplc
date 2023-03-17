@@ -342,7 +342,7 @@ namespace generator {
      * @return The string assembly for the given expression.
      */
     std::string generate_expr_array_literal(const std::shared_ptr<ast_node::array_literal_expr_node>& expression,
-                                    const_table& constants, stack_info& stack, bool debug);
+                                            const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single binary operation expression AST node.
@@ -403,6 +403,18 @@ namespace generator {
      */
     std::string generate_expr_true(const std::shared_ptr<ast_node::true_expr_node>& expression, const_table& constants,
                                    stack_info& stack, bool debug);
+
+    /**
+     * @brief Generates assembly for a single tuple index expression AST node.
+     *
+     * @param expression The tuple literal expression AST node.
+     * @param constants The set of global constants.
+     * @param stack Information about the stack.
+     * @param debug Whether to generate extra comments for debugging.
+     * @return The string assembly for the given expression.
+     */
+    std::string generate_expr_tuple_index(const std::shared_ptr<ast_node::tuple_index_expr_node>& expression,
+                                          const_table& constants, stack_info& stack, bool debug);
 
     /**
      * @brief Generates assembly for a single tuple literal expression AST node.
