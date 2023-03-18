@@ -34,7 +34,7 @@ namespace generator {
         if (this->type == INT_ENTRY) { return "dq " + std::to_string(this->int_value); }
 
         if (this->type == FLOAT_ENTRY) {
-            const std::string format = "dq %g";
+            const std::string format = "dq %.10g";
             constexpr unsigned int buf_size = 100;
             const std::unique_ptr<char[]> buf(new char[buf_size]);
             const unsigned int result_size = std::snprintf(buf.get(), buf_size, format.c_str(), this->float_value);
