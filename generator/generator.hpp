@@ -246,9 +246,16 @@ namespace generator {
         void generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command);
 
         /**
+         * @brief Generates assembly for a single `let` command AST node.
+         *
+         * @param command The `let` command AST node.
+         */
+        void generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command);
+
+        /**
          * @brief Generates assembly for a single `show` command AST node.
          *
-         * @param command The show command AST node.
+         * @param command The `show` command AST node.
          */
         void generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command);
 
@@ -278,6 +285,14 @@ namespace generator {
          * @return The string assembly for the given expression.
          */
         std::string generate_expr_binop(const std::shared_ptr<ast_node::binop_expr_node>& expression);
+
+        /**
+         * @brief Generates assembly for a single call expression AST node.
+         *
+         * @param expression The call expression AST node.
+         * @return The string assembly for the given expression.
+         */
+        std::string generate_expr_call(const std::shared_ptr<ast_node::call_expr_node>& expression);
 
         /**
          * @brief Generates assembly for a single `false` expression AST node.
@@ -334,6 +349,14 @@ namespace generator {
          * @return The string assembly for the given expression.
          */
         std::string generate_expr_unop(const std::shared_ptr<ast_node::unop_expr_node>& expression);
+
+        /**
+         * @brief Generates assembly for a single variable expression AST node.
+         *
+         * @param expression The variable expression AST node.
+         * @return The string assembly for the given expression.
+         */
+        std::string generate_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression);
 
     public:
         /**

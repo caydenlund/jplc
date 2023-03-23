@@ -99,18 +99,23 @@ namespace generator {
     }
 
     void generator::generate_commands() {
-        this->stack.push();
         this->main_assembly << "jpl_main:\n"
                             << "_jpl_main:\n"
-                            << "\tpush rbp\n";
-        this->stack.push();
-        this->main_assembly << "\tmov rbp, rsp\n"
+                            << "\tpush rbp\n"
+                            << "\tmov rbp, rsp\n"
                             << "\tpush r12\n";
         this->stack.push();
         this->main_assembly << "\tmov r12, rbp\n";
 
         for (const std::shared_ptr<ast_node::ast_node>& node : this->nodes) {
             this->generate_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node));
+        }
+
+        const unsigned int vars_size = this->stack.pop_all_vars();
+        if (vars_size > 0) {
+            this->main_assembly << "\tadd rsp, " << vars_size;
+            if (this->debug) this->main_assembly << " ; Remove local variables";
+            this->main_assembly << "\n";
         }
 
         this->main_assembly << "\tpop r12\n";
@@ -127,19 +132,53 @@ namespace generator {
         switch (command->type) {
             case ast_node::ASSERT_CMD:
             case ast_node::FN_CMD:
+                //  TODO (HW10): Implement.
+                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
             case ast_node::LET_CMD:
+                return this->generate_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command));
             case ast_node::PRINT_CMD:
             case ast_node::READ_CMD:
-                throw std::runtime_error("Unhandled command: \"" + command->s_expression() + "\"");
+                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
             case ast_node::SHOW_CMD:
                 return this->generate_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command));
             case ast_node::TIME_CMD:
             case ast_node::TYPE_CMD:
             case ast_node::WRITE_CMD:
-                throw std::runtime_error("Unhandled command: \"" + command->s_expression() + "\"");
+                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
             default:
-                throw std::runtime_error("Invalid command: \"" + command->s_expression() + "\"");
+                throw std::runtime_error("`generate_cmd`: invalid command: \"" + command->s_expression() + "\"");
         }
+    }
+
+    void generator::generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_let\n";
+
+        this->main_assembly << generate_expr(command->expr);
+        const unsigned int size = stack.pop();
+
+        //  TODO (HW10): Implement.
+        if (command->lvalue->type == ast_node::ARGUMENT_LVALUE) {
+            const std::shared_ptr<ast_node::argument_node> argument
+                    = std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(command->lvalue)->argument;
+
+            if (argument->type == ast_node::ARRAY_ARGUMENT) {
+                //  TODO (HW10): Implement.
+                throw std::runtime_error("`generate_cmd_let`: unimplemented lvalue argument: \""
+                                         + argument->s_expression() + "\"");
+            } else {
+                //  TODO (HW10): Implement.
+                const std::shared_ptr<ast_node::variable_argument_node> variable_argument
+                        = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
+
+                stack.push(variable_argument->name, size);
+            }
+        } else {
+            //  TODO (HW10): Implement.
+            throw std::runtime_error("`generate_cmd_let`: unimplemented lvalue: \"" + command->lvalue->s_expression()
+                                     + "\"");
+        }
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_let\n";
     }
 
     void generator::generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command) {
@@ -151,19 +190,27 @@ namespace generator {
         const bool needs_alignment = this->stack.needs_alignment();
         this->stack.pop();
         if (needs_alignment) {
-            this->main_assembly << "\tsub rsp, 8 ; Align stack\n";
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack\n";
+            this->main_assembly << "\n";
             this->stack.push();
         }
 
         this->main_assembly << this->generate_expr(command->expr) << "\tlea rdi, [rel "
-                            << constants[command->expr->r_type->s_expression()] << "] ; "
-                            << command->expr->r_type->s_expression() << "\n"
+                            << constants[command->expr->r_type->s_expression()] << "]";
+        if (this->debug) {
+            this->main_assembly << " ; ";
+            this->main_assembly << command->expr->r_type->s_expression();
+        }
+        this->main_assembly << "\n"
                             << "\tlea rsi, [rsp]\n"
                             << "\tcall _show\n"
                             << "\tadd rsp, " << this->stack.pop() << "\n";
 
         if (needs_alignment) {
-            this->main_assembly << "\tadd rsp, 8 ; Remove alignment\n";
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment\n";
+            this->main_assembly << "\n";
             this->stack.pop();
         }
 
@@ -176,28 +223,31 @@ namespace generator {
     std::string generator::generate_expr(const std::shared_ptr<ast_node::expr_node>& expression) {
         switch (expression->type) {
             case ast_node::ARRAY_INDEX_EXPR:
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                throw std::runtime_error("`generate_expr`: Unhandled expression: \"" + expression->s_expression()
+                                         + "\"");
             case ast_node::ARRAY_LITERAL_EXPR:
                 return this->generate_expr_array_literal(
                         std::reinterpret_pointer_cast<ast_node::array_literal_expr_node>(expression));
             case ast_node::ARRAY_LOOP_EXPR:
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                throw std::runtime_error("`generate_expr`: unhandled expression: \"" + expression->s_expression()
+                                         + "\"");
             case ast_node::BINOP_EXPR:
                 return this->generate_expr_binop(std::reinterpret_pointer_cast<ast_node::binop_expr_node>(expression));
             case ast_node::CALL_EXPR:
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                return this->generate_expr_call(std::reinterpret_pointer_cast<ast_node::call_expr_node>(expression));
             case ast_node::FALSE_EXPR:
                 return this->generate_expr_false(std::reinterpret_pointer_cast<ast_node::false_expr_node>(expression));
             case ast_node::FLOAT_EXPR:
                 return this->generate_expr_float(std::reinterpret_pointer_cast<ast_node::float_expr_node>(expression));
             case ast_node::IF_EXPR:
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                throw std::runtime_error("`generate_expr`: unhandled expression: \"" + expression->s_expression()
+                                         + "\"");
             case ast_node::INTEGER_EXPR:
                 return this->generate_expr_integer(
                         std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression));
-            case ast_node::OP_EXPR:
             case ast_node::SUM_LOOP_EXPR:
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                throw std::runtime_error("`generate_expr`: unhandled expression: \"" + expression->s_expression()
+                                         + "\"");
             case ast_node::TRUE_EXPR:
                 return this->generate_expr_true(std::reinterpret_pointer_cast<ast_node::true_expr_node>(expression));
             case ast_node::TUPLE_INDEX_EXPR:
@@ -209,9 +259,10 @@ namespace generator {
             case ast_node::UNOP_EXPR:
                 return this->generate_expr_unop(std::reinterpret_pointer_cast<ast_node::unop_expr_node>(expression));
             case ast_node::VARIABLE_EXPR:
-                throw std::runtime_error("Unhandled expression: \"" + expression->s_expression() + "\"");
+                return this->generate_expr_variable(
+                        std::reinterpret_pointer_cast<ast_node::variable_expr_node>(expression));
             default:
-                throw std::runtime_error("Invalid expression: \"" + expression->s_expression() + "\"");
+                throw std::runtime_error("`generate_expr`: invalid expression: \"" + expression->s_expression() + "\"");
         }
     }
 
@@ -236,11 +287,21 @@ namespace generator {
         assembly << "\tmov rdi, " << total_size << "\n";
 
         const bool needs_alignment = this->stack.needs_alignment();
-        if (needs_alignment) assembly << "\tsub rsp, 8 ; Align stack\n";
+        if (needs_alignment) {
+            assembly << "\tsub rsp, 8";
+            if (this->debug) assembly << " ; Align stack\n";
+            assembly << "\n";
+            this->stack.push();
+        }
 
         assembly << "\tcall _jpl_alloc\n";
 
-        if (needs_alignment) assembly << "\tadd rsp, 8 ; Remove alignment\n";
+        if (needs_alignment) {
+            assembly << "\tadd rsp, 8";
+            if (this->debug) assembly << " ; Remove alignment\n";
+            assembly << "\n";
+            this->stack.pop();
+        }
 
         if (this->debug) assembly << "\t;  Moving " << total_size << " bytes from rsp to rax\n";
 
@@ -301,7 +362,9 @@ namespace generator {
                              << "\tjne " << next_jump << "\n";
 
                     if (needs_alignment) {
-                        assembly << "\tsub rsp, 8 ; Align stack\n";
+                        assembly << "\tsub rsp, 8";
+                        if (this->debug) assembly << " ; Align stack\n";
+                        assembly << "\n";
                         this->stack.push();
                     }
 
@@ -309,7 +372,9 @@ namespace generator {
                              << "\tcall _fail_assertion\n";
 
                     if (needs_alignment) {
-                        assembly << "\tadd rsp, 8 ; Remove alignment\n";
+                        assembly << "\tadd rsp, 8";
+                        if (this->debug) assembly << " ; Remove alignment\n";
+                        assembly << "\n";
                         this->stack.pop();
                     }
 
@@ -323,13 +388,17 @@ namespace generator {
                              << "\tjne " << next_jump << "\n";
 
                     if (needs_alignment) {
-                        assembly << "\tsub rsp, 8 ; Align stack\n";
+                        assembly << "\tsub rsp, 8";
+                        if (this->debug) assembly << " ; Align stack\n";
+                        assembly << "\n";
                         this->stack.push();
                     }
                     assembly << "\tlea rdi, [rel " << constants[{"mod by zero"}] << "]\n"
                              << "\tcall _fail_assertion\n";
                     if (needs_alignment) {
-                        assembly << "\tadd rsp, 8 ; Remove alignment\n";
+                        assembly << "\tadd rsp, 8";
+                        if (this->debug) assembly << " ; Remove alignment\n";
+                        assembly << "\n";
                         this->stack.pop();
                     }
 
@@ -369,7 +438,8 @@ namespace generator {
                              << "\tand rax, 1\n";
                     break;
                 default:
-                    throw std::runtime_error("Invalid expression: \"" + expression->s_expression() + "\"");
+                    throw std::runtime_error("`generate_expr_binop`: Invalid expression: \""
+                                             + expression->s_expression() + "\"");
             }
             assembly << "\tpush rax\n";
             this->stack.push();
@@ -454,7 +524,8 @@ namespace generator {
                     this->stack.push();
                     break;
                 default:
-                    throw std::runtime_error("Invalid expression: \"" + expression->s_expression() + "\"");
+                    throw std::runtime_error("`generate_expr_binop`: invalid expression: \""
+                                             + expression->s_expression() + "\"");
             }
         } else if (operand_type == resolved_type::resolved_type_type::BOOL_TYPE) {
             switch (expression->operator_type) {
@@ -484,13 +555,58 @@ namespace generator {
                     //  TODO (HW11): Implement.
                 case ast_node::BINOP_OR:
                     //  TODO (HW11): Implement.
-                    throw std::runtime_error("Unimplemented expression: \"" + expression->s_expression() + "\"");
+                    throw std::runtime_error("`generate_expr_binop`: unimplemented expression: \""
+                                             + expression->s_expression() + "\"");
                 default:
-                    throw std::runtime_error("Invalid expression: \"" + expression->s_expression() + "\"");
+                    throw std::runtime_error("`generate_expr_binop`: invalid expression: \""
+                                             + expression->s_expression() + "\"");
             }
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_binop\n";
+
+        return assembly.str();
+    }
+
+    std::string generator::generate_expr_call(const std::shared_ptr<ast_node::call_expr_node>& expression) {
+        std::stringstream assembly;
+
+        if (this->debug) assembly << "\t;  START generate_expr_call\n";
+
+        //  TODO (HW10): Implement.
+
+        //  Push call arguments onto the stack from right to left.
+        for (int index = expression->call_args.size() - 1; index >= 0; index--) {
+            assembly << generate_expr(expression->call_args[index]);
+        }
+
+        //  TODO (HW10): Add more.
+        const std::vector<std::string> float_regs = {"xmm0"};
+        unsigned int float_reg_index = 0;
+
+        //  Next, we move arguments on the stack into their proper places.
+        for (const std::shared_ptr<ast_node::expr_node>& arg : expression->call_args) {
+            switch (arg->r_type->type) {
+                case resolved_type::BOOL_TYPE:
+                    throw std::runtime_error("`generate_expr_call`: unhandled call argument type: \""
+                                             + arg->s_expression() + "\"");
+                    break;
+                case resolved_type::FLOAT_TYPE:
+                    assembly << "\tmovsd " << float_regs[float_reg_index++] << "\n"
+                             << "\tadd rsp, " << this->stack.pop() << "\n";
+                    break;
+                case resolved_type::INT_TYPE:
+                case resolved_type::ARRAY_TYPE:
+                case resolved_type::TUPLE_TYPE:
+                    throw std::runtime_error("`generate_expr_call`: unhandled call argument type: \""
+                                             + arg->s_expression() + "\"");
+            }
+        }
+
+        //  TODO (HW10): Stack alignment.
+        assembly << "\tcall _" << expression->name << "\n";
+
+        if (this->debug) assembly << "\t;  END generate_expr_call\n";
 
         return assembly.str();
     }
@@ -500,8 +616,9 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_false\n";
 
-        assembly << "\tmov rax, [rel " << constants[(long)0] << "] ; False\n"
-                 << "\tpush rax\n";
+        assembly << "\tmov rax, [rel " << constants[(long)0] << "]";
+        if (this->debug) assembly << " ; False";
+        assembly << "\n\tpush rax\n";
         this->stack.push();
 
         if (this->debug) assembly << "\t;  END generate_expr_false\n";
@@ -514,8 +631,9 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_float\n";
 
-        assembly << "\tmov rax, [rel " << constants[expression->value] << "] ; " << expression->value << "\n"
-                 << "\tpush rax\n";
+        assembly << "\tmov rax, [rel " << constants[expression->value] << "]";
+        if (this->debug) assembly << " ; " << expression->value;
+        assembly << "\n\tpush rax\n";
         this->stack.push();
 
         if (this->debug) assembly << "\t;  END generate_expr_float\n";
@@ -528,8 +646,9 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_integer\n";
 
-        assembly << "\tmov rax, [rel " << constants[expression->value] << "] ; " << expression->value << "\n"
-                 << "\tpush rax\n";
+        assembly << "\tmov rax, [rel " << constants[expression->value] << "]";
+        if (this->debug) assembly << " ; " << expression->value;
+        assembly << "\n\tpush rax\n";
         this->stack.push();
 
         if (this->debug) assembly << "\t;  END generate_expr_integer\n";
@@ -542,8 +661,9 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_true\n";
 
-        assembly << "\tmov rax, [rel " << constants[(long)1] << "] ; True\n"
-                 << "\tpush rax\n";
+        assembly << "\tmov rax, [rel " << constants[(long)1] << "]";
+        if (this->debug) assembly << " ; True";
+        assembly << "\n\tpush rax\n";
         this->stack.push();
 
         if (this->debug) assembly << "\t;  END generate_expr_true\n";
@@ -643,6 +763,34 @@ namespace generator {
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_unop\n";
+
+        return assembly.str();
+    }
+
+    std::string generator::generate_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression) {
+        std::stringstream assembly;
+        constexpr unsigned int reg_size = 8;
+
+        if (this->debug) assembly << "\t;  START generate_expr_variable\n";
+
+        const unsigned int size = expression->r_type->size();
+        assembly << "\tsub rsp, " << size << "\n";
+        this->stack.push(size);
+
+        const unsigned int rbp_offset = this->stack[expression->name];
+
+        if (debug) assembly << "\t;  Moving " << size << " bytes from [rbp - " << rbp_offset << "] to [rsp]\n";
+
+        for (unsigned int offset = reg_size; offset <= size; offset += reg_size) {
+            //  Extra indentation for debug mode.
+            if (this->debug) assembly << "\t";
+            assembly << "\tmov r10, [rbp - " << rbp_offset + size - offset << "]\n";
+
+            if (this->debug) assembly << "\t";
+            assembly << "\tmov [rsp + " << size - offset << "], r10\n";
+        }
+
+        if (this->debug) assembly << "\t;  END generate_expr_variable\n";
 
         return assembly.str();
     }

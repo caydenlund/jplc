@@ -31,8 +31,27 @@ void stack_info::stack_info::int_stack::push(unsigned int value) {
     this->total += value;
 }
 
+unsigned int stack_info::stack_info::operator[](const std::string& variable) const {
+    return this->variables.at(variable);
+}
+
 bool stack_info::stack_info::needs_alignment() const { return this->stack.get_total() % stack_alignment > 0; }
 
 unsigned int stack_info::stack_info::pop() { return this->stack.pop(); }
 
+unsigned int stack_info::stack_info::pop_all_vars() {
+    unsigned int total = 0;
+
+    for ([[maybe_unused]] const std::pair<const std::basic_string<char>, unsigned int>& entry : this->variables) {
+        total += stack.pop();
+    }
+
+    return total;
+}
+
 void stack_info::stack_info::push(unsigned int num_bytes) { this->stack.push(num_bytes); }
+
+void stack_info::stack_info::push(const std::string& name, unsigned int num_bytes) {
+    this->stack.push(num_bytes);
+    this->variables[name] = this->stack.get_total();
+}
