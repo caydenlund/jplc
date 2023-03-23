@@ -784,7 +784,7 @@ namespace generator {
         for (unsigned int offset = reg_size; offset <= size; offset += reg_size) {
             //  Extra indentation for debug mode.
             if (this->debug) assembly << "\t";
-            assembly << "\tmov r10, [rbp - " << rbp_offset + size - offset << "]\n";
+            assembly << "\tmov r10, [rbp - " << rbp_offset - size + offset << "]\n";
 
             if (this->debug) assembly << "\t";
             assembly << "\tmov [rsp + " << size - offset << "], r10\n";
