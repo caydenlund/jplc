@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "ast_node/ast_node.hpp"
+#include "call_signature/call_signature.hpp"
 #include "stack_info/stack_info.hpp"
 #include "symbol_table/symbol_table.hpp"
 
@@ -194,6 +195,12 @@ namespace generator {
          *
          */
         std::stringstream function_assemblies;
+
+        /**
+         * @brief The call signatures of the functions defined in the program.
+         *
+         */
+        std::unordered_map<std::string, call_signature::call_signature> function_signatures;
 
         /**
          * @brief The header linking preface.

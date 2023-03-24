@@ -100,6 +100,8 @@ namespace generator {
     }
 
     void generator::generate_commands() {
+        constexpr unsigned int reg_size = 8;
+
         this->main_assembly << "jpl_main:\n"
                             << "_jpl_main:\n"
                             << "\tpush rbp\n"
@@ -112,10 +114,8 @@ namespace generator {
             this->generate_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node));
         }
 
-        constexpr unsigned int stack_start_size = 8;
-        const unsigned int vars_size = this->stack.size() - stack_start_size;
-        if (vars_size > 0) {
-            this->main_assembly << "\tadd rsp, " << vars_size;
+        if (this->stack.size() > reg_size) {
+            this->main_assembly << "\tadd rsp, " << this->stack.size() - reg_size;
             if (this->debug) this->main_assembly << " ; Remove local variables";
             this->main_assembly << "\n";
         }
@@ -209,7 +209,7 @@ namespace generator {
         this->stack.pop();
         if (needs_alignment) {
             this->main_assembly << "\tsub rsp, 8";
-            if (this->debug) this->main_assembly << " ; Align stack\n";
+            if (this->debug) this->main_assembly << " ; Align stack";
             this->main_assembly << "\n";
             this->stack.push();
         }
@@ -227,7 +227,7 @@ namespace generator {
 
         if (needs_alignment) {
             this->main_assembly << "\tadd rsp, 8";
-            if (this->debug) this->main_assembly << " ; Remove alignment\n";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
             this->main_assembly << "\n";
             this->stack.pop();
         }
@@ -323,7 +323,7 @@ namespace generator {
         const bool needs_alignment = this->stack.needs_alignment();
         if (needs_alignment) {
             assembly << "\tsub rsp, 8";
-            if (this->debug) assembly << " ; Align stack\n";
+            if (this->debug) assembly << " ; Align stack";
             assembly << "\n";
             this->stack.push();
         }
@@ -332,7 +332,7 @@ namespace generator {
 
         if (needs_alignment) {
             assembly << "\tadd rsp, 8";
-            if (this->debug) assembly << " ; Remove alignment\n";
+            if (this->debug) assembly << " ; Remove alignment";
             assembly << "\n";
             this->stack.pop();
         }
@@ -397,7 +397,7 @@ namespace generator {
 
                     if (needs_alignment) {
                         assembly << "\tsub rsp, 8";
-                        if (this->debug) assembly << " ; Align stack\n";
+                        if (this->debug) assembly << " ; Align stack";
                         assembly << "\n";
                         this->stack.push();
                     }
@@ -407,7 +407,7 @@ namespace generator {
 
                     if (needs_alignment) {
                         assembly << "\tadd rsp, 8";
-                        if (this->debug) assembly << " ; Remove alignment\n";
+                        if (this->debug) assembly << " ; Remove alignment";
                         assembly << "\n";
                         this->stack.pop();
                     }
@@ -423,7 +423,7 @@ namespace generator {
 
                     if (needs_alignment) {
                         assembly << "\tsub rsp, 8";
-                        if (this->debug) assembly << " ; Align stack\n";
+                        if (this->debug) assembly << " ; Align stack";
                         assembly << "\n";
                         this->stack.push();
                     }
@@ -431,7 +431,7 @@ namespace generator {
                              << "\tcall _fail_assertion\n";
                     if (needs_alignment) {
                         assembly << "\tadd rsp, 8";
-                        if (this->debug) assembly << " ; Remove alignment\n";
+                        if (this->debug) assembly << " ; Remove alignment";
                         assembly << "\n";
                         this->stack.pop();
                     }
@@ -605,84 +605,75 @@ namespace generator {
     std::string generator::generate_expr_call(const std::shared_ptr<ast_node::call_expr_node>& expression) {
         std::stringstream assembly;
 
-        if (this->debug) assembly << "\t;  START generate_expr_call\n";
+        const call_signature::call_signature& function = this->function_signatures[expression->name];
 
-        //  TODO (HW10): Implement.
+        //  1.  If there's a struct return value, allocate space for it on the stack.
+        if (function.ret_type->type == resolved_type::ARRAY_TYPE
+            || function.ret_type->type == resolved_type::TUPLE_TYPE) {
+            assembly << "\tsub rsp, " << function.ret_type->size();
+            if (this->debug) assembly << " ; Return struct";
+            assembly << "\n";
+            this->stack.push(function.ret_type->size());
+        }
 
-        //  Get the total size of the arguments that we will push onto the stack, so that we can check whether the stack
-        //  needs to be aligned.
-        //  TODO (HW10): Figure out a way to determine what variables are going to go onto the stack.
-        //  TODO (HW10): Debug.
-        //  unsigned int total = 0;
-        //  for (const std::shared_ptr<ast_node::expr_node>& arg : expression->call_args) {
-        //      total += arg->r_type->size();
-        //  }
-        //  this->stack.push(total);
+        //  2.  Add padding so the final stack size, before the call, is a multiple of 16 bytes.
+        this->stack.push(function.bytes_on_stack);
         const bool needs_alignment = this->stack.needs_alignment();
-        //  this->stack.pop();
-
+        this->stack.pop();
         if (needs_alignment) {
             assembly << "\tsub rsp, 8";
-            if (this->debug) assembly << " ; Align stack\n";
+            if (this->debug) assembly << " ; Align stack";
             assembly << "\n";
             this->stack.push();
         }
 
-        //  Push call arguments onto the stack from right to left.
-        for (int index = (int)expression->call_args.size() - 1; index >= 0; index--) {
+        //  3.  Compute every stack argument in reverse order (so that they end up on the stack in the normal order).
+        //  4.  Compute every register argument in reverse order.
+        for (const unsigned int& index : function.push_order) {
             assembly << generate_expr(expression->call_args[index]);
         }
 
-        const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"};
-        unsigned int float_reg_index = 0;
-
-        //  Next, we move arguments on the stack into their proper places.
-        for (const std::shared_ptr<ast_node::expr_node>& arg : expression->call_args) {
-            switch (arg->r_type->type) {
-                case resolved_type::BOOL_TYPE:
-                    throw std::runtime_error("`generate_expr_call`: unhandled call argument type: \""
-                                             + arg->s_expression() + "\"");
-                    break;
-                case resolved_type::FLOAT_TYPE:
-                    if (float_reg_index >= float_regs.size()) {
-                        throw std::runtime_error("`generate_expr_call`: too many float arguments: \""
-                                                 + std::to_string(float_reg_index + 1) + "\"");
-                        //  TODO (HW10): Handle this case.
-                    }
-                    assembly << "\tmovsd " << float_regs[float_reg_index++] << ", [rsp]\n"
-                             << "\tadd rsp, " << this->stack.pop() << "\n";
-                    break;
-                case resolved_type::INT_TYPE:
-                case resolved_type::ARRAY_TYPE:
-                case resolved_type::TUPLE_TYPE:
-                    throw std::runtime_error("`generate_expr_call`: unhandled call argument type: \""
-                                             + arg->s_expression() + "\"");
-            }
+        //  5.  Pop all register arguments into their correct registers.
+        for (const std::string& assem : function.pop_assem) {
+            assembly << assem;
+            this->stack.pop();
         }
 
+        //  6.  If there's a struct return value, load its address into RDI.
+        if (function.ret_type->type == resolved_type::ARRAY_TYPE
+            || function.ret_type->type == resolved_type::TUPLE_TYPE) {
+            //  TODO (HW10): Implement.
+            throw std::runtime_error("`generate_expr_call`: unhandled return type: \""
+                                     + function.ret_type->s_expression() + "\"");
+        }
+
+        //  7.  Execute the `call` instruction.
         assembly << "\tcall _" << expression->name << "\n";
 
+        //  8.  Drop every stack argument.
+        //      TODO (HW10): This.
+
+        //  9.  Drop the padding, if any.
         if (needs_alignment) {
             assembly << "\tadd rsp, 8";
-            if (this->debug) assembly << " ; Remove alignment\n";
+            if (this->debug) assembly << " ; Remove alignment";
             assembly << "\n";
             this->stack.pop();
         }
 
-        //  Push the result onto the stack.
-        switch (expression->r_type->type) {
-            case resolved_type::BOOL_TYPE:
-                throw std::runtime_error("`generate_expr_call`: unhandled return type: \""
-                                         + expression->r_type->s_expression() + "\"");
+        //  10. If the return value is in a register, push it onto the stack.
+        switch (function.ret_type->type) {
             case resolved_type::FLOAT_TYPE:
                 assembly << "\tsub rsp, 8\n"
                          << "\tmovsd [rsp], xmm0\n";
+                this->stack.push();
                 break;
+            case resolved_type::BOOL_TYPE:
             case resolved_type::INT_TYPE:
-            case resolved_type::ARRAY_TYPE:
-            case resolved_type::TUPLE_TYPE:
-                throw std::runtime_error("`generate_expr_call`: unhandled return type: \""
-                                         + expression->r_type->s_expression() + "\"");
+                assembly << "\tpush rax\n";
+                this->stack.push();
+            default:
+                break;
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_call\n";
@@ -876,6 +867,23 @@ namespace generator {
 
     generator::generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)
         : debug(debug), nodes(nodes) {
+        const std::shared_ptr<resolved_type::resolved_type> int_type = std::make_shared<resolved_type::resolved_type>(
+                resolved_type::INT_TYPE);
+        const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
+                resolved_type::FLOAT_TYPE);
+
+        for (const std::string function_name : {"sqrt", "exp", "sin", "cos", "tan", "asin", "acos", "atan", "log"}) {
+            this->function_signatures[function_name] = call_signature::call_signature({float_type}, float_type);
+        }
+
+        for (const std::string function_name : {"pow", "atan2"}) {
+            this->function_signatures[function_name] = call_signature::call_signature({float_type, float_type},
+                                                                                      float_type);
+        }
+
+        this->function_signatures["to_float"] = call_signature::call_signature({int_type}, float_type);
+        this->function_signatures["to_int"] = call_signature::call_signature({float_type}, int_type);
+
         this->generate_linking_preface();
         this->generate_commands();
     }
