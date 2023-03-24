@@ -100,21 +100,7 @@ namespace stack_info {
          */
         int_stack stack;
 
-        /**
-         * @brief A mapping from string variable names to its offset from register RBP.
-         *
-         */
-        std::unordered_map<std::string, unsigned int> variables;
-
     public:
-        /**
-         * @brief Subscript operator. Returns the offset from the RBP register to the given variable.
-         *
-         * @param variable The variable for which to get the address.
-         * @return The offset from the RBP register to the given variable.
-         */
-        [[nodiscard]] unsigned int operator[](const std::string& variable) const;
-
         /**
          * @brief Reports whether the stack needs to be 16-byte aligned.
          *
@@ -130,13 +116,6 @@ namespace stack_info {
         unsigned int pop();
 
         /**
-         * @brief Pops all variables from the stack.
-         *
-         * @return The total of all the popped values.
-         */
-        unsigned int pop_all_vars();
-
-        /**
          * @brief Pushes the given number of bytes onto the stack.
          *
          * @param num_bytes The number of bytes to push onto the stack. Defaults to 8.
@@ -144,11 +123,10 @@ namespace stack_info {
         void push(unsigned int num_bytes = default_num_bytes);
 
         /**
-         * @brief Pushes a named variable of the given number of bytes onto the stack.
+         * @brief Reports the size of the stack.
          *
-         * @param name The name of the variable to push onto the stack.
-         * @param num_bytes The number of bytes to push onto the stack. Defaults to 8.
+         * @return The size of the stack.
          */
-        void push(const std::string& name, unsigned int num_bytes = default_num_bytes);
+        [[nodiscard]] unsigned int size() const;
     };
 }  //  namespace stack_info

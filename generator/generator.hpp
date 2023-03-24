@@ -178,12 +178,6 @@ namespace generator {
         //  ===========================
 
         /**
-         * @brief A set of assembly instructions for the program's commands.
-         *
-         */
-        std::stringstream main_assembly;
-
-        /**
          * @brief The constants defined in the `.data` section of the assembly.
          *
          */
@@ -208,6 +202,12 @@ namespace generator {
         std::stringstream linking_preface_assembly;
 
         /**
+         * @brief A set of assembly instructions for the program's commands.
+         *
+         */
+        std::stringstream main_assembly;
+
+        /**
          * @brief The set of command nodes that make up the program.
          *
          */
@@ -218,6 +218,13 @@ namespace generator {
          *
          */
         stack_info::stack_info stack;
+
+        /**
+         * @brief The set of all variables.
+         * @details Maps to a pair of {variable offset, variable size}.
+         *
+         */
+        std::unordered_map<std::string, unsigned int> variables;
 
         //  ================
         //  ||  Methods:  ||
@@ -269,6 +276,14 @@ namespace generator {
          * @return The string assembly result for the given expression.
          */
         std::string generate_expr(const std::shared_ptr<ast_node::expr_node>& expression);
+
+        /**
+         * @brief Generates assembly for a single array index expression AST node.
+         *
+         * @param expression The array index expression AST node.
+         * @return The string assembly for the given expression.
+         */
+        std::string generate_expr_array_index(const std::shared_ptr<ast_node::array_index_expr_node>& expression);
 
         /**
          * @brief Generates assembly for a single array literal expression AST node.
