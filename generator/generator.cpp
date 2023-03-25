@@ -132,9 +132,10 @@ namespace generator {
     void generator::generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command) {
         switch (command->type) {
             case ast_node::ASSERT_CMD:
-            case ast_node::FN_CMD:
                 //  TODO (HW10): Implement.
                 throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+            case ast_node::FN_CMD:
+                return this->generate_cmd_fn(std::reinterpret_pointer_cast<ast_node::fn_cmd_node>(command));
             case ast_node::LET_CMD:
                 return this->generate_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command));
             case ast_node::PRINT_CMD:
@@ -149,6 +150,55 @@ namespace generator {
             default:
                 throw std::runtime_error("`generate_cmd`: invalid command: \"" + command->s_expression() + "\"");
         }
+    }
+
+    void generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command) {
+        //  TODO (HW10): Implement.
+        std::stringstream func_assembly;
+
+        func_assembly << command->name << ":\n_" << command->name << ":\n";
+
+        const std::vector<std::shared_ptr<resolved_type::resolved_type>> arg_types;
+        for (const std::shared_ptr<ast_node::binding_node>& binding : command->bindings) {
+            //  TODO (HW10): Get the correct signature arguments.
+        }
+        //  TODO (HW10): Get the correct return type.
+        const std::shared_ptr<resolved_type::resolved_type> return_type;
+
+        this->function_signatures[command->name] = call_signature::call_signature(arg_types, return_type);
+
+        //  1. Start with the preamble:
+        func_assembly << "\tpush rbp\n"
+                      << "\tmov rbp, rsp\n";
+
+        //  Save the size of the stack so that we can restore it at the end of the function.
+        const unsigned int start_stack_size = this->stack.size();
+
+        //  2. If the function returns a struct, push the address for the return value onto the stack.
+        //  TODO (HW10): Implement.
+
+        //  3. Process each argument.
+        //  TODO (HW10): Implement.
+
+        //  4. Generate each statement.
+        for (const std::shared_ptr<ast_node::stmt_node>& statement : command->statements) {
+            func_assembly << this->generate_stmt(statement);
+        }
+
+        //  5. Free the local variables from the stack.
+        if (this->stack.size() > start_stack_size) {
+            func_assembly << "\tadd rsp, " << this->stack.size() - start_stack_size;
+            if (this->debug) func_assembly << " ; Free local variables";
+            func_assembly << "\n";
+
+            while (this->stack.size() > start_stack_size) { this->stack.pop(); }
+        }
+
+        //  6. Add the postamble.
+        func_assembly << "\tpop rbp\n"
+                      << "\tret\n";
+
+        this->function_assemblies << func_assembly.str() << "\n";
     }
 
     void generator::generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command) {
@@ -863,6 +913,50 @@ namespace generator {
         if (this->debug) assembly << "\t;  END generate_expr_variable\n";
 
         return assembly.str();
+    }
+
+    std::string generator::generate_stmt(const std::shared_ptr<ast_node::stmt_node>& statement) {
+        switch (statement->type) {
+            case ast_node::ASSERT_STMT:
+                return this->generate_stmt_assert(std::reinterpret_pointer_cast<ast_node::assert_stmt_node>(statement));
+            case ast_node::LET_STMT:
+                return this->generate_stmt_let(std::reinterpret_pointer_cast<ast_node::let_stmt_node>(statement));
+            case ast_node::RETURN_STMT:
+                return this->generate_stmt_return(std::reinterpret_pointer_cast<ast_node::return_stmt_node>(statement));
+            default:
+                throw std::runtime_error("`generate_stmt_let`: invalid statement: \"" + statement->s_expression()
+                                         + "\"");
+        }
+    }
+
+    std::string generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
+        std::stringstream assembly;
+
+        const std::string next_jump = this->constants.next_jump();
+
+        assembly << generate_expr(statement->expr) << "\tpop rax\n";
+        this->stack.pop();
+        assembly << "\tcmp rax, 0\n"
+                 << "\tjne " << next_jump << "\n"
+                 << "\tlea rdi, [rel const" << this->constants[statement->text] << "]";
+        if (this->debug) assembly << " ; " << statement->text;
+        assembly << "\n"
+                 << "\tcall _fail_assertion\n"
+                 << next_jump << ":\n";
+
+        return assembly.str();
+    }
+
+    std::string generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& statement) {
+        //  TODO (HW10): Implement.
+
+        return {};
+    }
+
+    std::string generator::generate_stmt_return(const std::shared_ptr<ast_node::return_stmt_node>& statement) {
+        //  TODO (HW10): Implement.
+
+        return {};
     }
 
     generator::generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)

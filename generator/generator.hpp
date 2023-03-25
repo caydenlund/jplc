@@ -260,6 +260,13 @@ namespace generator {
         void generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command);
 
         /**
+         * @brief Generates assembly for a single `fn` command AST node.
+         *
+         * @param command The `fn` command AST node.
+         */
+        void generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command);
+
+        /**
          * @brief Generates assembly for a single `let` command AST node.
          *
          * @param command The `let` command AST node.
@@ -379,6 +386,38 @@ namespace generator {
          * @return The string assembly for the given expression.
          */
         std::string generate_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression);
+
+        /**
+         * @brief Generates assembly for a single statement AST node.
+         *
+         * @param statement The statement AST node.
+         * @return The string assembly for the given statement.
+         */
+        std::string generate_stmt(const std::shared_ptr<ast_node::stmt_node>& statement);
+
+        /**
+         * @brief Generates assembly for a single `assert` statement AST node.
+         *
+         * @param statement The `assert` statement AST node.
+         * @return The string assembly for the given statement.
+         */
+        std::string generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement);
+
+        /**
+         * @brief Generates assembly for a single `let` statement AST node.
+         *
+         * @param statement The `let` statement AST node.
+         * @return The string assembly for the given statement.
+         */
+        std::string generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& statement);
+
+        /**
+         * @brief Generates assembly for a single `return` statement AST node.
+         *
+         * @param statement The `return` statement AST node.
+         * @return The string assembly for the given statement.
+         */
+        std::string generate_stmt_return(const std::shared_ptr<ast_node::return_stmt_node>& statement);
 
     public:
         /**
