@@ -13,9 +13,9 @@
 #include "generator.hpp"
 
 namespace generator {
-    //  ==============
-    //  ||  Types:  ||
-    //  ==============
+    //  ========================
+    //  ||  Constants table:  ||
+    //  ========================
 
     generator::const_table::table_entry::table_entry(long int_value)
         : type(INT_ENTRY), int_value(int_value), float_value(), string_value() {}
@@ -71,219 +71,27 @@ namespace generator {
 
     std::string generator::const_table::next_jump() { return ".jump" + std::to_string(this->next_jump_number++); }
 
-    void generator::generate_linking_preface() {
-        this->linking_preface_assembly << "global jpl_main\n"
-                                       << "global _jpl_main\n"
-                                       << "extern _fail_assertion\n"
-                                       << "extern _jpl_alloc\n"
-                                       << "extern _get_time\n"
-                                       << "extern _show\n"
-                                       << "extern _print\n"
-                                       << "extern _print_time\n"
-                                       << "extern _read_image\n"
-                                       << "extern _write_image\n"
-                                       << "extern _fmod\n"
-                                       << "extern _sqrt\n"
-                                       << "extern _exp\n"
-                                       << "extern _sin\n"
-                                       << "extern _cos\n"
-                                       << "extern _tan\n"
-                                       << "extern _asin\n"
-                                       << "extern _acos\n"
-                                       << "extern _atan\n"
-                                       << "extern _log\n"
-                                       << "extern _pow\n"
-                                       << "extern _atan2\n"
-                                       << "extern _to_int\n"
-                                       << "extern _to_float\n"
-                                       << "\n";
+    //  =======================
+    //  ||  Variable table:  ||
+    //  =======================
+
+    generator::variable_table::variable_table(const std::shared_ptr<variable_table>& parent) : parent(parent) {}
+
+    std::tuple<std::string, unsigned int> generator::variable_table::get_variable_address(const std::string& variable,
+                                                                                          bool from_child) const {
+        const std::string reg = (this->parent == nullptr && from_child) ? "r12" : "rbp";
+        if (this->variables.count(variable) > 0) { return {reg, this->variables.at(variable)}; }
+
+        return this->parent->get_variable_address(variable, true);
     }
 
-    void generator::generate_commands() {
-        constexpr unsigned int reg_size = 8;
-
-        this->main_assembly << "jpl_main:\n"
-                            << "_jpl_main:\n"
-                            << "\tpush rbp\n"
-                            << "\tmov rbp, rsp\n"
-                            << "\tpush r12\n";
-        this->stack.push();
-        this->main_assembly << "\tmov r12, rbp\n";
-
-        for (const std::shared_ptr<ast_node::ast_node>& node : this->nodes) {
-            this->generate_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node));
-        }
-
-        if (this->stack.size() > reg_size) {
-            this->main_assembly << "\tadd rsp, " << this->stack.size() - reg_size;
-            if (this->debug) this->main_assembly << " ; Remove local variables";
-            this->main_assembly << "\n";
-        }
-
-        this->main_assembly << "\tpop r12\n";
-        this->stack.pop();
-        this->main_assembly << "\tpop rbp\n"
-                            << "\tret\n";
+    void generator::variable_table::set_variable_address(const std::string& variable, unsigned int offset) {
+        this->variables[variable] = offset;
     }
 
-    //  Commands:
-    //  ---------
-
-    void generator::generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command) {
-        switch (command->type) {
-            case ast_node::ASSERT_CMD:
-                //  TODO (HW10): Implement.
-                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
-            case ast_node::FN_CMD:
-                return this->generate_cmd_fn(std::reinterpret_pointer_cast<ast_node::fn_cmd_node>(command));
-            case ast_node::LET_CMD:
-                return this->generate_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command));
-            case ast_node::PRINT_CMD:
-            case ast_node::READ_CMD:
-                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
-            case ast_node::SHOW_CMD:
-                return this->generate_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command));
-            case ast_node::TIME_CMD:
-            case ast_node::TYPE_CMD:
-            case ast_node::WRITE_CMD:
-                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
-            default:
-                throw std::runtime_error("`generate_cmd`: invalid command: \"" + command->s_expression() + "\"");
-        }
-    }
-
-    void generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command) {
-        //  TODO (HW10): Implement.
-        std::stringstream func_assembly;
-
-        func_assembly << command->name << ":\n_" << command->name << ":\n";
-
-        const std::vector<std::shared_ptr<resolved_type::resolved_type>> arg_types;
-        for (const std::shared_ptr<ast_node::binding_node>& binding : command->bindings) {
-            //  TODO (HW10): Get the correct signature arguments.
-        }
-        //  TODO (HW10): Get the correct return type.
-        const std::shared_ptr<resolved_type::resolved_type> return_type;
-
-        this->function_signatures[command->name] = call_signature::call_signature(arg_types, return_type);
-
-        //  1. Start with the preamble:
-        func_assembly << "\tpush rbp\n"
-                      << "\tmov rbp, rsp\n";
-
-        //  Save the size of the stack so that we can restore it at the end of the function.
-        const unsigned int start_stack_size = this->stack.size();
-
-        //  2. If the function returns a struct, push the address for the return value onto the stack.
-        //  TODO (HW10): Implement.
-
-        //  3. Process each argument.
-        //  TODO (HW10): Implement.
-
-        //  4. Generate each statement.
-        for (const std::shared_ptr<ast_node::stmt_node>& statement : command->statements) {
-            func_assembly << this->generate_stmt(statement);
-        }
-
-        //  5. Free the local variables from the stack.
-        if (this->stack.size() > start_stack_size) {
-            func_assembly << "\tadd rsp, " << this->stack.size() - start_stack_size;
-            if (this->debug) func_assembly << " ; Free local variables";
-            func_assembly << "\n";
-
-            while (this->stack.size() > start_stack_size) { this->stack.pop(); }
-        }
-
-        //  6. Add the postamble.
-        func_assembly << "\tpop rbp\n"
-                      << "\tret\n";
-
-        this->function_assemblies << func_assembly.str() << "\n";
-    }
-
-    void generator::generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command) {
-        if (this->debug) this->main_assembly << "\t;  START generate_cmd_let\n";
-
-        this->main_assembly << generate_expr(command->expr);
-        this->stack.pop();
-
-        const std::function<void(const std::shared_ptr<ast_node::lvalue_node>&,
-                                 const std::shared_ptr<resolved_type::resolved_type>&)>
-                bind_lvalue = [this, &bind_lvalue](const std::shared_ptr<ast_node::lvalue_node>& lvalue,
-                                                   const std::shared_ptr<resolved_type::resolved_type>& r_type) {
-                    if (lvalue->type == ast_node::ARGUMENT_LVALUE) {
-                        const std::shared_ptr<ast_node::argument_node> argument
-                                = std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(lvalue)->argument;
-
-                        this->stack.push(r_type->size());
-                        if (argument->type == ast_node::ARRAY_ARGUMENT) {
-                            const std::shared_ptr<ast_node::array_argument_node> array_argument
-                                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
-
-                            this->variables[array_argument->name] = this->stack.size();
-
-                            //  TODO (HW10): Fix this so that it works with multi-dimensional arrays.
-                            for (const token::token& size_argument : array_argument->dimension_vars) {
-                                this->variables[size_argument.text] = this->stack.size();
-                            }
-                        } else {
-                            const std::shared_ptr<ast_node::variable_argument_node> variable_argument
-                                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
-
-                            this->variables[variable_argument->name] = this->stack.size();
-                        }
-                    } else {
-                        const std::shared_ptr<ast_node::tuple_lvalue_node> tuple_lvalue
-                                = std::reinterpret_pointer_cast<ast_node::tuple_lvalue_node>(lvalue);
-                        const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_r_type
-                                = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
-
-                        for (int index = (int)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
-                            bind_lvalue(tuple_lvalue->lvalues[index], tuple_r_type->element_types[index]);
-                        }
-                    }
-                };
-
-        bind_lvalue(command->lvalue, command->expr->r_type);
-
-        if (this->debug) this->main_assembly << "\t;  END generate_cmd_let\n";
-    }
-
-    void generator::generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command) {
-        if (this->debug) this->main_assembly << "\t;  START generate_cmd_show\n";
-
-        //  We need to know the size of the expression on the stack in order to align the stack,
-        //  so we push it onto the stack and then pop it again before generating the expression.
-        this->stack.push(command->expr->r_type->size());
-        const bool needs_alignment = this->stack.needs_alignment();
-        this->stack.pop();
-        if (needs_alignment) {
-            this->main_assembly << "\tsub rsp, 8";
-            if (this->debug) this->main_assembly << " ; Align stack";
-            this->main_assembly << "\n";
-            this->stack.push();
-        }
-
-        this->main_assembly << this->generate_expr(command->expr) << "\tlea rdi, [rel "
-                            << constants[command->expr->r_type->s_expression()] << "]";
-        if (this->debug) {
-            this->main_assembly << " ; ";
-            this->main_assembly << command->expr->r_type->s_expression();
-        }
-        this->main_assembly << "\n"
-                            << "\tlea rsi, [rsp]\n"
-                            << "\tcall _show\n"
-                            << "\tadd rsp, " << this->stack.pop() << "\n";
-
-        if (needs_alignment) {
-            this->main_assembly << "\tadd rsp, 8";
-            if (this->debug) this->main_assembly << " ; Remove alignment";
-            this->main_assembly << "\n";
-            this->stack.pop();
-        }
-
-        if (this->debug) this->main_assembly << "\t;  END generate_cmd_show\n";
-    }
+    //  =======================
+    //  ||  Base generator:  ||
+    //  =======================
 
     //  Expressions:
     //  ------------
@@ -441,7 +249,7 @@ namespace generator {
                     assembly << "\timul rax, r10\n";
                     break;
                 case ast_node::BINOP_DIVIDE:
-                    next_jump = constants.next_jump();
+                    next_jump = constants->next_jump();
                     assembly << "\tcmp r10, 0\n"
                              << "\tjne " << next_jump << "\n";
 
@@ -452,7 +260,7 @@ namespace generator {
                         this->stack.push();
                     }
 
-                    assembly << "\tlea rdi, [rel " << constants[{"divide by zero"}] << "]\n"
+                    assembly << "\tlea rdi, [rel " << (*this->constants)[{"divide by zero"}] << "]\n"
                              << "\tcall _fail_assertion\n";
 
                     if (needs_alignment) {
@@ -467,7 +275,7 @@ namespace generator {
                              << "\tidiv r10\n";
                     break;
                 case ast_node::BINOP_MOD:
-                    next_jump = constants.next_jump();
+                    next_jump = constants->next_jump();
                     assembly << "\tcmp r10, 0\n"
                              << "\tjne " << next_jump << "\n";
 
@@ -477,7 +285,7 @@ namespace generator {
                         assembly << "\n";
                         this->stack.push();
                     }
-                    assembly << "\tlea rdi, [rel " << constants[{"mod by zero"}] << "]\n"
+                    assembly << "\tlea rdi, [rel " << (*this->constants)[{"mod by zero"}] << "]\n"
                              << "\tcall _fail_assertion\n";
                     if (needs_alignment) {
                         assembly << "\tadd rsp, 8";
@@ -655,7 +463,7 @@ namespace generator {
     std::string generator::generate_expr_call(const std::shared_ptr<ast_node::call_expr_node>& expression) {
         std::stringstream assembly;
 
-        const call_signature::call_signature& function = this->function_signatures[expression->name];
+        const call_signature::call_signature& function = (*this->function_signatures)[expression->name];
 
         //  1.  If there's a struct return value, allocate space for it on the stack.
         if (function.ret_type->type == resolved_type::ARRAY_TYPE
@@ -736,7 +544,7 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_false\n";
 
-        assembly << "\tmov rax, [rel " << constants[(long)0] << "]";
+        assembly << "\tmov rax, [rel " << (*this->constants)[(long)0] << "]";
         if (this->debug) assembly << " ; False";
         assembly << "\n\tpush rax\n";
         this->stack.push();
@@ -751,7 +559,7 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_float\n";
 
-        assembly << "\tmov rax, [rel " << constants[expression->value] << "]";
+        assembly << "\tmov rax, [rel " << (*this->constants)[expression->value] << "]";
         if (this->debug) assembly << " ; " << expression->value;
         assembly << "\n\tpush rax\n";
         this->stack.push();
@@ -766,7 +574,7 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_integer\n";
 
-        assembly << "\tmov rax, [rel " << constants[expression->value] << "]";
+        assembly << "\tmov rax, [rel " << (*this->constants)[expression->value] << "]";
         if (this->debug) assembly << " ; " << expression->value;
         assembly << "\n\tpush rax\n";
         this->stack.push();
@@ -781,7 +589,7 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_true\n";
 
-        assembly << "\tmov rax, [rel " << constants[(long)1] << "]";
+        assembly << "\tmov rax, [rel " << (*this->constants)[(long)1] << "]";
         if (this->debug) assembly << " ; True";
         assembly << "\n\tpush rax\n";
         this->stack.push();
@@ -897,14 +705,18 @@ namespace generator {
         assembly << "\tsub rsp, " << size << "\n";
         this->stack.push(size);
 
-        const unsigned int rbp_offset = this->variables[expression->name];
+        const std::tuple<std::string, unsigned int> variable_address = this->variables.get_variable_address(
+                expression->name);
+        const std::string reg = std::get<0>(variable_address);
+        const unsigned int reg_offset = std::get<1>(variable_address);
 
-        if (debug) assembly << "\t;  Moving " << size << " bytes from [rbp - " << rbp_offset << "] to [rsp]\n";
+        if (debug)
+            assembly << "\t;  Moving " << size << " bytes from [" << reg << " - " << reg_offset << "] to [rsp]\n";
 
         for (unsigned int offset = reg_size; offset <= size; offset += reg_size) {
             //  Extra indentation for debug mode.
             if (this->debug) assembly << "\t";
-            assembly << "\tmov r10, [rbp - " << rbp_offset - size + offset << "]\n";
+            assembly << "\tmov r10, [" << reg << " - " << reg_offset - size + offset << "]\n";
 
             if (this->debug) assembly << "\t";
             assembly << "\tmov [rsp + " << size - offset << "], r10\n";
@@ -915,7 +727,23 @@ namespace generator {
         return assembly.str();
     }
 
-    std::string generator::generate_stmt(const std::shared_ptr<ast_node::stmt_node>& statement) {
+    generator::generator(
+            const std::shared_ptr<const_table>& constants,
+            const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>& function_signatures,
+            const std::shared_ptr<variable_table>& parent_variable_table, bool debug)
+        : constants(constants), debug(debug), function_signatures(function_signatures),
+          variables(parent_variable_table) {
+        //  TODO (HW10): Implement.
+    }
+
+    //  ===========================
+    //  ||  Function generator:  ||
+    //  ===========================
+
+    //  Statements:
+    //  -----------
+
+    std::string fn_generator::generate_stmt(const std::shared_ptr<ast_node::stmt_node>& statement) {
         switch (statement->type) {
             case ast_node::ASSERT_STMT:
                 return this->generate_stmt_assert(std::reinterpret_pointer_cast<ast_node::assert_stmt_node>(statement));
@@ -929,16 +757,16 @@ namespace generator {
         }
     }
 
-    std::string generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
+    std::string fn_generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
         std::stringstream assembly;
 
-        const std::string next_jump = this->constants.next_jump();
+        const std::string next_jump = (*this->constants).next_jump();
 
         assembly << generate_expr(statement->expr) << "\tpop rax\n";
         this->stack.pop();
         assembly << "\tcmp rax, 0\n"
                  << "\tjne " << next_jump << "\n"
-                 << "\tlea rdi, [rel const" << this->constants[statement->text] << "]";
+                 << "\tlea rdi, [rel const" << (*this->constants)[statement->text] << "]";
         if (this->debug) assembly << " ; " << statement->text;
         assembly << "\n"
                  << "\tcall _fail_assertion\n"
@@ -947,49 +775,288 @@ namespace generator {
         return assembly.str();
     }
 
-    std::string generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& statement) {
+    std::string fn_generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>&) {
         //  TODO (HW10): Implement.
 
         return {};
     }
 
-    std::string generator::generate_stmt_return(const std::shared_ptr<ast_node::return_stmt_node>& statement) {
+    std::string fn_generator::generate_stmt_return(const std::shared_ptr<ast_node::return_stmt_node>&) {
         //  TODO (HW10): Implement.
 
         return {};
     }
 
-    generator::generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)
-        : debug(debug), nodes(nodes) {
+    fn_generator::fn_generator(
+            const std::shared_ptr<const_table>& constants,
+            const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>& function_signatures,
+            const std::shared_ptr<variable_table>& parent_variable_table, bool debug)
+        : generator(constants, function_signatures, parent_variable_table, debug) {
+        //  TODO (HW10): Implement.
+    }
+
+    std::string fn_generator::assem() const {
+        //  TODO (HW10): Implement.
+
+        return {};
+    }
+
+    //  =======================
+    //  ||  Main generator:  ||
+    //  =======================
+
+    //  Commands:
+    //  ---------
+
+    void main_generator::generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command) {
+        switch (command->type) {
+            case ast_node::ASSERT_CMD:
+                //  TODO (HW10): Implement.
+                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+            case ast_node::FN_CMD:
+                return this->generate_cmd_fn(std::reinterpret_pointer_cast<ast_node::fn_cmd_node>(command));
+            case ast_node::LET_CMD:
+                return this->generate_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command));
+            case ast_node::PRINT_CMD:
+            case ast_node::READ_CMD:
+                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+            case ast_node::SHOW_CMD:
+                return this->generate_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command));
+            case ast_node::TIME_CMD:
+            case ast_node::TYPE_CMD:
+            case ast_node::WRITE_CMD:
+                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+            default:
+                throw std::runtime_error("`generate_cmd`: invalid command: \"" + command->s_expression() + "\"");
+        }
+    }
+
+    void main_generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>&) {
+        /*
+        //  TODO (HW10): Implement.
+        std::stringstream func_assembly;
+
+        func_assembly << command->name << ":\n_" << command->name << ":\n";
+
+        const std::vector<std::shared_ptr<resolved_type::resolved_type>> arg_types;
+        for (const std::shared_ptr<ast_node::binding_node>& binding : command->bindings) {
+            //  TODO (HW10): Get the correct signature arguments.
+        }
+        //  TODO (HW10): Get the correct return type.
+        const std::shared_ptr<resolved_type::resolved_type> return_type;
+
+        (*this->function_signatures)[command->name] = call_signature::call_signature(arg_types, return_type);
+
+        //  1. Start with the preamble:
+        func_assembly << "\tpush rbp\n"
+                      << "\tmov rbp, rsp\n";
+
+        //  Save the size of the stack so that we can restore it at the end of the function.
+        const unsigned int start_stack_size = this->stack.size();
+
+        //  2. If the function returns a struct, push the address for the return value onto the stack.
+        //  TODO (HW10): Implement.
+
+        //  3. Process each argument.
+        //  TODO (HW10): Implement.
+
+        //  4. Generate each statement.
+        for (const std::shared_ptr<ast_node::stmt_node>& statement : command->statements) {
+            func_assembly << this->generate_stmt(statement);
+        }
+
+        //  5. Free the local variables from the stack.
+        if (this->stack.size() > start_stack_size) {
+            func_assembly << "\tadd rsp, " << this->stack.size() - start_stack_size;
+            if (this->debug) func_assembly << " ; Free local variables";
+            func_assembly << "\n";
+
+            while (this->stack.size() > start_stack_size) { this->stack.pop(); }
+        }
+
+        //  6. Add the postamble.
+        func_assembly << "\tpop rbp\n"
+                      << "\tret\n";
+
+        this->function_assemblies << func_assembly.str() << "\n";
+         */
+    }
+
+    void main_generator::generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_let\n";
+
+        this->main_assembly << generate_expr(command->expr);
+        this->stack.pop();
+
+        const std::function<void(const std::shared_ptr<ast_node::lvalue_node>&,
+                                 const std::shared_ptr<resolved_type::resolved_type>&)>
+                bind_lvalue = [this, &bind_lvalue](const std::shared_ptr<ast_node::lvalue_node>& lvalue,
+                                                   const std::shared_ptr<resolved_type::resolved_type>& r_type) {
+                    if (lvalue->type == ast_node::ARGUMENT_LVALUE) {
+                        const std::shared_ptr<ast_node::argument_node> argument
+                                = std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(lvalue)->argument;
+
+                        this->stack.push(r_type->size());
+                        if (argument->type == ast_node::ARRAY_ARGUMENT) {
+                            const std::shared_ptr<ast_node::array_argument_node> array_argument
+                                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
+
+                            this->variables.set_variable_address(array_argument->name, this->stack.size());
+
+                            //  TODO (HW10): Fix this so that it works with multi-dimensional arrays.
+                            for (const token::token& size_argument : array_argument->dimension_vars) {
+                                this->variables.set_variable_address(size_argument.text, this->stack.size());
+                            }
+                        } else {
+                            const std::shared_ptr<ast_node::variable_argument_node> variable_argument
+                                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
+
+                            this->variables.set_variable_address(variable_argument->name, this->stack.size());
+                        }
+                    } else {
+                        const std::shared_ptr<ast_node::tuple_lvalue_node> tuple_lvalue
+                                = std::reinterpret_pointer_cast<ast_node::tuple_lvalue_node>(lvalue);
+                        const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_r_type
+                                = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
+
+                        for (int index = (int)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
+                            bind_lvalue(tuple_lvalue->lvalues[index], tuple_r_type->element_types[index]);
+                        }
+                    }
+                };
+
+        bind_lvalue(command->lvalue, command->expr->r_type);
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_let\n";
+    }
+
+    void main_generator::generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_show\n";
+
+        //  We need to know the size of the expression on the stack in order to align the stack,
+        //  so we push it onto the stack and then pop it again before generating the expression.
+        this->stack.push(command->expr->r_type->size());
+        const bool needs_alignment = this->stack.needs_alignment();
+        this->stack.pop();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << this->generate_expr(command->expr) << "\tlea rdi, [rel "
+                            << (*this->constants)[command->expr->r_type->s_expression()] << "]";
+        if (this->debug) {
+            this->main_assembly << " ; ";
+            this->main_assembly << command->expr->r_type->s_expression();
+        }
+        this->main_assembly << "\n"
+                            << "\tlea rsi, [rsp]\n"
+                            << "\tcall _show\n"
+                            << "\tadd rsp, " << this->stack.pop() << "\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_show\n";
+    }
+
+    void main_generator::generate_linking_preface() {
+        this->linking_preface_assembly << "global jpl_main\n"
+                                       << "global _jpl_main\n"
+                                       << "extern _fail_assertion\n"
+                                       << "extern _jpl_alloc\n"
+                                       << "extern _get_time\n"
+                                       << "extern _show\n"
+                                       << "extern _print\n"
+                                       << "extern _print_time\n"
+                                       << "extern _read_image\n"
+                                       << "extern _write_image\n"
+                                       << "extern _fmod\n"
+                                       << "extern _sqrt\n"
+                                       << "extern _exp\n"
+                                       << "extern _sin\n"
+                                       << "extern _cos\n"
+                                       << "extern _tan\n"
+                                       << "extern _asin\n"
+                                       << "extern _acos\n"
+                                       << "extern _atan\n"
+                                       << "extern _log\n"
+                                       << "extern _pow\n"
+                                       << "extern _atan2\n"
+                                       << "extern _to_int\n"
+                                       << "extern _to_float\n"
+                                       << "\n";
+    }
+
+    void main_generator::generate_commands() {
+        constexpr unsigned int reg_size = 8;
+
+        this->main_assembly << "jpl_main:\n"
+                            << "_jpl_main:\n"
+                            << "\tpush rbp\n"
+                            << "\tmov rbp, rsp\n"
+                            << "\tpush r12\n";
+        this->stack.push();
+        this->main_assembly << "\tmov r12, rbp\n";
+
+        for (const std::shared_ptr<ast_node::ast_node>& node : this->nodes) {
+            this->generate_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node));
+        }
+
+        if (this->stack.size() > reg_size) {
+            this->main_assembly << "\tadd rsp, " << this->stack.size() - reg_size;
+            if (this->debug) this->main_assembly << " ; Remove local variables";
+            this->main_assembly << "\n";
+        }
+
+        this->main_assembly << "\tpop r12\n";
+        this->stack.pop();
+        this->main_assembly << "\tpop rbp\n"
+                            << "\tret\n";
+    }
+
+    main_generator::main_generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)
+        : generator(std::make_shared<const_table>(),
+                    std::make_shared<std::unordered_map<std::string, call_signature::call_signature>>(), nullptr,
+                    debug),
+          nodes(nodes) {
         const std::shared_ptr<resolved_type::resolved_type> int_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::INT_TYPE);
         const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::FLOAT_TYPE);
 
         for (const std::string function_name : {"sqrt", "exp", "sin", "cos", "tan", "asin", "acos", "atan", "log"}) {
-            this->function_signatures[function_name] = call_signature::call_signature({float_type}, float_type);
+            (*this->function_signatures)[function_name] = call_signature::call_signature({float_type}, float_type);
         }
 
         for (const std::string function_name : {"pow", "atan2"}) {
-            this->function_signatures[function_name] = call_signature::call_signature({float_type, float_type},
-                                                                                      float_type);
+            (*this->function_signatures)[function_name] = call_signature::call_signature({float_type, float_type},
+                                                                                         float_type);
         }
 
-        this->function_signatures["to_float"] = call_signature::call_signature({int_type}, float_type);
-        this->function_signatures["to_int"] = call_signature::call_signature({float_type}, int_type);
+        (*this->function_signatures)["to_float"] = call_signature::call_signature({int_type}, float_type);
+        (*this->function_signatures)["to_int"] = call_signature::call_signature({float_type}, int_type);
 
         this->generate_linking_preface();
         this->generate_commands();
     }
 
-    std::string generator::assem() const {
+    std::string main_generator::assem() const {
         std::stringstream assembly;
 
         assembly << this->linking_preface_assembly.str() << "\n"
-                 << this->constants.assem() << "\n"
-                 << "section .text\n"
-                 << this->function_assemblies.str() << "\n"
-                 << this->main_assembly.str() << "\n";
+                 << this->constants->assem() << "\n"
+                 << "section .text\n";
+
+        for (const std::string& function_assem : this->function_assemblies) { assembly << function_assem << "\n"; }
+
+        assembly << this->main_assembly.str() << "\n";
 
         return assembly.str();
     }
@@ -999,6 +1066,6 @@ namespace generator {
     //  ================
 
     std::string generate(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug) {
-        return generator(nodes, debug).assem();
+        return main_generator(nodes, debug).assem();
     }
 }  //  namespace generator

@@ -27,7 +27,7 @@ namespace generator {
      *
      */
     class generator {
-    private:
+    protected:
         //  ==============
         //  ||  Types:  ||
         //  ==============
@@ -174,15 +174,62 @@ namespace generator {
             std::string next_jump();
         };
 
+        /**
+         * @brief Tracks variables as an offset from register RBP.
+         *
+         */
+        class variable_table {
+        private:
+            /**
+             * @brief A pointer to the parent variable table, if present.
+             *
+             */
+            const std::shared_ptr<variable_table> parent;
+
+            /**
+             * @brief A mapping from a variable name to an offset from register RBP.
+             *
+             */
+            std::unordered_map<std::string, unsigned int> variables;
+
+        public:
+            /**
+             * @brief Class constructor.
+             *
+             * @param parent The parent instance.
+             */
+            variable_table(const std::shared_ptr<variable_table>& parent = nullptr);
+
+            /**
+             * @brief Determines the address to use to access a local or global variable.
+             *
+             * @param variable The variable to access.
+             * @param from_child True when a child instance is calling this instance,
+             *     for when determining whether to use register RBP or register R12. Defaults to false.
+             * @return The address to use to access the given variable, given in a pair of {register, offset}.
+             */
+            [[nodiscard]] std::tuple<std::string, unsigned int> get_variable_address(const std::string& variable,
+                                                                                     bool from_child = false) const;
+
+            /**
+             * @brief Sets the address for the given variable.
+             *
+             * @param variable The variable to set.
+             * @param offset The offset from the base pointer where the value is.
+             */
+            void set_variable_address(const std::string& variable, unsigned int offset);
+        };
+
         //  ===========================
         //  ||  Instance Variables:  ||
         //  ===========================
 
         /**
          * @brief The constants defined in the `.data` section of the assembly.
+         * @details Each instance will point to the same main constants table.
          *
          */
-        const_table constants;
+        const std::shared_ptr<const_table> constants;
 
         /**
          * @brief Whether to include extra output when debugging.
@@ -191,34 +238,16 @@ namespace generator {
         bool debug;
 
         /**
-         * @brief The functions defined in the program.
-         *
-         */
-        std::stringstream function_assemblies;
-
-        /**
          * @brief The call signatures of the functions defined in the program.
          *
          */
-        std::unordered_map<std::string, call_signature::call_signature> function_signatures;
+        const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>> function_signatures;
 
         /**
-         * @brief The header linking preface.
-         *
-         */
-        std::stringstream linking_preface_assembly;
-
-        /**
-         * @brief A set of assembly instructions for the program's commands.
+         * @brief The main assembly sequence for this instance.
          *
          */
         std::stringstream main_assembly;
-
-        /**
-         * @brief The set of command nodes that make up the program.
-         *
-         */
-        const std::vector<std::shared_ptr<ast_node::ast_node>> nodes;
 
         /**
          * @brief Information about the stack.
@@ -228,57 +257,13 @@ namespace generator {
 
         /**
          * @brief The set of all variables.
-         * @details Maps to a pair of {variable offset, variable size}.
          *
          */
-        std::unordered_map<std::string, unsigned int> variables;
+        variable_table variables;
 
         //  ================
         //  ||  Methods:  ||
         //  ================
-
-        /**
-         * @brief Generates the header linking preface for a JPL program.
-         *
-         */
-        void generate_linking_preface();
-
-        /**
-         * @brief Iterates over the commands of the JPL program, updating the `.data` and `.text` sections accordingly.
-         *
-         */
-        void generate_commands();
-
-        //  Commands:
-        //  ---------
-
-        /**
-         * @brief Generates assembly for a single command AST node.
-         *
-         * @param command The command AST node.
-         */
-        void generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command);
-
-        /**
-         * @brief Generates assembly for a single `fn` command AST node.
-         *
-         * @param command The `fn` command AST node.
-         */
-        void generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command);
-
-        /**
-         * @brief Generates assembly for a single `let` command AST node.
-         *
-         * @param command The `let` command AST node.
-         */
-        void generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command);
-
-        /**
-         * @brief Generates assembly for a single `show` command AST node.
-         *
-         * @param command The `show` command AST node.
-         */
-        void generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command);
 
         //  Expressions:
         //  ------------
@@ -387,6 +372,44 @@ namespace generator {
          */
         std::string generate_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& expression);
 
+    public:
+        /**
+         * @brief Class constructor.
+         *
+         * @param constants A pointer to the global constants table.
+         * @param function_signatures A pointer to the set of function signatures.
+         * @param parent_variable_table A pointer to the parent generator's variable table.
+         *     Use `nullptr` if there is no parent.
+         * @param debug Whether to generate extra debugging output.
+         */
+        generator(const std::shared_ptr<const_table>& constants,
+                  const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>&
+                          function_signatures,
+                  const std::shared_ptr<variable_table>& parent_variable_table, bool debug = false);
+
+        /**
+         * @brief Class destructor.
+         *
+         */
+        virtual ~generator() = default;
+
+        /**
+         * @brief Returns the assembly generated by this instance.
+         *
+         * @return The (string) assembly generated by this instance.
+         */
+        virtual std::string assem() const = 0;
+    };
+
+    /**
+     * @brief A specialization of the `generator` class for generating assembly a function.
+     *
+     */
+    class fn_generator : public generator {
+    private:
+        //  Statements:
+        //  -----------
+
         /**
          * @brief Generates assembly for a single statement AST node.
          *
@@ -423,17 +446,115 @@ namespace generator {
         /**
          * @brief Class constructor.
          *
-         * @param nodes The set of AST nodes for which to generate the assembly.
-         * @param debug Whether to generate extra comments for debugging.
+         * @param constants A pointer to the global constants table.
+         * @param function_signatures A pointer to the set of function signatures.
+         * @param parent_variable_table A pointer to the parent generator's variable table.
+         * @param debug Whether to generate extra debugging output.
          */
-        generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug);
+        fn_generator(const std::shared_ptr<const_table>& constants,
+                     const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>&
+                             function_signatures,
+                     const std::shared_ptr<variable_table>& parent_variable_table, bool debug);
 
         /**
          * @brief Returns the assembly generated by this instance.
          *
          * @return The (string) assembly generated by this instance.
          */
-        std::string assem() const;
+        [[nodiscard]] std::string assem() const override;
+    };
+
+    /**
+     * @brief A specialization of the `generator` class for generating the overall assembly for the program.
+     *
+     */
+    class main_generator : public generator {
+    private:
+        /**
+         * @brief The header linking preface.
+         *
+         */
+        std::stringstream linking_preface_assembly;
+
+        /**
+         * @brief A set of assembly instructions for the program's commands.
+         *
+         */
+        std::stringstream main_assembly;
+
+        /**
+         * @brief The set of command nodes that make up the program.
+         *
+         */
+        const std::vector<std::shared_ptr<ast_node::ast_node>> nodes;
+
+        /**
+         * @brief The functions defined in the program.
+         *
+         */
+        std::vector<std::string> function_assemblies;
+
+        //  Commands:
+        //  ---------
+
+        /**
+         * @brief Generates assembly for a single command AST node.
+         *
+         * @param command The command AST node.
+         */
+        void generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command);
+
+        /**
+         * @brief Generates assembly for a single `fn` command AST node.
+         *
+         * @param command The `fn` command AST node.
+         */
+        void generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command);
+
+        /**
+         * @brief Generates assembly for a single `let` command AST node.
+         *
+         * @param command The `let` command AST node.
+         */
+        void generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command);
+
+        /**
+         * @brief Generates assembly for a single `show` command AST node.
+         *
+         * @param command The `show` command AST node.
+         */
+        void generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command);
+
+        //  Misc. methods:
+        //  --------------
+
+        /**
+         * @brief Generates the header linking preface for a JPL program.
+         *
+         */
+        void generate_linking_preface();
+
+        /**
+         * @brief Iterates over the commands of the JPL program, updating the `.data` and `.text` sections accordingly.
+         *
+         */
+        void generate_commands();
+
+    public:
+        /**
+         * @brief Class constructor.
+         *
+         * @param nodes The set of command nodes that compose the program.
+         * @param debug Whether to generate extra debug output.
+         */
+        main_generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug);
+
+        /**
+         * @brief Returns the assembly generated by this instance.
+         *
+         * @return The (string) assembly generated by this instance.
+         */
+        [[nodiscard]] std::string assem() const override;
     };
 
     /**
