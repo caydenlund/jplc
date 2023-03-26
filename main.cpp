@@ -82,8 +82,8 @@ int lex_parse_and_check_only(const std::string& filename) {
 int lex_parse_check_and_generate_only(const std::string& filename, bool debug) {
     const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
     const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
-    type_checker::check(nodes);
-    std::cout << generator::generate(nodes, debug);
+    const symbol_table::symbol_table global_symbol_table = type_checker::check(nodes);
+    std::cout << generator::generate(std::make_shared<symbol_table::symbol_table>(global_symbol_table), nodes, debug);
 
     std::cout << "Compilation succeeded: assembly complete\n";
 

@@ -287,13 +287,15 @@ namespace type_checker {
         return true;
     }
 
-    void check(const parser::node_list_t& nodes) {
+    symbol_table::symbol_table check(const parser::node_list_t& nodes) {
         symbol_table::symbol_table global_symbol_table;
         initialize_symbol_table(global_symbol_table);
 
         for (const parser::node_ptr_t& node : nodes) {
             check_cmd(std::reinterpret_pointer_cast<ast_node::cmd_node>(node), global_symbol_table);
         }
+
+        return global_symbol_table;
     }
 
     //  Superclasses:

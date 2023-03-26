@@ -7,6 +7,9 @@
  *
  */
 
+//  TODO (HW10): Values aren't going into the const table in the right order.
+//               See `my-tests-sec-11---test-4.jpl`.
+
 #include <functional>
 #include <sstream>
 
@@ -38,7 +41,7 @@ namespace generator {
             const std::string format = "dq %.10g";
             constexpr unsigned int buf_size = 100;
             const std::unique_ptr<char[]> buf(new char[buf_size]);
-            const unsigned int result_size = std::snprintf(buf.get(), buf_size, format.c_str(), this->float_value);
+            const unsigned long result_size = std::snprintf(buf.get(), buf_size, format.c_str(), this->float_value);
             std::string result(buf.get(), buf.get() + result_size);
 
             if (result.find('.') == std::string::npos && result.find('e') == std::string::npos) result += ".0";
@@ -77,15 +80,15 @@ namespace generator {
 
     generator::variable_table::variable_table(const std::shared_ptr<variable_table>& parent) : parent(parent) {}
 
-    std::tuple<std::string, unsigned int> generator::variable_table::get_variable_address(const std::string& variable,
-                                                                                          bool from_child) const {
+    std::tuple<std::string, long> generator::variable_table::get_variable_address(const std::string& variable,
+                                                                                 bool from_child) const {
         const std::string reg = (this->parent == nullptr && from_child) ? "r12" : "rbp";
         if (this->variables.count(variable) > 0) { return {reg, this->variables.at(variable)}; }
 
         return this->parent->get_variable_address(variable, true);
     }
 
-    void generator::variable_table::set_variable_address(const std::string& variable, unsigned int offset) {
+    void generator::variable_table::set_variable_address(const std::string& variable, long offset) {
         this->variables[variable] = offset;
     }
 
@@ -197,7 +200,7 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  Moving " << total_size << " bytes from rsp to rax\n";
 
-        for (unsigned int offset = reg_size; offset <= total_size; offset += reg_size) {
+        for (long offset = reg_size; offset <= (long)total_size; offset += reg_size) {
             //  Extra indentation for debug mode.
             if (this->debug) assembly << "\t";
             assembly << "\tmov r10, [rsp + " << total_size - offset << "]\n";
@@ -463,7 +466,11 @@ namespace generator {
     std::string generator::generate_expr_call(const std::shared_ptr<ast_node::call_expr_node>& expression) {
         std::stringstream assembly;
 
+        if (this->debug) assembly << "\t;  START generate_expr_call\n";
+
         const call_signature::call_signature& function = (*this->function_signatures)[expression->name];
+
+        if (this->debug) assembly << "\t;  <<START 1: " << this->stack.size() << ">>\n";
 
         //  1.  If there's a struct return value, allocate space for it on the stack.
         if (function.ret_type->type == resolved_type::ARRAY_TYPE
@@ -473,6 +480,10 @@ namespace generator {
             assembly << "\n";
             this->stack.push(function.ret_type->size());
         }
+
+        if (this->debug) assembly << "\t;  <<END 1: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 2: " << this->stack.size() << ">>\n";
 
         //  2.  Add padding so the final stack size, before the call, is a multiple of 16 bytes.
         this->stack.push(function.bytes_on_stack);
@@ -485,17 +496,28 @@ namespace generator {
             this->stack.push();
         }
 
+        if (this->debug) assembly << "\t;  <<END 2: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 3/4: " << this->stack.size() << ">>\n";
         //  3.  Compute every stack argument in reverse order (so that they end up on the stack in the normal order).
         //  4.  Compute every register argument in reverse order.
         for (const unsigned int& index : function.push_order) {
             assembly << generate_expr(expression->call_args[index]);
         }
 
+        if (this->debug) assembly << "\t;  <<END 3/4: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 5: " << this->stack.size() << ">>\n";
+
         //  5.  Pop all register arguments into their correct registers.
         for (const std::string& assem : function.pop_assem) {
             assembly << assem;
             this->stack.pop();
         }
+
+        if (this->debug) assembly << "\t;  <<END 5: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 6: " << this->stack.size() << ">>\n";
 
         //  6.  If there's a struct return value, load its address into RDI.
         if (function.ret_type->type == resolved_type::ARRAY_TYPE
@@ -505,11 +527,29 @@ namespace generator {
                                      + function.ret_type->s_expression() + "\"");
         }
 
+        if (this->debug) assembly << "\t;  <<END 6: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 7: " << this->stack.size() << ">>\n";
+
         //  7.  Execute the `call` instruction.
         assembly << "\tcall _" << expression->name << "\n";
 
+        if (this->debug) assembly << "\t;  <<END 7: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 8: " << this->stack.size() << ">>\n";
+
         //  8.  Drop every stack argument.
         //      TODO (HW10): This.
+        if (function.bytes_on_stack > 0) {
+            assembly << "\tadd rsp, " << function.bytes_on_stack << "\n";
+            const unsigned int stack_size = this->stack.size();
+
+            while (stack_size - this->stack.size() < function.bytes_on_stack) this->stack.pop();
+        }
+
+        if (this->debug) assembly << "\t;  <<END 8: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 9: " << this->stack.size() << ">>\n";
 
         //  9.  Drop the padding, if any.
         if (needs_alignment) {
@@ -518,6 +558,10 @@ namespace generator {
             assembly << "\n";
             this->stack.pop();
         }
+
+        if (this->debug) assembly << "\t;  <<END 9: " << this->stack.size() << ">>\n";
+
+        if (this->debug) assembly << "\t;  <<START 10: " << this->stack.size() << ">>\n";
 
         //  10. If the return value is in a register, push it onto the stack.
         switch (function.ret_type->type) {
@@ -533,6 +577,8 @@ namespace generator {
             default:
                 break;
         }
+
+        if (this->debug) assembly << "\t;  <<END 10: " << this->stack.size() << ">>\n";
 
         if (this->debug) assembly << "\t;  END generate_expr_call\n";
 
@@ -613,14 +659,14 @@ namespace generator {
         const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_type
                 = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(expression->expr->r_type);
         const unsigned int element_size = tuple_type->element_types[element_index]->size();
-        const unsigned int element_offset = tuple_type->offset(element_index);
-        const unsigned int destination = tuple_type->size() - element_size;
+        const long element_offset = (long)tuple_type->offset(element_index);
+        const long destination = (long)tuple_type->size() - element_size;
 
         if (this->debug)
             assembly << "\t;  Moving " << element_size << " bytes from rsp + " << element_offset << " to rsp + "
                      << destination << "\n";
 
-        for (int mov_offset = (int)(element_size - reg_size); mov_offset >= 0; mov_offset -= reg_size) {
+        for (long mov_offset = (long)(element_size - reg_size); mov_offset >= 0; mov_offset -= reg_size) {
             if (this->debug) assembly << "\t";
             assembly << "\tmov r10, [rsp + " << element_offset << " + " << mov_offset << "]\n";
 
@@ -705,15 +751,15 @@ namespace generator {
         assembly << "\tsub rsp, " << size << "\n";
         this->stack.push(size);
 
-        const std::tuple<std::string, unsigned int> variable_address = this->variables.get_variable_address(
+        const std::tuple<std::string, long> variable_address = this->variables.get_variable_address(
                 expression->name);
         const std::string reg = std::get<0>(variable_address);
-        const unsigned int reg_offset = std::get<1>(variable_address);
+        const long reg_offset = std::get<1>(variable_address);
 
         if (debug)
             assembly << "\t;  Moving " << size << " bytes from [" << reg << " - " << reg_offset << "] to [rsp]\n";
 
-        for (unsigned int offset = reg_size; offset <= size; offset += reg_size) {
+        for (long offset = reg_size; offset <= (long)size; offset += reg_size) {
             //  Extra indentation for debug mode.
             if (this->debug) assembly << "\t";
             assembly << "\tmov r10, [" << reg << " - " << reg_offset - size + offset << "]\n";
@@ -728,13 +774,12 @@ namespace generator {
     }
 
     generator::generator(
+            const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
             const std::shared_ptr<const_table>& constants,
             const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>& function_signatures,
             const std::shared_ptr<variable_table>& parent_variable_table, bool debug)
         : constants(constants), debug(debug), function_signatures(function_signatures),
-          variables(parent_variable_table) {
-        //  TODO (HW10): Implement.
-    }
+          global_symbol_table(global_symbol_table), variables(parent_variable_table) {}
 
     //  ===========================
     //  ||  Function generator:  ||
@@ -743,63 +788,213 @@ namespace generator {
     //  Statements:
     //  -----------
 
-    std::string fn_generator::generate_stmt(const std::shared_ptr<ast_node::stmt_node>& statement) {
+    void fn_generator::generate_stmt(const std::shared_ptr<ast_node::stmt_node>& statement) {
         switch (statement->type) {
             case ast_node::ASSERT_STMT:
-                return this->generate_stmt_assert(std::reinterpret_pointer_cast<ast_node::assert_stmt_node>(statement));
+                this->generate_stmt_assert(std::reinterpret_pointer_cast<ast_node::assert_stmt_node>(statement));
+                break;
             case ast_node::LET_STMT:
-                return this->generate_stmt_let(std::reinterpret_pointer_cast<ast_node::let_stmt_node>(statement));
+                this->generate_stmt_let(std::reinterpret_pointer_cast<ast_node::let_stmt_node>(statement));
+                break;
             case ast_node::RETURN_STMT:
-                return this->generate_stmt_return(std::reinterpret_pointer_cast<ast_node::return_stmt_node>(statement));
+                this->generate_stmt_return(std::reinterpret_pointer_cast<ast_node::return_stmt_node>(statement));
+                break;
             default:
                 throw std::runtime_error("`generate_stmt_let`: invalid statement: \"" + statement->s_expression()
                                          + "\"");
         }
     }
 
-    std::string fn_generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
-        std::stringstream assembly;
-
+    void fn_generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
         const std::string next_jump = (*this->constants).next_jump();
 
-        assembly << generate_expr(statement->expr) << "\tpop rax\n";
+        if (this->debug) this->main_assembly << ";  START generate_stmt_assert\n";
+
+        this->main_assembly << generate_expr(statement->expr) << "\tpop rax\n";
         this->stack.pop();
-        assembly << "\tcmp rax, 0\n"
-                 << "\tjne " << next_jump << "\n"
-                 << "\tlea rdi, [rel const" << (*this->constants)[statement->text] << "]";
-        if (this->debug) assembly << " ; " << statement->text;
-        assembly << "\n"
-                 << "\tcall _fail_assertion\n"
-                 << next_jump << ":\n";
+        this->main_assembly << "\tcmp rax, 0\n"
+                            << "\tjne " << next_jump << "\n"
+                            << "\tlea rdi, [rel const" << (*this->constants)[statement->text] << "]";
+        if (this->debug) this->main_assembly << " ; " << statement->text;
+        this->main_assembly << "\n"
+                            << "\tcall _fail_assertion\n"
+                            << next_jump << ":\n";
 
-        return assembly.str();
+        this->main_assembly.str();
+
+        if (this->debug) this->main_assembly << ";  END generate_stmt_assert\n";
     }
 
-    std::string fn_generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>&) {
+    void fn_generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& statement) {
+        if (this->debug) this->main_assembly << "\t;  START generate_stmt_let\n";
+
         //  TODO (HW10): Implement.
 
-        return {};
+        this->main_assembly << generate_expr(statement->expr);
+        this->stack.pop();
+
+        this->bind_lvalue(statement->lvalue, statement->expr->r_type);
+
+        if (this->debug) this->main_assembly << "\t;  END generate_stmt_let\n";
     }
 
-    std::string fn_generator::generate_stmt_return(const std::shared_ptr<ast_node::return_stmt_node>&) {
-        //  TODO (HW10): Implement.
+    void fn_generator::generate_stmt_return(const std::shared_ptr<ast_node::return_stmt_node>& statement) {
+        if (this->debug) this->main_assembly << "\t;  START generate_stmt_return\n";
 
-        return {};
+        this->main_assembly << generate_expr(statement->return_val);
+
+        switch (statement->return_val->r_type->type) {
+            case resolved_type::BOOL_TYPE:
+            case resolved_type::INT_TYPE:
+                this->main_assembly << "\tpop rax\n";
+                this->stack.pop();
+                break;
+            case resolved_type::FLOAT_TYPE:
+                this->main_assembly << "\tmovsd xmm0, [rsp]\n"
+                                    << "\tadd rsp, 8\n";
+                this->stack.pop();
+                break;
+            case resolved_type::ARRAY_TYPE:
+            case resolved_type::TUPLE_TYPE:
+                //  TODO (HW10): Implement.
+                throw std::runtime_error("`generate_stmt_return`: unimplemented return type: \""
+                                         + statement->return_val->r_type->s_expression() + "\"");
+        }
+
+        this->main_assembly << "\tadd rsp, " << this->stack.size() << "\n"
+                            << "\tpop rbp\n"
+                            << "\tret\n";
+
+        if (this->debug) this->main_assembly << "\t;  END generate_stmt_return\n";
+    }
+
+    void fn_generator::handle_reg_binding(const std::shared_ptr<ast_node::binding_node>& binding,
+                                          const std::shared_ptr<resolved_type::resolved_type>& r_type,
+                                          const std::string& reg) {
+        if (binding->type == ast_node::TUPLE_BINDING) {
+            throw std::runtime_error("`handle_reg_binding`: not a register binding: \"" + binding->s_expression()
+                                     + "\"");
+        }
+
+        const std::shared_ptr<ast_node::argument_node> argument
+                = std::reinterpret_pointer_cast<ast_node::var_binding_node>(binding)->binding_arg;
+
+        if (r_type->type == resolved_type::FLOAT_TYPE) {
+            this->main_assembly << "\tsub rsp, 8\n"
+                                << "\tmovsd [rsp], " << reg << "\n";
+            this->bind_argument(argument, r_type);
+        } else {
+            this->main_assembly << "\tpush " << reg << "\n";
+            this->bind_argument(argument, r_type);
+        }
+    }
+
+    void fn_generator::handle_stack_binding(const std::shared_ptr<ast_node::binding_node>& binding,
+                                            const std::shared_ptr<resolved_type::resolved_type>& r_type) {
+        if (binding->type == ast_node::TUPLE_BINDING) {
+            const std::shared_ptr<ast_node::tuple_binding_node> tuple_binding
+                    = std::reinterpret_pointer_cast<ast_node::tuple_binding_node>(binding);
+            const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_type
+                    = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
+
+            for (unsigned int index = 0; index < tuple_binding->bindings.size(); ++index) {
+                this->handle_stack_binding(tuple_binding->bindings[index], tuple_type->element_types[index]);
+            }
+        } else {
+            const std::shared_ptr<ast_node::argument_node> argument
+                    = std::reinterpret_pointer_cast<ast_node::var_binding_node>(binding)->binding_arg;
+            if (argument->type == ast_node::ARRAY_ARGUMENT) {
+                const std::shared_ptr<ast_node::array_argument_node> array_argument
+                        = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
+                const std::shared_ptr<resolved_type::array_resolved_type> array_type
+                        = std::reinterpret_pointer_cast<resolved_type::array_resolved_type>(r_type);
+
+                constexpr int reg_size = 8;
+                long rbp_offset_offset = rbp_offset;
+                for (const token::token& dim_arg : array_argument->dimension_vars) {
+                    this->variables.set_variable_address(dim_arg.text, rbp_offset_offset);
+                    rbp_offset_offset -= reg_size;
+                }
+                this->variables.set_variable_address(array_argument->name, -this->rbp_offset);
+                this->rbp_offset -= (long)r_type->size();
+            } else {
+                const std::shared_ptr<ast_node::variable_argument_node> var_argument
+                        = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
+                this->main_assembly << "\t;    [[" << this->rbp_offset << "]]\n";
+                this->variables.set_variable_address(var_argument->name, this->rbp_offset);
+                this->rbp_offset -= (long)r_type->size();
+            }
+        }
     }
 
     fn_generator::fn_generator(
-            const std::shared_ptr<const_table>& constants,
+            const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
+            const std::shared_ptr<ast_node::fn_cmd_node>& function, const std::shared_ptr<const_table>& constants,
             const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>& function_signatures,
             const std::shared_ptr<variable_table>& parent_variable_table, bool debug)
-        : generator(constants, function_signatures, parent_variable_table, debug) {
-        //  TODO (HW10): Implement.
+        : generator(global_symbol_table, constants, function_signatures, parent_variable_table, debug),
+          rbp_offset(initial_rbp_offset) {
+        this->main_assembly << "\t;  [[" << initial_rbp_offset << "]]\n";
+        this->main_assembly << function->name << ":\n_" << function->name << ":\n";
+
+        const std::shared_ptr<name_info::function_info> func_info
+                = std::reinterpret_pointer_cast<name_info::function_info>((*this->global_symbol_table)[function->name]);
+
+        const call_signature::call_signature call_sig(func_info->call_args, func_info->r_type);
+        (*this->function_signatures)[function->name] = call_sig;
+
+        if (this->debug) this->main_assembly << "\t;  <<START 1: " << this->stack.size() << ">>\n";
+
+        //  1. Start with the preamble:
+        this->main_assembly << "\tpush rbp\n"
+                            << "\tmov rbp, rsp\n";
+
+        if (this->debug) this->main_assembly << "\t;  <<END 1: " << this->stack.size() << ">>\n";
+
+        if (this->debug) this->main_assembly << "\t;  <<START 2: " << this->stack.size() << ">>\n";
+
+        //  2. If the function returns a struct, push the address for the return value onto the stack.
+        if (call_sig.ret_type->type == resolved_type::ARRAY_TYPE
+            || call_sig.ret_type->type == resolved_type::TUPLE_TYPE) {
+            //  TODO (HW10): Implement.
+        }
+
+        if (this->debug) this->main_assembly << "\t;  <<END 2: " << this->stack.size() << ">>\n";
+
+        if (this->debug) this->main_assembly << "\t;  <<START 3: " << this->stack.size() << ">>\n";
+
+        //  3. Process each argument.
+        for (unsigned int arg_index = 0; arg_index < function->bindings.size(); ++arg_index) {
+            const std::tuple<std::shared_ptr<resolved_type::resolved_type>, bool, std::string>& arg_info
+                    = call_sig.all_args[arg_index];
+            if (std::get<1>(arg_info)) {
+                this->handle_reg_binding(function->bindings[arg_index], std::get<0>(arg_info), std::get<2>(arg_info));
+            } else {
+                this->handle_stack_binding(function->bindings[arg_index], std::get<0>(arg_info));
+            }
+        }
+
+        if (this->debug) this->main_assembly << "\t;  <<END 3: " << this->stack.size() << ">>\n";
+
+        if (this->debug) this->main_assembly << "\t;  <<START 4: " << this->stack.size() << ">>\n";
+
+        //  4. Generate each statement.
+        for (const std::shared_ptr<ast_node::stmt_node>& statement : function->statements) {
+            this->generate_stmt(statement);
+        }
+
+        if (this->debug) this->main_assembly << "\t;  <<END 4: " << this->stack.size() << ">>\n";
+
+        //  5. Add the postamble, if no return statement was found.
+
+        if (this->debug) this->main_assembly << "\t;  <<START 5: " << this->stack.size() << ">>\n";
+
+        //  TODO (HW10): Add postamble if there is no return instruction.
+
+        if (this->debug) this->main_assembly << "\t;  <<END 5: " << this->stack.size() << ">>\n";
     }
 
-    std::string fn_generator::assem() const {
-        //  TODO (HW10): Implement.
-
-        return {};
-    }
+    std::string fn_generator::assem() const { return this->main_assembly.str(); }
 
     //  =======================
     //  ||  Main generator:  ||
@@ -831,55 +1026,10 @@ namespace generator {
         }
     }
 
-    void main_generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>&) {
-        /*
-        //  TODO (HW10): Implement.
-        std::stringstream func_assembly;
-
-        func_assembly << command->name << ":\n_" << command->name << ":\n";
-
-        const std::vector<std::shared_ptr<resolved_type::resolved_type>> arg_types;
-        for (const std::shared_ptr<ast_node::binding_node>& binding : command->bindings) {
-            //  TODO (HW10): Get the correct signature arguments.
-        }
-        //  TODO (HW10): Get the correct return type.
-        const std::shared_ptr<resolved_type::resolved_type> return_type;
-
-        (*this->function_signatures)[command->name] = call_signature::call_signature(arg_types, return_type);
-
-        //  1. Start with the preamble:
-        func_assembly << "\tpush rbp\n"
-                      << "\tmov rbp, rsp\n";
-
-        //  Save the size of the stack so that we can restore it at the end of the function.
-        const unsigned int start_stack_size = this->stack.size();
-
-        //  2. If the function returns a struct, push the address for the return value onto the stack.
-        //  TODO (HW10): Implement.
-
-        //  3. Process each argument.
-        //  TODO (HW10): Implement.
-
-        //  4. Generate each statement.
-        for (const std::shared_ptr<ast_node::stmt_node>& statement : command->statements) {
-            func_assembly << this->generate_stmt(statement);
-        }
-
-        //  5. Free the local variables from the stack.
-        if (this->stack.size() > start_stack_size) {
-            func_assembly << "\tadd rsp, " << this->stack.size() - start_stack_size;
-            if (this->debug) func_assembly << " ; Free local variables";
-            func_assembly << "\n";
-
-            while (this->stack.size() > start_stack_size) { this->stack.pop(); }
-        }
-
-        //  6. Add the postamble.
-        func_assembly << "\tpop rbp\n"
-                      << "\tret\n";
-
-        this->function_assemblies << func_assembly.str() << "\n";
-         */
+    void main_generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command) {
+        const fn_generator function(this->global_symbol_table, command, this->constants, this->function_signatures,
+                                    std::make_shared<variable_table>(this->variables), this->debug);
+        this->function_assemblies.emplace_back(function.assem());
     }
 
     void main_generator::generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command) {
@@ -901,17 +1051,17 @@ namespace generator {
                             const std::shared_ptr<ast_node::array_argument_node> array_argument
                                     = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
 
-                            this->variables.set_variable_address(array_argument->name, this->stack.size());
+                            this->variables.set_variable_address(array_argument->name, (long)this->stack.size());
 
                             //  TODO (HW10): Fix this so that it works with multi-dimensional arrays.
                             for (const token::token& size_argument : array_argument->dimension_vars) {
-                                this->variables.set_variable_address(size_argument.text, this->stack.size());
+                                this->variables.set_variable_address(size_argument.text, (long)this->stack.size());
                             }
                         } else {
                             const std::shared_ptr<ast_node::variable_argument_node> variable_argument
                                     = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
 
-                            this->variables.set_variable_address(variable_argument->name, this->stack.size());
+                            this->variables.set_variable_address(variable_argument->name, (long)this->stack.size());
                         }
                     } else {
                         const std::shared_ptr<ast_node::tuple_lvalue_node> tuple_lvalue
@@ -919,7 +1069,7 @@ namespace generator {
                         const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_r_type
                                 = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
 
-                        for (int index = (int)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
+                        for (long index = (long)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
                             bind_lvalue(tuple_lvalue->lvalues[index], tuple_r_type->element_types[index]);
                         }
                     }
@@ -964,6 +1114,44 @@ namespace generator {
         }
 
         if (this->debug) this->main_assembly << "\t;  END generate_cmd_show\n";
+    }
+
+    void generator::bind_argument(const std::shared_ptr<ast_node::argument_node>& argument,
+                                  const std::shared_ptr<resolved_type::resolved_type>& r_type) {
+        this->stack.push(r_type->size());
+        if (argument->type == ast_node::ARRAY_ARGUMENT) {
+            const std::shared_ptr<ast_node::array_argument_node> array_argument
+                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
+
+            this->variables.set_variable_address(array_argument->name, (long)this->stack.size());
+
+            //  TODO (HW10): Fix this so that it works with multi-dimensional arrays.
+            for (const token::token& size_argument : array_argument->dimension_vars) {
+                this->variables.set_variable_address(size_argument.text, (long)this->stack.size());
+            }
+        } else {
+            const std::shared_ptr<ast_node::variable_argument_node> variable_argument
+                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
+
+            this->variables.set_variable_address(variable_argument->name, (long)this->stack.size());
+        }
+    }
+
+    void generator::bind_lvalue(const std::shared_ptr<ast_node::lvalue_node>& lvalue,
+                                const std::shared_ptr<resolved_type::resolved_type>& r_type) {
+        if (lvalue->type == ast_node::ARGUMENT_LVALUE) {
+            this->bind_argument(std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(lvalue)->argument,
+                                r_type);
+        } else {
+            const std::shared_ptr<ast_node::tuple_lvalue_node> tuple_lvalue
+                    = std::reinterpret_pointer_cast<ast_node::tuple_lvalue_node>(lvalue);
+            const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_r_type
+                    = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
+
+            for (long index = (long)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
+                bind_lvalue(tuple_lvalue->lvalues[index], tuple_r_type->element_types[index]);
+            }
+        }
     }
 
     void main_generator::generate_linking_preface() {
@@ -1021,8 +1209,9 @@ namespace generator {
                             << "\tret\n";
     }
 
-    main_generator::main_generator(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)
-        : generator(std::make_shared<const_table>(),
+    main_generator::main_generator(const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
+                                   const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)
+        : generator(global_symbol_table, std::make_shared<const_table>(),
                     std::make_shared<std::unordered_map<std::string, call_signature::call_signature>>(), nullptr,
                     debug),
           nodes(nodes) {
@@ -1065,7 +1254,8 @@ namespace generator {
     //  ||  Methods:  ||
     //  ================
 
-    std::string generate(const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug) {
-        return main_generator(nodes, debug).assem();
+    std::string generate(const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
+                         const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug) {
+        return main_generator(global_symbol_table, nodes, debug).assem();
     }
 }  //  namespace generator

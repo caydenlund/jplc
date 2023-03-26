@@ -18,8 +18,6 @@ namespace call_signature {
     call_signature::call_signature(const std::vector<std::shared_ptr<resolved_type::resolved_type>>& arg_types,
                                    const std::shared_ptr<resolved_type::resolved_type>& ret_type)
         : bytes_on_stack(0), ret_type(ret_type) {
-        constexpr unsigned int reg_size = 8;
-
         unsigned int total_ints = 0;
         unsigned int total_floats = 0;
 
@@ -38,30 +36,36 @@ namespace call_signature {
         for (unsigned int arg_index = 0; arg_index < arg_types.size(); ++arg_index) {
             const std::shared_ptr<resolved_type::resolved_type>& arg_type = arg_types[arg_index];
 
+            bool is_reg = false;
+            std::string reg_name;
+            reg_t reg_type;
             switch (arg_type->type) {
                 case resolved_type::BOOL_TYPE:
                 case resolved_type::INT_TYPE:
-                    if (++total_ints > int_regs.size()) {
-                        stack_args.emplace_back(arg_index);
-                        this->bytes_on_stack += reg_size;
-                    } else {
-                        reg_args.emplace_back(arg_index, reg_t::INT, int_regs[total_ints - 1]);
+                    if (++total_ints <= int_regs.size()) {
+                        is_reg = true;
+                        reg_name = int_regs[total_ints - 1];
+                        reg_type = reg_t::INT;
                     }
                     break;
                 case resolved_type::FLOAT_TYPE:
-                    if (++total_floats > float_regs.size()) {
-                        stack_args.emplace_back(arg_index);
-                        this->bytes_on_stack += reg_size;
-                    } else {
-                        reg_args.emplace_back(arg_index, reg_t::FLOAT, float_regs[total_floats - 1]);
+                    if (++total_floats <= float_regs.size()) {
+                        is_reg = true;
+                        reg_name = float_regs[total_floats - 1];
+                        reg_type = reg_t::FLOAT;
                     }
                     break;
                 case resolved_type::ARRAY_TYPE:
                 case resolved_type::TUPLE_TYPE:
-                    stack_args.emplace_back(arg_index);
-                    this->bytes_on_stack += arg_type->size();
                     break;
             }
+            if (is_reg) {
+                reg_args.emplace_back(arg_index, reg_type, reg_name);
+            } else {
+                stack_args.emplace_back(arg_index);
+                this->bytes_on_stack += arg_type->size();
+            }
+            this->all_args.emplace_back(arg_type, is_reg, reg_name);
         }
 
         for (int index = (int)stack_args.size() - 1; index >= 0; --index) {
@@ -69,7 +73,7 @@ namespace call_signature {
         }
 
         for (int index = (int)reg_args.size() - 1; index >= 0; --index) {
-            this->push_order.emplace_back(std::get<0>(reg_args[reg_args.size() - index - 1]));
+            this->push_order.emplace_back(std::get<0>(reg_args[index]));
         }
 
         for (const std::tuple<unsigned int, reg_t, std::string>& reg_arg : reg_args) {

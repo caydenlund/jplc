@@ -94,8 +94,9 @@ namespace type_checker {
      * @brief Type-checks the given list of AST nodes.
      *
      * @param nodes A set of AST command nodes.
+     * @return The global symbol table.
      */
-    void check(const parser::node_list_t& nodes);
+    symbol_table::symbol_table check(const parser::node_list_t& nodes);
 
     /*
     =====================

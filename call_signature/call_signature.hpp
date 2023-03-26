@@ -22,6 +22,13 @@ namespace call_signature {
      */
     struct call_signature {
         /**
+         * @brief The list of all arguments, in the order to save.
+         * @details Each argument is encoded as a tuple of {resolved_type, is_register, register}.
+         *
+         */
+        std::vector<std::tuple<std::shared_ptr<resolved_type::resolved_type>, bool, std::string>> all_args;
+
+        /**
          * @brief The number of bytes that will be pushed onto the stack to call this function.
          * @details Does not include arguments that lie in registers,
          *          or the return value if the return value is a struct.
