@@ -1037,8 +1037,7 @@ namespace generator {
     void main_generator::generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command) {
         switch (command->type) {
             case ast_node::ASSERT_CMD:
-                //  TODO (HW10): Implement.
-                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+                return this->generate_cmd_assert(std::reinterpret_pointer_cast<ast_node::assert_cmd_node>(command));
             case ast_node::FN_CMD:
                 return this->generate_cmd_fn(std::reinterpret_pointer_cast<ast_node::fn_cmd_node>(command));
             case ast_node::LET_CMD:
@@ -1056,6 +1055,26 @@ namespace generator {
             default:
                 throw std::runtime_error("`generate_cmd`: invalid command: \"" + command->s_expression() + "\"");
         }
+    }
+
+    void main_generator::generate_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command) {
+        const std::string next_jump = (*this->constants).next_jump();
+
+        if (this->debug) this->main_assembly << ";  START generate_cmd_assert\n";
+
+        this->main_assembly << generate_expr(command->condition) << "\tpop rax\n";
+        this->stack.pop();
+        this->main_assembly << "\tcmp rax, 0\n"
+                            << "\tjne " << next_jump << "\n"
+                            << "\tlea rdi, [rel const" << (*this->constants)[command->text] << "]";
+        if (this->debug) this->main_assembly << " ; " << command->text;
+        this->main_assembly << "\n"
+                            << "\tcall _fail_assertion\n"
+                            << next_jump << ":\n";
+
+        this->main_assembly.str();
+
+        if (this->debug) this->main_assembly << ";  END generate_cmd_assert\n";
     }
 
     void main_generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command) {

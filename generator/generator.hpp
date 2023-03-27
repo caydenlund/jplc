@@ -569,6 +569,13 @@ namespace generator {
         void generate_cmd(const std::shared_ptr<ast_node::cmd_node>& command);
 
         /**
+         * @brief Generates assembly for a single `assert` command AST node.
+         *
+         * @param command The `assert` command AST node.
+         */
+        void generate_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command);
+
+        /**
          * @brief Generates assembly for a single `fn` command AST node.
          *
          * @param command The `fn` command AST node.
