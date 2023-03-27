@@ -69,7 +69,7 @@ namespace call_signature {
         }
 
         for (int index = (int)stack_args.size() - 1; index >= 0; --index) {
-            this->push_order.emplace_back(stack_args[stack_args.size() - index - 1]);
+            this->push_order.emplace_back(stack_args[index]);
         }
 
         for (int index = (int)reg_args.size() - 1; index >= 0; --index) {

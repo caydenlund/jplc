@@ -9,6 +9,8 @@
 
 //  TODO (HW10): Values aren't going into the const table in the right order.
 //               See `my-tests-sec-11---test-4.jpl`.
+//  TODO (HW10): Remove the extraneous debugging output.
+//               See output including "<<(START|END) #: #>>", "[[#]]".
 
 #include <functional>
 #include <sstream>
@@ -81,7 +83,7 @@ namespace generator {
     generator::variable_table::variable_table(const std::shared_ptr<variable_table>& parent) : parent(parent) {}
 
     std::tuple<std::string, long> generator::variable_table::get_variable_address(const std::string& variable,
-                                                                                 bool from_child) const {
+                                                                                  bool from_child) const {
         const std::string reg = (this->parent == nullptr && from_child) ? "r12" : "rbp";
         if (this->variables.count(variable) > 0) { return {reg, this->variables.at(variable)}; }
 
@@ -211,6 +213,7 @@ namespace generator {
 
         assembly << "\tadd rsp, " << total_size << "\n";
         this->stack.pop();
+
         assembly << "\tpush rax\n";
         //  NOTE: This will probably need to be updated for a rank-2 array.
         assembly << "\tmov rax, " << expression->expressions.size() << "\n"
@@ -464,6 +467,7 @@ namespace generator {
     }
 
     std::string generator::generate_expr_call(const std::shared_ptr<ast_node::call_expr_node>& expression) {
+        constexpr unsigned int reg_size = 8;
         std::stringstream assembly;
 
         if (this->debug) assembly << "\t;  START generate_expr_call\n";
@@ -473,8 +477,9 @@ namespace generator {
         if (this->debug) assembly << "\t;  <<START 1: " << this->stack.size() << ">>\n";
 
         //  1.  If there's a struct return value, allocate space for it on the stack.
-        if (function.ret_type->type == resolved_type::ARRAY_TYPE
-            || function.ret_type->type == resolved_type::TUPLE_TYPE) {
+        if ((function.ret_type->type == resolved_type::ARRAY_TYPE
+             || function.ret_type->type == resolved_type::TUPLE_TYPE)
+            && function.ret_type->size() > 0) {
             assembly << "\tsub rsp, " << function.ret_type->size();
             if (this->debug) assembly << " ; Return struct";
             assembly << "\n";
@@ -520,11 +525,10 @@ namespace generator {
         if (this->debug) assembly << "\t;  <<START 6: " << this->stack.size() << ">>\n";
 
         //  6.  If there's a struct return value, load its address into RDI.
-        if (function.ret_type->type == resolved_type::ARRAY_TYPE
-            || function.ret_type->type == resolved_type::TUPLE_TYPE) {
-            //  TODO (HW10): Implement.
-            throw std::runtime_error("`generate_expr_call`: unhandled return type: \""
-                                     + function.ret_type->s_expression() + "\"");
+        if ((function.ret_type->type == resolved_type::ARRAY_TYPE
+             || function.ret_type->type == resolved_type::TUPLE_TYPE)
+            && function.ret_type->size() > 0) {
+            assembly << "\tlea rdi, [rsp + " << function.bytes_on_stack + (needs_alignment ? reg_size : 0) << "]\n";
         }
 
         if (this->debug) assembly << "\t;  <<END 6: " << this->stack.size() << ">>\n";
@@ -539,12 +543,13 @@ namespace generator {
         if (this->debug) assembly << "\t;  <<START 8: " << this->stack.size() << ">>\n";
 
         //  8.  Drop every stack argument.
-        //      TODO (HW10): This.
         if (function.bytes_on_stack > 0) {
             assembly << "\tadd rsp, " << function.bytes_on_stack << "\n";
-            const unsigned int stack_size = this->stack.size();
 
-            while (stack_size - this->stack.size() < function.bytes_on_stack) this->stack.pop();
+            const unsigned int stack_size = this->stack.size();
+            while (stack_size - this->stack.size() < function.bytes_on_stack) { this->stack.pop(); }
+        } else {
+            this->stack.push(0);
         }
 
         if (this->debug) assembly << "\t;  <<END 8: " << this->stack.size() << ">>\n";
@@ -556,7 +561,8 @@ namespace generator {
             assembly << "\tadd rsp, 8";
             if (this->debug) assembly << " ; Remove alignment";
             assembly << "\n";
-            this->stack.pop();
+
+            while (this->stack.pop() == 0) {}
         }
 
         if (this->debug) assembly << "\t;  <<END 9: " << this->stack.size() << ">>\n";
@@ -660,7 +666,7 @@ namespace generator {
                 = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(expression->expr->r_type);
         const unsigned int element_size = tuple_type->element_types[element_index]->size();
         const long element_offset = (long)tuple_type->offset(element_index);
-        const long destination = (long)tuple_type->size() - element_size;
+        const long destination = (long)tuple_type->size() - element_size;  //  NOLINT(*-narrowing-conversions)
 
         if (this->debug)
             assembly << "\t;  Moving " << element_size << " bytes from rsp + " << element_offset << " to rsp + "
@@ -751,8 +757,7 @@ namespace generator {
         assembly << "\tsub rsp, " << size << "\n";
         this->stack.push(size);
 
-        const std::tuple<std::string, long> variable_address = this->variables.get_variable_address(
-                expression->name);
+        const std::tuple<std::string, long> variable_address = this->variables.get_variable_address(expression->name);
         const std::string reg = std::get<0>(variable_address);
         const long reg_offset = std::get<1>(variable_address);
 
@@ -828,8 +833,6 @@ namespace generator {
     void fn_generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& statement) {
         if (this->debug) this->main_assembly << "\t;  START generate_stmt_let\n";
 
-        //  TODO (HW10): Implement.
-
         this->main_assembly << generate_expr(statement->expr);
         this->stack.pop();
 
@@ -855,10 +858,29 @@ namespace generator {
                 this->stack.pop();
                 break;
             case resolved_type::ARRAY_TYPE:
-            case resolved_type::TUPLE_TYPE:
-                //  TODO (HW10): Implement.
+                //  TODO (HW10): Implement array values.
                 throw std::runtime_error("`generate_stmt_return`: unimplemented return type: \""
-                                         + statement->return_val->r_type->s_expression() + "\"");
+                                         + statement->s_expression() + "\"");
+            case resolved_type::TUPLE_TYPE:
+                const long size = (long)statement->return_val->r_type->size();
+                if (size > 0) {
+                    this->main_assembly << "\tmov rax, [rbp - 8]";
+                    if (this->debug) this->main_assembly << " ; Address for the return tuple.";
+                    this->main_assembly << "\n";
+
+                    if (this->debug) this->main_assembly << "\t;  Moving " << size << " bytes from [rsp] to [rax]\n";
+
+                    constexpr long reg_size = 8;
+                    for (long offset = size - reg_size; offset >= 0; offset -= reg_size) {
+                        if (this->debug) this->main_assembly << "\t";
+
+                        this->main_assembly << "\tmov r10, [rsp + " << offset << "]\n";
+
+                        if (this->debug) this->main_assembly << "\t";
+
+                        this->main_assembly << "\tmov [rax + " << offset << "], r10\n";
+                    }
+                }
         }
 
         this->main_assembly << "\tadd rsp, " << this->stack.size() << "\n"
@@ -954,9 +976,13 @@ namespace generator {
         if (this->debug) this->main_assembly << "\t;  <<START 2: " << this->stack.size() << ">>\n";
 
         //  2. If the function returns a struct, push the address for the return value onto the stack.
-        if (call_sig.ret_type->type == resolved_type::ARRAY_TYPE
-            || call_sig.ret_type->type == resolved_type::TUPLE_TYPE) {
-            //  TODO (HW10): Implement.
+        if ((call_sig.ret_type->type == resolved_type::ARRAY_TYPE
+             || call_sig.ret_type->type == resolved_type::TUPLE_TYPE)
+            && (call_sig.ret_type->size() > 0
+                || !std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(call_sig.ret_type)
+                            ->element_types.empty())) {
+            this->main_assembly << "\tpush rdi\n";
+            this->stack.push();
         }
 
         if (this->debug) this->main_assembly << "\t;  <<END 2: " << this->stack.size() << ">>\n";
@@ -979,17 +1005,22 @@ namespace generator {
         if (this->debug) this->main_assembly << "\t;  <<START 4: " << this->stack.size() << ">>\n";
 
         //  4. Generate each statement.
+        bool has_return = false;
         for (const std::shared_ptr<ast_node::stmt_node>& statement : function->statements) {
+            has_return = has_return || (statement->type == ast_node::RETURN_STMT);
             this->generate_stmt(statement);
         }
 
         if (this->debug) this->main_assembly << "\t;  <<END 4: " << this->stack.size() << ">>\n";
 
-        //  5. Add the postamble, if no return statement was found.
-
         if (this->debug) this->main_assembly << "\t;  <<START 5: " << this->stack.size() << ">>\n";
 
-        //  TODO (HW10): Add postamble if there is no return instruction.
+        //  5. Add the postamble, if no return statement was found.
+        if (!has_return) {
+            if (this->stack.size() > 0) this->main_assembly << "\tadd rsp, " << this->stack.size() << "\n";
+            this->main_assembly << "\tpop rbp\n"
+                                << "\tret\n";
+        }
 
         if (this->debug) this->main_assembly << "\t;  <<END 5: " << this->stack.size() << ">>\n";
     }
