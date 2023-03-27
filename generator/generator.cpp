@@ -1044,8 +1044,9 @@ namespace generator {
             case ast_node::LET_CMD:
                 return this->generate_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command));
             case ast_node::PRINT_CMD:
-            case ast_node::READ_CMD:
                 throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+            case ast_node::READ_CMD:
+                return this->generate_cmd_read(std::reinterpret_pointer_cast<ast_node::read_cmd_node>(command));
             case ast_node::SHOW_CMD:
                 return this->generate_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command));
             case ast_node::TIME_CMD:
@@ -1109,6 +1110,61 @@ namespace generator {
         bind_lvalue(command->lvalue, command->expr->r_type);
 
         if (this->debug) this->main_assembly << "\t;  END generate_cmd_let\n";
+    }
+
+    void main_generator::generate_cmd_read(const std::shared_ptr<ast_node::read_cmd_node>& command) {
+        constexpr unsigned int image_size = 24;
+
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_read\n";
+
+        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
+
+        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
+
+        this->main_assembly << "\tsub rsp, " << image_size << "\n";
+        this->stack.push(image_size);
+
+        this->main_assembly << "\tlea rdi, [rsp]\n";
+
+        const bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
+
+        this->main_assembly << "\tlea rsi, [rel " << (*this->constants)[command->file_name] << "]";
+        if (this->debug) this->main_assembly << " ; " << command->file_name;
+        this->main_assembly << "\n"
+                            << "\tcall _read_image\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        const std::shared_ptr<resolved_type::resolved_type> float_type = std::make_shared<resolved_type::resolved_type>(
+                resolved_type::FLOAT_TYPE);
+        const std::shared_ptr<resolved_type::tuple_resolved_type> pixel_type
+                = std::make_shared<resolved_type::tuple_resolved_type>(
+                        std::vector<std::shared_ptr<resolved_type::resolved_type>> {float_type, float_type, float_type,
+                                                                                    float_type});
+        const std::shared_ptr<resolved_type::array_resolved_type> array_r_type
+                = std::make_shared<resolved_type::array_resolved_type>(pixel_type, 2);
+
+        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
+
+        this->stack.pop();
+        this->bind_argument(command->read_dest, array_r_type);
+
+        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_read\n";
     }
 
     void main_generator::generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command) {

@@ -209,7 +209,7 @@ namespace generator {
              * @return The address to use to access the given variable, given in a pair of {register, offset}.
              */
             [[nodiscard]] std::tuple<std::string, long> get_variable_address(const std::string& variable,
-                                                                            bool from_child = false) const;
+                                                                             bool from_child = false) const;
 
             /**
              * @brief Sets the address for the given variable.
@@ -581,6 +581,13 @@ namespace generator {
          * @param command The `let` command AST node.
          */
         void generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command);
+
+        /**
+         * @brief Generates assembly for a single `read` command AST node.
+         *
+         * @param command The `read` command AST node.
+         */
+        void generate_cmd_read(const std::shared_ptr<ast_node::read_cmd_node>& command);
 
         /**
          * @brief Generates assembly for a single `show` command AST node.
