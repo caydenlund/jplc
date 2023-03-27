@@ -1341,6 +1341,10 @@ namespace generator {
         (*this->function_signatures)["to_float"] = call_signature::call_signature({int_type}, float_type);
         (*this->function_signatures)["to_int"] = call_signature::call_signature({float_type}, int_type);
 
+        constexpr long arg_address = -16;
+        this->variables.set_variable_address("args", arg_address);
+        this->variables.set_variable_address("argnum", arg_address);
+
         this->generate_linking_preface();
         this->generate_commands();
     }
