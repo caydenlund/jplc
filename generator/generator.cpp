@@ -7,8 +7,6 @@
  *
  */
 
-//  TODO (HW10): Values aren't going into the const table in the right order.
-//               See `my-tests-sec-11---test-4.jpl`.
 //  TODO (HW10): Remove the extraneous debugging output.
 //               See output including "<<(START|END) #: #>>", "[[#]]".
 
@@ -1104,9 +1102,12 @@ namespace generator {
 
                             this->variables.set_variable_address(array_argument->name, (long)this->stack.size());
 
-                            //  TODO (HW10): Fix this so that it works with multi-dimensional arrays.
+                            long offset = 0;
+                            constexpr int reg_size = 8;
                             for (const token::token& size_argument : array_argument->dimension_vars) {
-                                this->variables.set_variable_address(size_argument.text, (long)this->stack.size());
+                                this->variables.set_variable_address(size_argument.text,
+                                                                     (long)this->stack.size() - offset);
+                                offset += reg_size;
                             }
                         } else {
                             const std::shared_ptr<ast_node::variable_argument_node> variable_argument
@@ -1231,9 +1232,11 @@ namespace generator {
 
             this->variables.set_variable_address(array_argument->name, (long)this->stack.size());
 
-            //  TODO (HW10): Fix this so that it works with multi-dimensional arrays.
+            long offset = 0;
+            constexpr int reg_size = 8;
             for (const token::token& size_argument : array_argument->dimension_vars) {
-                this->variables.set_variable_address(size_argument.text, (long)this->stack.size());
+                this->variables.set_variable_address(size_argument.text, (long)this->stack.size() - offset);
+                offset += reg_size;
             }
         } else {
             const std::shared_ptr<ast_node::variable_argument_node> variable_argument
