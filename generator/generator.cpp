@@ -817,7 +817,7 @@ namespace generator {
         this->stack.pop();
         this->main_assembly << "\tcmp rax, 0\n"
                             << "\tjne " << next_jump << "\n"
-                            << "\tlea rdi, [rel const" << (*this->constants)[statement->text] << "]";
+                            << "\tlea rdi, [rel " << (*this->constants)[statement->text] << "]";
         if (this->debug) this->main_assembly << " ; " << statement->text;
         this->main_assembly << "\n"
                             << "\tcall _fail_assertion\n"
@@ -1064,7 +1064,7 @@ namespace generator {
         this->stack.pop();
         this->main_assembly << "\tcmp rax, 0\n"
                             << "\tjne " << next_jump << "\n"
-                            << "\tlea rdi, [rel const" << (*this->constants)[command->text] << "]";
+                            << "\tlea rdi, [rel " << (*this->constants)[command->text] << "]";
         if (this->debug) this->main_assembly << " ; " << command->text;
         this->main_assembly << "\n"
                             << "\tcall _fail_assertion\n"
