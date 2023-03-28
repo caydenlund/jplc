@@ -546,8 +546,6 @@ namespace generator {
 
             const unsigned int stack_size = this->stack.size();
             while (stack_size - this->stack.size() < function.bytes_on_stack) { this->stack.pop(); }
-        } else {
-            this->stack.push(0);
         }
 
         if (this->debug) assembly << "\t;  <<END 8: " << this->stack.size() << ">>\n";

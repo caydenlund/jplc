@@ -26,9 +26,13 @@ namespace call_signature {
         std::vector<std::tuple<unsigned int, reg_t, std::string>> reg_args;
         std::vector<unsigned int> stack_args;
 
-        if (this->ret_type->type == resolved_type::ARRAY_TYPE || this->ret_type->type == resolved_type::TUPLE_TYPE) {
-            ++total_ints;
+        bool struct_ret_type = this->ret_type->type == resolved_type::ARRAY_TYPE;
+        if (this->ret_type->type == resolved_type::TUPLE_TYPE) {
+            const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_type
+                    = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(this->ret_type);
+            if (!tuple_type->element_types.empty()) { struct_ret_type = true; }
         }
+        if (struct_ret_type) { ++total_ints; }
 
         const std::vector<std::string> int_regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
         const std::vector<std::string> float_regs = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"};
