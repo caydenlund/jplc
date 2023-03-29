@@ -497,21 +497,26 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_binop\n";
 
-        assembly << this->generate_expr(expression->right_operand);
-
-        std::string short_circuit_jump;
 
         if (expression->operator_type == ast_node::op_type::BINOP_AND
             || expression->operator_type == ast_node::op_type::BINOP_OR) {
-            short_circuit_jump = this->constants->next_jump();
+            assembly << this->generate_expr(expression->left_operand);
+
+            const std::string short_circuit_jump = this->constants->next_jump();
             assembly << "\tpop rax\n";
             this->stack.pop();
             assembly << "\tcmp rax, 0\n"
                      << "\t" << (expression->operator_type == ast_node::op_type::BINOP_AND ? "je" : "jne") << " "
                      << short_circuit_jump << "\n";
+
+            assembly << this->generate_expr(expression->right_operand) << "\tpop rax\n"
+                     << short_circuit_jump << ":\n"
+                     << "\tpush rax\n";
+
+            return assembly.str();
         }
 
-        assembly << this->generate_expr(expression->left_operand);
+        assembly << this->generate_expr(expression->right_operand) << this->generate_expr(expression->left_operand);
 
         const resolved_type::resolved_type_type operand_type = expression->left_operand->r_type->type;
 
@@ -725,14 +730,6 @@ namespace generator {
                     assembly << "\tcmp rax, r10\n"
                              << "\tsetne al\n"
                              << "\tand rax, 1\n"
-                             << "\tpush rax\n";
-                    this->stack.push();
-                    break;
-                case ast_node::BINOP_AND:
-                case ast_node::BINOP_OR:
-                    assembly << "\tpop rax\n";
-                    this->stack.pop();
-                    assembly << short_circuit_jump << ":\n"
                              << "\tpush rax\n";
                     this->stack.push();
                     break;
