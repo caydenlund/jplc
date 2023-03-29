@@ -1111,17 +1111,20 @@ namespace generator {
             assembly << "\t;  Moving " << element_size << " bytes from rsp + " << element_offset << " to rsp + "
                      << destination << "\n";
 
-        for (long mov_offset = (long)(element_size - reg_size); mov_offset >= 0; mov_offset -= reg_size) {
-            if (this->debug) assembly << "\t";
-            assembly << "\tmov r10, [rsp + " << element_offset << " + " << mov_offset << "]\n";
+        if (element_size > 0) {
+            for (long mov_offset = (long)(element_size - reg_size); mov_offset >= 0; mov_offset -= reg_size) {
+                if (this->debug) assembly << "\t";
+                assembly << "\tmov r10, [rsp + " << element_offset << " + " << mov_offset << "]\n";
 
-            if (this->debug) assembly << "\t";
-            assembly << "\tmov [rsp + " << destination << " + " << mov_offset << "], r10\n";
+                if (this->debug) assembly << "\t";
+                assembly << "\tmov [rsp + " << destination << " + " << mov_offset << "], r10\n";
+            }
+
+            this->stack.pop();
+            this->stack.push(element_size);
         }
 
         assembly << "\tadd rsp, " << tuple_type->size() - element_size << "\n";
-        this->stack.pop();
-        this->stack.push(element_size);
 
         if (this->debug) assembly << "\t;  END generate_expr_tuple_index\n";
 
