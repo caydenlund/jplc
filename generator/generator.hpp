@@ -299,6 +299,14 @@ namespace generator {
         std::string generate_expr_array_literal(const std::shared_ptr<ast_node::array_literal_expr_node>& expression);
 
         /**
+         * @brief Generates assembly for an array loop expression.
+         *
+         * @param expression The array loop expression AST node.
+         * @return The string assembly for the given expression.
+         */
+        std::string generate_expr_array_loop(const std::shared_ptr<ast_node::array_loop_expr_node>& expression);
+
+        /**
          * @brief Generates assembly for a single binary operation expression AST node.
          *
          * @param expression The binary operation expression AST node.
@@ -345,6 +353,14 @@ namespace generator {
          * @return The string assembly for the given expression.
          */
         std::string generate_expr_integer(const std::shared_ptr<ast_node::integer_expr_node>& expression);
+
+        /**
+         * @brief Generates assembly for a single sum loop expression AST node.
+         *
+         * @param expression The sum loop expression AST node.
+         * @return The string assembly for the given expression.
+         */
+        std::string generate_expr_sum_loop(const std::shared_ptr<ast_node::sum_loop_expr_node>& expression);
 
         /**
          * @brief Generates assembly for a single `true` expression AST node.

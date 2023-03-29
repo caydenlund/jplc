@@ -108,9 +108,8 @@ namespace generator {
                 return this->generate_expr_array_literal(
                         std::reinterpret_pointer_cast<ast_node::array_literal_expr_node>(expression));
             case ast_node::ARRAY_LOOP_EXPR:
-                //  TODO (HW11): Implement.
-                throw std::runtime_error("`generate_expr`: unhandled expression: \"" + expression->s_expression()
-                                         + "\"");
+                return this->generate_expr_array_loop(
+                        std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(expression));
             case ast_node::BINOP_EXPR:
                 return this->generate_expr_binop(std::reinterpret_pointer_cast<ast_node::binop_expr_node>(expression));
             case ast_node::CALL_EXPR:
@@ -125,9 +124,8 @@ namespace generator {
                 return this->generate_expr_integer(
                         std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression));
             case ast_node::SUM_LOOP_EXPR:
-                //  TODO (HW11): Implement.
-                throw std::runtime_error("`generate_expr`: unhandled expression: \"" + expression->s_expression()
-                                         + "\"");
+                return this->generate_expr_sum_loop(
+                        std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(expression));
             case ast_node::TRUE_EXPR:
                 return this->generate_expr_true(std::reinterpret_pointer_cast<ast_node::true_expr_node>(expression));
             case ast_node::TUPLE_INDEX_EXPR:
@@ -146,13 +144,106 @@ namespace generator {
         }
     }
 
-    std::string generator::generate_expr_array_index(  //  NOLINT(readability-make-member-function-const)
-            const std::shared_ptr<ast_node::array_index_expr_node>&) {
+    std::string
+    generator::generate_expr_array_index(const std::shared_ptr<ast_node::array_index_expr_node>& expression) {
         std::stringstream assembly;
 
         if (this->debug) assembly << "\t;  START generate_expr_array_index\n";
 
-        //  TODO (HW11): Implement.
+        assembly << this->generate_expr(expression->array);
+
+        //  Put each index expression onto the stack.
+        const long rank = (long)expression->params.size();
+        for (long index = rank - 1; index >= 0; --index) { assembly << generate_expr(expression->params[index]); }
+
+        constexpr long reg_size = 8;
+        const long array_offset = reg_size * rank;
+        for (long offset = 0; offset < array_offset; offset += reg_size) {
+            const std::string jump_1 = this->constants->next_jump();
+            const std::string jump_2 = this->constants->next_jump();
+
+            assembly << "\tmov rax, [rsp + " << offset << "]\n"
+                     << "\tcmp rax, 0\n"
+                     << "\tjge " << jump_1 << "\n";
+
+            const bool needs_alignment = this->stack.needs_alignment();
+            if (needs_alignment) {
+                assembly << "\tsub rsp, 8";
+                if (this->debug) assembly << " ; Align stack";
+                assembly << "\n";
+                this->stack.push();
+            }
+
+            assembly << "\tlea rdi, [rel " << (*this->constants)[{"negative array index"}] << "]";
+            if (this->debug) assembly << " ; negative array index";
+            assembly << "\n";
+
+            assembly << "\tcall _fail_assertion\n";
+
+            if (needs_alignment) {
+                assembly << "\tadd rsp, 8";
+                if (this->debug) assembly << " ; Remove alignment";
+                assembly << "\n";
+                this->stack.pop();
+            }
+
+            assembly << jump_1 << ":\n"
+                     << "\tcmp rax, [rsp + " << array_offset + offset << "]\n"
+                     << "\tjl " << jump_2 << "\n";
+
+            if (needs_alignment) {
+                assembly << "\tsub rsp, 8";
+                if (this->debug) assembly << " ; Align stack";
+                assembly << "\n";
+                this->stack.push();
+            }
+
+            assembly << "\tlea rdi, [rel " << (*this->constants)[{"index too large"}] << "]";
+            if (this->debug) assembly << " ; index too large";
+            assembly << "\n";
+
+            assembly << "\tcall _fail_assertion\n";
+
+            if (needs_alignment) {
+                assembly << "\tadd rsp, 8";
+                if (this->debug) assembly << " ; Remove alignment";
+                assembly << "\n";
+                this->stack.pop();
+            }
+
+            assembly << jump_2 << ":\n";
+        }
+
+        assembly << "\tmov rax, 0\n";
+
+        for (long offset = 0; offset < array_offset; offset += reg_size) {
+            assembly << "\timul rax, [rsp + " << array_offset + offset << "]\n"
+                     << "\tadd rax, [rsp + " << offset << "]\n";
+        }
+
+        assembly << "\timul rax, " << expression->r_type->size() << "\n"
+                 << "\tadd rax, [rsp + " << array_offset * 2 << "]\n";
+
+        if (this->debug) assembly << ";  Remove index variables\n";
+        for (long offset = 0; offset < rank; ++offset) { assembly << "\tadd rsp, " << this->stack.pop() << "\n"; }
+
+        assembly << "\tadd rsp, " << array_offset + reg_size;
+        if (this->debug) assembly << " ; Remove array";
+        assembly << "\n";
+        this->stack.pop();
+
+        const long return_size = (long)expression->r_type->size();
+        assembly << "\tsub rsp, " << return_size << "\n";
+        this->stack.push(return_size);
+
+        if (this->debug) assembly << "\t;  Moving " << return_size << " bytes from [rax] to [rsp]\n";
+        for (long offset = return_size - reg_size; offset >= 0; offset -= reg_size) {
+            if (this->debug) assembly << "\t";  //  Extra indentation for debug mode.
+            assembly << "\tmov r10, [rax + " << offset << "]\n";
+
+            if (this->debug) assembly << "\t";  //  Extra indentation for debug mode.
+            assembly << "\tmov [rsp + " << offset << "], r10\n";
+        }
 
         if (this->debug) assembly << "\t;  END generate_expr_array_index\n";
 
@@ -217,6 +308,186 @@ namespace generator {
         this->stack.push(expression->r_type->size());
 
         if (this->debug) assembly << "\t;  END generate_expr_array_literal\n";
+
+        return assembly.str();
+    }
+
+    std::string generator::generate_expr_array_loop(const std::shared_ptr<ast_node::array_loop_expr_node>& expression) {
+        constexpr long reg_size = 8;
+        std::stringstream assembly;
+
+        if (this->debug)
+            assembly << "\t;  START generate_expr_array_loop\n"
+                     << "\t;  Allocating 8 bytes for the array pointer\n";
+
+        assembly << "\tsub rsp, 8\n";
+        this->stack.push();
+
+        const std::shared_ptr<resolved_type::array_resolved_type> array_r_type
+                = std::reinterpret_pointer_cast<resolved_type::array_resolved_type>(expression->r_type);
+        const long item_size = (long)array_r_type->element_type->size();
+        const long rank = (long)expression->binding_pairs.size();
+
+        for (long index = rank - 1; index >= 0; --index) {
+            const std::tuple<token::token, std::shared_ptr<ast_node::expr_node>>& pair
+                    = expression->binding_pairs[index];
+            if (this->debug) assembly << "\t;  Computing bound for " << std::get<0>(pair).text << "\n";
+
+            assembly << this->generate_expr(std::get<1>(pair));
+
+            const std::string jump = this->constants->next_jump();
+
+            assembly << "\tmov rax, [rsp]\n"
+                     << "\tcmp rax, 0\n"
+                     << "\tjg " << jump << "\n";
+
+            const bool needs_alignment = this->stack.needs_alignment();
+            if (needs_alignment) {
+                assembly << "\tsub rsp, 8";
+                if (this->debug) assembly << " ; Align stack";
+                assembly << "\n";
+                this->stack.push();
+            }
+
+            assembly << "\tlea rdi, [rel " << (*this->constants)[{"non-positive loop bound"}] << "]";
+            if (this->debug) assembly << " ; non-positive loop bound";
+            assembly << "\n"
+                     << "\tcall _fail_assertion\n";
+
+            if (needs_alignment) {
+                assembly << "\tadd rsp, 8";
+                if (this->debug) assembly << " ; Remove alignment";
+                assembly << "\n";
+                this->stack.pop();
+            }
+
+            assembly << jump << ":\n";
+        }
+
+        if (this->debug) assembly << "\t;  Computing total heap size to allocate\n";
+
+        assembly << "\tmov rdi, " << item_size;
+        if (this->debug) assembly << " ; Size of one element";
+        assembly << "\n";
+
+        for (long offset = 0; offset < reg_size * rank; offset += reg_size) {
+            assembly << "\timul rdi, [rsp + " << offset << "]";
+            if (this->debug) assembly << "; Multiply by one dimension";
+            assembly << "\n";
+
+            const std::string next_jump = this->constants->next_jump();
+            assembly << "\tjno " << next_jump << "\n";
+
+            const bool needs_alignment = this->stack.needs_alignment();
+            if (needs_alignment) {
+                assembly << "\tsub rsp, 8";
+                if (this->debug) assembly << " ; Align stack";
+                assembly << "\n";
+                this->stack.push();
+            }
+
+            assembly << "\tlea rdi, [rel " << (*this->constants)[{"overflow computing array size"}] << "]";
+            if (this->debug) assembly << " ; overflow computing array size";
+            assembly << "\n"
+                     << "\tcall _fail_assertion\n";
+
+            if (needs_alignment) {
+                assembly << "\tadd rsp, 8";
+                if (this->debug) assembly << " ; Remove alignment";
+                assembly << "\n";
+                this->stack.pop();
+            }
+
+            assembly << next_jump << ":\n";
+        }
+
+        const bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            assembly << "\tsub rsp, 8";
+            if (this->debug) assembly << " ; Align stack";
+            assembly << "\n";
+            this->stack.push();
+        }
+
+        assembly << "\tcall _jpl_alloc\n";
+
+        if (needs_alignment) {
+            assembly << "\tadd rsp, 8";
+            if (this->debug) assembly << " ; Remove alignment";
+            assembly << "\n";
+            this->stack.pop();
+        }
+
+        assembly << "\tmov [rsp + " << reg_size * rank << "], rax";
+        if (this->debug) assembly << " ; Move array pointer to previously-allocated space";
+        assembly << "\n";
+
+        for (long index = rank - 1; index >= 0; --index) {
+            const std::string& name = std::get<0>(expression->binding_pairs[index]).text;
+            assembly << "\tmov rax, 0";
+            if (this->debug) assembly << " ; Initialize " << name << " to 0";
+            assembly << "\n"
+                     << "\tpush rax\n";
+            this->stack.push();
+            this->variables.set_variable_address(name, (long)this->stack.size());
+        }
+
+        const std::string body_start = this->constants->next_jump();
+
+        assembly << body_start << ":";
+        if (this->debug) assembly << " ; Begin loop body";
+        assembly << "\n";
+
+        assembly << this->generate_expr(expression->item_expr);
+
+        if (this->debug) assembly << "\t;  Calculate the index to store the result\n";
+        assembly << "\tmov rax, 0\n";
+        for (long offset = item_size; offset < reg_size * rank + item_size; offset += reg_size) {
+            assembly << "\timul rax, [rsp + " << rank * reg_size + offset << "]\n"
+                     << "\tadd rax, [rsp + " << offset << "]\n";
+        }
+        assembly << "\timul rax, " << item_size << "\n"
+                 << "\tadd rax, [rsp + " << 2 * rank * reg_size + item_size << "]\n";
+
+        if (this->debug) assembly << "\t;  Moving " << item_size << "-byte body from [rsp] to [rax]\n";
+        for (long offset = item_size - reg_size; offset >= 0; offset -= reg_size) {
+            if (this->debug) assembly << "\t";
+            assembly << "\tmov r10, [rsp + " << offset << "]\n";
+
+            if (this->debug) assembly << "\t";
+            assembly << "\tmov [rax + " << offset << "], r10\n";
+        }
+
+        assembly << "\tadd rsp, " << item_size << "\n";
+        this->stack.pop();
+
+        for (long index = rank - 1; index >= 0; --index) {
+            const std::string& name = std::get<0>(expression->binding_pairs[index]).text;
+
+            if (this->debug) assembly << "\t;  Increment " << name << "\n";
+            assembly << "\tadd qword [rsp + " << reg_size * index << "], 1\n";
+
+            if (this->debug) assembly << "\t;  Compare " << name << " to its bound\n";
+            assembly << "\tmov rax, [rsp + " << reg_size * index << "]\n"
+                     << "\tcmp rax, [rsp + " << reg_size * (index + rank) << "]\n"
+                     << "\tjl " << body_start;
+            if (this->debug) assembly << " ; If " << name << " < bound, run next iteration";
+            assembly << "\n";
+
+            if (index > 0) {
+                assembly << "\tmov qword [rsp + " << index * reg_size << "], 0";
+                if (this->debug) assembly << " ; Set " << name << " = 0";
+                assembly << "\n";
+            }
+        }
+
+        assembly << "\tadd rsp, " << reg_size * rank;
+        if (this->debug) assembly << " ; Free all loop variables";
+        assembly << "\n";
+        for (long index = 0; index < 2 * rank + 1; ++index) { this->stack.pop(); }
+        this->stack.push(reg_size * (rank + 1));
+
+        if (this->debug) assembly << "\t;  END generate_expr_array_loop\n";
 
         return assembly.str();
     }
@@ -671,6 +942,119 @@ namespace generator {
         this->stack.push();
 
         if (this->debug) assembly << "\t;  END generate_expr_integer\n";
+
+        return assembly.str();
+    }
+
+    std::string generator::generate_expr_sum_loop(const std::shared_ptr<ast_node::sum_loop_expr_node>& expression) {
+        constexpr long reg_size = 8;
+        std::stringstream assembly;
+
+        if (this->debug)
+            assembly << "\t;  START generate_expr_sum_loop\n"
+                     << "\t;  Allocating 8 bytes for the sum\n";
+
+        assembly << "\tsub rsp, 8\n";
+        this->stack.push();
+
+        const long rank = (long)expression->binding_pairs.size();
+
+        for (long index = rank - 1; index >= 0; --index) {
+            const std::tuple<token::token, std::shared_ptr<ast_node::expr_node>>& pair
+                    = expression->binding_pairs[index];
+            if (this->debug) assembly << "\t;  Computing bound for " << std::get<0>(pair).text << "\n";
+
+            assembly << this->generate_expr(std::get<1>(pair));
+
+            const std::string jump = this->constants->next_jump();
+
+            assembly << "\tmov rax, [rsp]\n"
+                     << "\tcmp rax, 0\n"
+                     << "\tjg " << jump << "\n";
+
+            const bool needs_alignment = this->stack.needs_alignment();
+            if (needs_alignment) {
+                assembly << "\tsub rsp, 8";
+                if (this->debug) assembly << " ; Align stack";
+                assembly << "\n";
+                this->stack.push();
+            }
+
+            assembly << "\tlea rdi, [rel " << (*this->constants)[{"non-positive loop bound"}] << "]";
+            if (this->debug) assembly << " ; non-positive loop bound";
+            assembly << "\n"
+                     << "\tcall _fail_assertion\n";
+
+            if (needs_alignment) {
+                assembly << "\tadd rsp, 8";
+                if (this->debug) assembly << " ; Remove alignment";
+                assembly << "\n";
+                this->stack.pop();
+            }
+
+            assembly << jump << ":\n";
+        }
+
+        if (this->debug) assembly << "\t;  Initializing sum to 0\n";
+
+        assembly << "\tmov rax, 0\n"
+                 << "\tmov [rsp + " << reg_size * rank << "], rax";
+        if (this->debug) assembly << " ; Move to pre-allocated space";
+        assembly << "\n";
+
+        for (long index = rank - 1; index >= 0; --index) {
+            const std::string& name = std::get<0>(expression->binding_pairs[index]).text;
+            assembly << "\tmov rax, 0";
+            if (this->debug) assembly << " ; Initialize " << name << " to 0";
+            assembly << "\n"
+                     << "\tpush rax\n";
+            this->stack.push();
+            this->variables.set_variable_address(name, (long)this->stack.size());
+        }
+
+        const std::string body_start = this->constants->next_jump();
+
+        assembly << body_start << ":";
+        if (this->debug) assembly << " ; Begin loop body";
+        assembly << "\n";
+
+        assembly << this->generate_expr(expression->sum_expr) << "\tpop rax\n";
+        this->stack.pop();
+
+        assembly << "\tadd [rsp + " << 2 * reg_size * rank << "], rax";
+        if (this->debug) assembly << " ; Add loop body to sum";
+        assembly << "\n";
+
+        for (long index = rank - 1; index >= 0; --index) {
+            const std::string& name = std::get<0>(expression->binding_pairs[index]).text;
+
+            if (this->debug) assembly << "\t;  Increment " << name << "\n";
+            assembly << "\tadd qword [rsp + " << reg_size * index << "], 1\n";
+
+            if (this->debug) assembly << "\t;  Compare " << name << " to its bound\n";
+            assembly << "\tmov rax, [rsp + " << reg_size * index << "]\n"
+                     << "\tcmp rax, [rsp + " << reg_size * (index + rank) << "]\n"
+                     << "\tjl " << body_start;
+            if (this->debug) assembly << " ; If " << name << " < bound, run next iteration";
+            assembly << "\n";
+
+            if (index > 0) {
+                assembly << "\tmov qword [rsp + " << index * reg_size << "], 0";
+                if (this->debug) assembly << " ; Set " << name << " = 0";
+                assembly << "\n";
+            }
+        }
+
+        assembly << "\tadd rsp, " << reg_size * rank;
+        if (this->debug) assembly << " ; Free all loop variables";
+        assembly << "\n";
+        for (long index = 0; index < rank; ++index) { this->stack.pop(); }
+        assembly << "\tadd rsp, " << reg_size * rank;
+        if (this->debug) assembly << " ; Free all loop bounds";
+        assembly << "\n";
+        for (long index = 0; index < rank; ++index) { this->stack.pop(); }
+
+        if (this->debug) assembly << "\t;  END generate_expr_sum_loop\n";
 
         return assembly.str();
     }
