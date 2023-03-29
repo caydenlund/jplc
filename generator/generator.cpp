@@ -120,9 +120,7 @@ namespace generator {
             case ast_node::FLOAT_EXPR:
                 return this->generate_expr_float(std::reinterpret_pointer_cast<ast_node::float_expr_node>(expression));
             case ast_node::IF_EXPR:
-                //  TODO (HW11): Implement.
-                throw std::runtime_error("`generate_expr`: unhandled expression: \"" + expression->s_expression()
-                                         + "\"");
+                return this->generate_expr_if(std::reinterpret_pointer_cast<ast_node::if_expr_node>(expression));
             case ast_node::INTEGER_EXPR:
                 return this->generate_expr_integer(
                         std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression));
@@ -228,12 +226,24 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_binop\n";
 
-        assembly << this->generate_expr(expression->right_operand) << this->generate_expr(expression->left_operand);
+        assembly << this->generate_expr(expression->right_operand);
+
+        std::string short_circuit_jump;
+
+        if (expression->operator_type == ast_node::op_type::BINOP_AND
+            || expression->operator_type == ast_node::op_type::BINOP_OR) {
+            short_circuit_jump = this->constants->next_jump();
+            assembly << "\tpop rax\n";
+            this->stack.pop();
+            assembly << "\tcmp rax, 0\n"
+                     << "\t" << (expression->operator_type == ast_node::op_type::BINOP_AND ? "je" : "jne") << " "
+                     << short_circuit_jump << "\n";
+        }
+
+        assembly << this->generate_expr(expression->left_operand);
 
         const resolved_type::resolved_type_type operand_type = expression->left_operand->r_type->type;
 
-        //  Because we're popping twice and then pushing once before making a function call, we invert the stack needing
-        //  alignment.
         const bool needs_alignment = this->stack.needs_alignment();
 
         std::string next_jump;
@@ -448,11 +458,13 @@ namespace generator {
                     this->stack.push();
                     break;
                 case ast_node::BINOP_AND:
-                    //  TODO (HW11): Implement.
                 case ast_node::BINOP_OR:
-                    //  TODO (HW11): Implement.
-                    throw std::runtime_error("`generate_expr_binop`: unimplemented expression: \""
-                                             + expression->s_expression() + "\"");
+                    assembly << "\tpop rax\n";
+                    this->stack.pop();
+                    assembly << short_circuit_jump << ":\n"
+                             << "\tpush rax\n";
+                    this->stack.push();
+                    break;
                 default:
                     throw std::runtime_error("`generate_expr_binop`: invalid expression: \""
                                              + expression->s_expression() + "\"");
@@ -613,6 +625,37 @@ namespace generator {
         this->stack.push();
 
         if (this->debug) assembly << "\t;  END generate_expr_float\n";
+
+        return assembly.str();
+    }
+
+    std::string generator::generate_expr_if(const std::shared_ptr<ast_node::if_expr_node>& expression) {
+        std::stringstream assembly;
+
+        if (this->debug) assembly << "\t;  START generate_expr_if\n";
+
+        assembly << this->generate_expr(expression->conditional_expr);
+
+        assembly << "\tpop rax\n";
+        this->stack.pop();
+        assembly << "\tcmp rax, 0\n";
+
+        const std::string jump_1 = this->constants->next_jump();
+        const std::string jump_2 = this->constants->next_jump();
+
+        assembly << "\tje " << jump_1 << "\n";
+
+        assembly << this->generate_expr(expression->affirmative_expr);
+        this->stack.pop();
+
+        assembly << "\tjmp " << jump_2 << "\n";
+
+        assembly << jump_1 << ":\n";
+        assembly << this->generate_expr(expression->negative_expr);
+
+        assembly << jump_2 << ":\n";
+
+        if (this->debug) assembly << "\t;  END generate_expr_if\n";
 
         return assembly.str();
     }

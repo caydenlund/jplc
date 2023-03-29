@@ -331,6 +331,14 @@ namespace generator {
         std::string generate_expr_float(const std::shared_ptr<ast_node::float_expr_node>& expression);
 
         /**
+         * @brief Generates assembly for a single `if` expression AST node.
+         *
+         * @param expression The `if` expression AST node.
+         * @return The string assembly for the given expression.
+         */
+        std::string generate_expr_if(const std::shared_ptr<ast_node::if_expr_node>& expression);
+
+        /**
          * @brief Generates assembly for a single integer expression AST node.
          *
          * @param expression The integer expression AST node.
