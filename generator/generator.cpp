@@ -947,9 +947,11 @@ namespace generator {
         constexpr long reg_size = 8;
         std::stringstream assembly;
 
-        if (this->debug)
-            assembly << "\t;  START generate_expr_sum_loop\n"
-                     << "\t;  Allocating 8 bytes for the sum\n";
+        if (this->debug) assembly << "\t;  START generate_expr_sum_loop\n";
+
+        const bool is_int = expression->r_type->type == resolved_type::INT_TYPE;
+
+        if (this->debug) assembly << "\t;  Allocating 8 bytes for the sum\n";
 
         assembly << "\tsub rsp, 8\n";
         this->stack.push();
@@ -1015,12 +1017,29 @@ namespace generator {
         if (this->debug) assembly << " ; Begin loop body";
         assembly << "\n";
 
-        assembly << this->generate_expr(expression->sum_expr) << "\tpop rax\n";
-        this->stack.pop();
+        assembly << this->generate_expr(expression->sum_expr);
 
-        assembly << "\tadd [rsp + " << 2 * reg_size * rank << "], rax";
-        if (this->debug) assembly << " ; Add loop body to sum";
-        assembly << "\n";
+        if (is_int) {
+            assembly << "\tpop rax\n";
+            this->stack.pop();
+
+            assembly << "\tadd [rsp + " << 2 * reg_size * rank << "], rax";
+            if (this->debug) assembly << " ; Add loop body to sum";
+            assembly << "\n";
+        } else {
+            assembly << "\tmovsd xmm0, [rsp]\n"
+                     << "\tadd rsp, 8\n";
+            this->stack.pop();
+
+            const long offset = 2 * reg_size * rank;
+            assembly << "\taddsd xmm0, [rsp + " << offset << "]";
+            if (this->debug) assembly << " ; Load sum";
+            assembly << "\n";
+
+            assembly << "\tmovsd [rsp + " << offset << "], xmm0";
+            if (this->debug) assembly << " ; Store sum";
+            assembly << "\n";
+        }
 
         for (long index = rank - 1; index >= 0; --index) {
             const std::string& name = std::get<0>(expression->binding_pairs[index]).text;
