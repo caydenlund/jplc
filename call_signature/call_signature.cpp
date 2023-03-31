@@ -24,7 +24,7 @@ namespace call_signature {
         enum reg_t { INT, FLOAT };
 
         std::vector<std::tuple<unsigned int, reg_t, std::string>> reg_args;
-        std::vector<unsigned int> stack_args;
+        std::vector<long> stack_arg_indices;
 
         bool struct_ret_type = this->ret_type->type == resolved_type::ARRAY_TYPE;
         if (this->ret_type->type == resolved_type::TUPLE_TYPE) {
@@ -66,14 +66,15 @@ namespace call_signature {
             if (is_reg) {
                 reg_args.emplace_back(arg_index, reg_type, reg_name);
             } else {
-                stack_args.emplace_back(arg_index);
+                stack_arg_indices.emplace_back(arg_index);
                 this->bytes_on_stack += arg_type->size();
+                this->stack_args.emplace_back(arg_type->size());
             }
             this->all_args.emplace_back(arg_type, is_reg, reg_name);
         }
 
-        for (int index = (int)stack_args.size() - 1; index >= 0; --index) {
-            this->push_order.emplace_back(stack_args[index]);
+        for (int index = (int)stack_arg_indices.size() - 1; index >= 0; --index) {
+            this->push_order.emplace_back(stack_arg_indices[index]);
         }
 
         for (int index = (int)reg_args.size() - 1; index >= 0; --index) {

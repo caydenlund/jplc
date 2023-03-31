@@ -821,11 +821,9 @@ namespace generator {
         if (this->debug) assembly << "\t;  <<START 8: " << this->stack.size() << ">>\n";
 
         //  8.  Drop every stack argument.
-        if (function.bytes_on_stack > 0) {
-            assembly << "\tadd rsp, " << function.bytes_on_stack << "\n";
-
-            const unsigned int stack_size = this->stack.size();
-            while (stack_size - this->stack.size() < function.bytes_on_stack) { this->stack.pop(); }
+        for (const long arg : function.stack_args) {
+            assembly << "\tadd rsp, " << arg << "\n";
+            this->stack.pop();
         }
 
         if (this->debug) assembly << "\t;  <<END 8: " << this->stack.size() << ">>\n";
@@ -859,6 +857,8 @@ namespace generator {
             default:
                 break;
         }
+
+        if (function.ret_type->size() == 0) this->stack.push(0);
 
         if (this->debug) assembly << "\t;  <<END 10: " << this->stack.size() << ">>\n";
 
@@ -1255,21 +1255,36 @@ namespace generator {
     void fn_generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
         const std::string next_jump = (*this->constants).next_jump();
 
-        if (this->debug) this->main_assembly << ";  START generate_stmt_assert\n";
+        if (this->debug) this->main_assembly << "\t;  START generate_stmt_assert\n";
 
         this->main_assembly << generate_expr(statement->expr) << "\tpop rax\n";
         this->stack.pop();
         this->main_assembly << "\tcmp rax, 0\n"
-                            << "\tjne " << next_jump << "\n"
-                            << "\tlea rdi, [rel " << (*this->constants)[statement->text] << "]";
+                            << "\tjne " << next_jump << "\n";
+
+        const bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << "\tlea rdi, [rel " << (*this->constants)[statement->text] << "]";
         if (this->debug) this->main_assembly << " ; " << statement->text;
         this->main_assembly << "\n"
-                            << "\tcall _fail_assertion\n"
-                            << next_jump << ":\n";
+                            << "\tcall _fail_assertion\n";
 
-        this->main_assembly.str();
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
 
-        if (this->debug) this->main_assembly << ";  END generate_stmt_assert\n";
+        this->main_assembly << next_jump << ":\n";
+
+        if (this->debug) this->main_assembly << "\t;  END generate_stmt_assert\n";
     }
 
     void fn_generator::generate_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& statement) {
@@ -1300,9 +1315,6 @@ namespace generator {
                 this->stack.pop();
                 break;
             case resolved_type::ARRAY_TYPE:
-                //  TODO (HW10): Implement array values.
-                throw std::runtime_error("`generate_stmt_return`: unimplemented return type: \""
-                                         + statement->s_expression() + "\"");
             case resolved_type::TUPLE_TYPE:
                 const long size = (long)statement->return_val->r_type->size();
                 if (size > 0) {
@@ -1379,7 +1391,7 @@ namespace generator {
                     this->variables.set_variable_address(dim_arg.text, rbp_offset_offset);
                     rbp_offset_offset -= reg_size;
                 }
-                this->variables.set_variable_address(array_argument->name, -this->rbp_offset);
+                this->variables.set_variable_address(array_argument->name, this->rbp_offset);
                 this->rbp_offset -= (long)r_type->size();
             } else {
                 const std::shared_ptr<ast_node::variable_argument_node> var_argument

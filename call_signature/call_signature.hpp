@@ -37,6 +37,12 @@ namespace call_signature {
         unsigned int bytes_on_stack;
 
         /**
+         * @brief The size of each stack argument.
+         *
+         */
+        std::vector<long> stack_args;
+
+        /**
          * @brief The order that the arguments should be pushed onto the stack.
          *
          */
