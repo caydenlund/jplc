@@ -634,6 +634,27 @@ namespace generator {
          */
         void generate_cmd_show(const std::shared_ptr<ast_node::show_cmd_node>& command);
 
+        /**
+         * @brief Generates assembly for a single `time` command AST node.
+         *
+         * @param command The `time` command AST node.
+         */
+        void generate_cmd_time(const std::shared_ptr<ast_node::time_cmd_node>& command);
+
+        /**
+         * @brief Generates assembly for a single `type` command AST node.
+         *
+         * @param command The `type` command AST node.
+         */
+        void generate_cmd_type(const std::shared_ptr<ast_node::type_cmd_node>& command);
+
+        /**
+         * @brief Generates assembly for a single `write` command AST node.
+         *
+         * @param command The `write` command AST node.
+         */
+        void generate_cmd_write(const std::shared_ptr<ast_node::write_cmd_node>& command);
+
         //  Misc. methods:
         //  --------------
 

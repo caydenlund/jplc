@@ -1512,9 +1512,11 @@ namespace generator {
             case ast_node::SHOW_CMD:
                 return this->generate_cmd_show(std::reinterpret_pointer_cast<ast_node::show_cmd_node>(command));
             case ast_node::TIME_CMD:
+                return this->generate_cmd_time(std::reinterpret_pointer_cast<ast_node::time_cmd_node>(command));
             case ast_node::TYPE_CMD:
+                return this->generate_cmd_type(std::reinterpret_pointer_cast<ast_node::type_cmd_node>(command));
             case ast_node::WRITE_CMD:
-                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+                return this->generate_cmd_write(std::reinterpret_pointer_cast<ast_node::write_cmd_node>(command));
             default:
                 throw std::runtime_error("`generate_cmd`: invalid command: \"" + command->s_expression() + "\"");
         }
@@ -1714,6 +1716,114 @@ namespace generator {
         }
 
         if (this->debug) this->main_assembly << "\t;  END generate_cmd_show\n";
+    }
+
+    void main_generator::generate_cmd_time(const std::shared_ptr<ast_node::time_cmd_node>& command) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_time\n";
+
+        bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << "\tcall _get_time\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        this->main_assembly << "\tsub rsp, 8\n"
+                            << "\tmovsd [rsp], xmm0\n";
+        this->stack.push();
+        const long time_offset_start = this->stack.size();
+
+        this->generate_cmd(command->command);
+
+        needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << "\tcall _get_time\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        this->main_assembly << "\tsub rsp, 8\n"
+                            << "\tmovsd [rsp], xmm0\n";
+        this->stack.push();
+
+        this->main_assembly << "\tmovsd xmm0, [rsp]\n"
+                            << "\tadd rsp, 8\n";
+        this->stack.pop();
+
+        this->main_assembly << "\tmovsd xmm1, [rsp + " << this->stack.size() - time_offset_start << "]\n"
+                            << "\tsubsd xmm0, xmm1\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+        this->main_assembly << "\tcall _print_time\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_time\n";
+    }
+
+    void main_generator::generate_cmd_type(const std::shared_ptr<ast_node::type_cmd_node>&) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_type\n";
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_type\n";
+    }
+
+    void main_generator::generate_cmd_write(const std::shared_ptr<ast_node::write_cmd_node>& command) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_write\n";
+
+        this->stack.push(command->expr->r_type->size());
+        const bool needs_alignment = this->stack.needs_alignment();
+        this->stack.pop();
+
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << this->generate_expr(command->expr) << "\tlea rdi, [rel "
+                            << (*this->constants)[command->file_name] << "]\n"
+                            << "\tcall _write_image\n"
+                            << "\tadd rsp, " << this->stack.pop() << "\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_write\n";
     }
 
     void generator::bind_argument(const std::shared_ptr<ast_node::argument_node>& argument,
