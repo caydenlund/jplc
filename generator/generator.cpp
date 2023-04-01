@@ -1255,12 +1255,13 @@ namespace generator {
     }
 
     void fn_generator::generate_stmt_assert(const std::shared_ptr<ast_node::assert_stmt_node>& statement) {
-        const std::string next_jump = (*this->constants).next_jump();
-
         if (this->debug) this->main_assembly << "\t;  START generate_stmt_assert\n";
 
         this->main_assembly << generate_expr(statement->expr) << "\tpop rax\n";
         this->stack.pop();
+
+        const std::string next_jump = (*this->constants).next_jump();
+
         this->main_assembly << "\tcmp rax, 0\n"
                             << "\tjne " << next_jump << "\n";
 
@@ -1523,23 +1524,39 @@ namespace generator {
     }
 
     void main_generator::generate_cmd_assert(const std::shared_ptr<ast_node::assert_cmd_node>& command) {
-        const std::string next_jump = (*this->constants).next_jump();
-
-        if (this->debug) this->main_assembly << ";  START generate_cmd_assert\n";
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_assert\n";
 
         this->main_assembly << generate_expr(command->condition) << "\tpop rax\n";
         this->stack.pop();
+
+        const std::string next_jump = (*this->constants).next_jump();
+
         this->main_assembly << "\tcmp rax, 0\n"
-                            << "\tjne " << next_jump << "\n"
-                            << "\tlea rdi, [rel " << (*this->constants)[command->text] << "]";
+                            << "\tjne " << next_jump << "\n";
+
+        const bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << "\tlea rdi, [rel " << (*this->constants)[command->text] << "]";
         if (this->debug) this->main_assembly << " ; " << command->text;
         this->main_assembly << "\n"
-                            << "\tcall _fail_assertion\n"
-                            << next_jump << ":\n";
+                            << "\tcall _fail_assertion\n";
 
-        this->main_assembly.str();
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
 
-        if (this->debug) this->main_assembly << ";  END generate_cmd_assert\n";
+        this->main_assembly << next_jump << ":\n";
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_assert\n";
     }
 
     void main_generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command) {
