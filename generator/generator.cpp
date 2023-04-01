@@ -755,9 +755,12 @@ namespace generator {
         if (this->debug) assembly << "\t;  <<START 1: " << this->stack.size() << ">>\n";
 
         //  1.  If there's a struct return value, allocate space for it on the stack.
-        if ((function.ret_type->type == resolved_type::ARRAY_TYPE
-             || function.ret_type->type == resolved_type::TUPLE_TYPE)
-            && function.ret_type->size() > 0) {
+        const bool has_struct_return = function.ret_type->type == resolved_type::ARRAY_TYPE
+                                    || (function.ret_type->type == resolved_type::TUPLE_TYPE
+                                        && !std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(
+                                                    function.ret_type)
+                                                    ->element_types.empty());
+        if (has_struct_return) {
             assembly << "\tsub rsp, " << function.ret_type->size();
             if (this->debug) assembly << " ; Return struct";
             assembly << "\n";
@@ -803,9 +806,7 @@ namespace generator {
         if (this->debug) assembly << "\t;  <<START 6: " << this->stack.size() << ">>\n";
 
         //  6.  If there's a struct return value, load its address into RDI.
-        if ((function.ret_type->type == resolved_type::ARRAY_TYPE
-             || function.ret_type->type == resolved_type::TUPLE_TYPE)
-            && function.ret_type->size() > 0) {
+        if (has_struct_return) {
             assembly << "\tlea rdi, [rsp + " << function.bytes_on_stack + (needs_alignment ? reg_size : 0) << "]\n";
         }
 
@@ -854,11 +855,12 @@ namespace generator {
             case resolved_type::INT_TYPE:
                 assembly << "\tpush rax\n";
                 this->stack.push();
+                break;
             default:
+                if (!has_struct_return) this->stack.push(0);
                 break;
         }
 
-        if (function.ret_type->size() == 0) this->stack.push(0);
 
         if (this->debug) assembly << "\t;  <<END 10: " << this->stack.size() << ">>\n";
 
@@ -1316,10 +1318,17 @@ namespace generator {
                 break;
             case resolved_type::ARRAY_TYPE:
             case resolved_type::TUPLE_TYPE:
-                const long size = (long)statement->return_val->r_type->size();
-                if (size > 0) {
+                bool has_return_val = true;
+                if (statement->return_val->r_type->type == resolved_type::TUPLE_TYPE) {
+                    if (std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(statement->return_val->r_type)
+                                ->element_types.empty()) {
+                        has_return_val = false;
+                    }
+                }
+                if (has_return_val) {
+                    const long size = (long)statement->return_val->r_type->size();
                     this->main_assembly << "\tmov rax, [rbp - 8]";
-                    if (this->debug) this->main_assembly << " ; Address for the return tuple.";
+                    if (this->debug) this->main_assembly << " ; Address for the return value.";
                     this->main_assembly << "\n";
 
                     if (this->debug) this->main_assembly << "\t;  Moving " << size << " bytes from [rsp] to [rax]\n";
@@ -1664,8 +1673,9 @@ namespace generator {
             this->main_assembly << " ; ";
             this->main_assembly << command->expr->r_type->s_expression();
         }
-        this->main_assembly << "\n"
-                            << "\tlea rsi, [rsp]\n"
+        this->main_assembly << "\n";
+
+        this->main_assembly << "\tlea rsi, [rsp]\n"
                             << "\tcall _show\n"
                             << "\tadd rsp, " << this->stack.pop() << "\n";
 
