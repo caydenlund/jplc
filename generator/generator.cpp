@@ -1506,7 +1506,7 @@ namespace generator {
             case ast_node::LET_CMD:
                 return this->generate_cmd_let(std::reinterpret_pointer_cast<ast_node::let_cmd_node>(command));
             case ast_node::PRINT_CMD:
-                throw std::runtime_error("`generate_cmd`: unhandled command: \"" + command->s_expression() + "\"");
+                return this->generate_cmd_print(std::reinterpret_pointer_cast<ast_node::print_cmd_node>(command));
             case ast_node::READ_CMD:
                 return this->generate_cmd_read(std::reinterpret_pointer_cast<ast_node::read_cmd_node>(command));
             case ast_node::SHOW_CMD:
@@ -1595,6 +1595,33 @@ namespace generator {
         bind_lvalue(command->lvalue, command->expr->r_type);
 
         if (this->debug) this->main_assembly << "\t;  END generate_cmd_let\n";
+    }
+
+    void main_generator::generate_cmd_print(const std::shared_ptr<ast_node::print_cmd_node>& command) {
+        if (this->debug) this->main_assembly << "\t;  START generate_cmd_print\n";
+
+        this->main_assembly << "\tlea rdi, [rel " << (*this->constants)[command->text] << "]";
+        if (this->debug) this->main_assembly << " ; " << command->text;
+        this->main_assembly << "\n";
+
+        const bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            this->main_assembly << "\tsub rsp, 8";
+            if (this->debug) this->main_assembly << " ; Align stack";
+            this->main_assembly << "\n";
+            this->stack.push();
+        }
+
+        this->main_assembly << "\tcall _print\n";
+
+        if (needs_alignment) {
+            this->main_assembly << "\tadd rsp, 8";
+            if (this->debug) this->main_assembly << " ; Remove alignment";
+            this->main_assembly << "\n";
+            this->stack.pop();
+        }
+
+        if (this->debug) this->main_assembly << "\t;  END generate_cmd_print\n";
     }
 
     void main_generator::generate_cmd_read(const std::shared_ptr<ast_node::read_cmd_node>& command) {

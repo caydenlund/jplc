@@ -614,6 +614,13 @@ namespace generator {
         void generate_cmd_let(const std::shared_ptr<ast_node::let_cmd_node>& command);
 
         /**
+         * @brief Generates assembly for a single `print` command AST node.
+         *
+         * @param command The `print` command AST node.
+         */
+        void generate_cmd_print(const std::shared_ptr<ast_node::print_cmd_node>& command);
+
+        /**
          * @brief Generates assembly for a single `read` command AST node.
          *
          * @param command The `read` command AST node.
