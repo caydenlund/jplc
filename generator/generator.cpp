@@ -917,24 +917,44 @@ namespace generator {
 
         assembly << this->generate_expr(expression->conditional_expr);
 
-        assembly << "\tpop rax\n";
-        this->stack.pop();
-        assembly << "\tcmp rax, 0\n";
+        std::string jump_1;
+        std::string jump_2;
 
-        const std::string jump_1 = this->constants->next_jump();
-        const std::string jump_2 = this->constants->next_jump();
+        switch (this->opt_level) {
+            case 1:
+                if (expression->affirmative_expr->type == ast_node::node_type::INTEGER_EXPR
+                    && expression->negative_expr->type == ast_node::node_type::INTEGER_EXPR
+                    && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->affirmative_expr)->value
+                               == 1
+                    && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->negative_expr)->value
+                               == 0) {
+                    break;
+                }
+                //  Otherwise, fall through.
+            case 0:
+                assembly << "\tpop rax\n";
+                this->stack.pop();
+                assembly << "\tcmp rax, 0\n";
 
-        assembly << "\tje " << jump_1 << "\n";
+                jump_1 = this->constants->next_jump();
+                jump_2 = this->constants->next_jump();
 
-        assembly << this->generate_expr(expression->affirmative_expr);
-        this->stack.pop();
+                assembly << "\tje " << jump_1 << "\n";
 
-        assembly << "\tjmp " << jump_2 << "\n";
+                assembly << this->generate_expr(expression->affirmative_expr);
+                this->stack.pop();
 
-        assembly << jump_1 << ":\n";
-        assembly << this->generate_expr(expression->negative_expr);
+                assembly << "\tjmp " << jump_2 << "\n";
 
-        assembly << jump_2 << ":\n";
+                assembly << jump_1 << ":\n";
+                assembly << this->generate_expr(expression->negative_expr);
+
+                assembly << jump_2 << ":\n";
+                break;
+            default:
+                throw std::runtime_error("`generate_expr_if`: invalid optimization level: \""
+                                         + std::to_string(this->opt_level) + "\"");
+        }
 
         if (this->debug) assembly << "\t;  END generate_expr_if\n";
 
