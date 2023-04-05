@@ -1226,9 +1226,9 @@ namespace generator {
             const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
             const std::shared_ptr<const_table>& constants,
             const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>& function_signatures,
-            const std::shared_ptr<variable_table>& parent_variable_table, bool debug)
+            const std::shared_ptr<variable_table>& parent_variable_table, bool debug, unsigned int opt_level)
         : constants(constants), debug(debug), function_signatures(function_signatures),
-          global_symbol_table(global_symbol_table), variables(parent_variable_table) {}
+          global_symbol_table(global_symbol_table), opt_level(opt_level), variables(parent_variable_table) {}
 
     //  ===========================
     //  ||  Function generator:  ||
@@ -1417,8 +1417,8 @@ namespace generator {
             const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
             const std::shared_ptr<ast_node::fn_cmd_node>& function, const std::shared_ptr<const_table>& constants,
             const std::shared_ptr<std::unordered_map<std::string, call_signature::call_signature>>& function_signatures,
-            const std::shared_ptr<variable_table>& parent_variable_table, bool debug)
-        : generator(global_symbol_table, constants, function_signatures, parent_variable_table, debug),
+            const std::shared_ptr<variable_table>& parent_variable_table, bool debug, unsigned int opt_level)
+        : generator(global_symbol_table, constants, function_signatures, parent_variable_table, debug, opt_level),
           rbp_offset(initial_rbp_offset) {
         this->main_assembly << "\t;  [[" << initial_rbp_offset << "]]\n";
         this->main_assembly << function->name << ":\n_" << function->name << ":\n";
@@ -1561,7 +1561,7 @@ namespace generator {
 
     void main_generator::generate_cmd_fn(const std::shared_ptr<ast_node::fn_cmd_node>& command) {
         const fn_generator function(this->global_symbol_table, command, this->constants, this->function_signatures,
-                                    std::make_shared<variable_table>(this->variables), this->debug);
+                                    std::make_shared<variable_table>(this->variables), this->debug, this->opt_level);
         this->function_assemblies.emplace_back(function.assem());
     }
 
@@ -1939,10 +1939,11 @@ namespace generator {
     }
 
     main_generator::main_generator(const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
-                                   const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug)
+                                   const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug,
+                                   unsigned int opt_level)
         : generator(global_symbol_table, std::make_shared<const_table>(),
-                    std::make_shared<std::unordered_map<std::string, call_signature::call_signature>>(), nullptr,
-                    debug),
+                    std::make_shared<std::unordered_map<std::string, call_signature::call_signature>>(), nullptr, debug,
+                    opt_level),
           nodes(nodes) {
         const std::shared_ptr<resolved_type::resolved_type> int_type = std::make_shared<resolved_type::resolved_type>(
                 resolved_type::INT_TYPE);
@@ -1988,7 +1989,8 @@ namespace generator {
     //  ================
 
     std::string generate(const std::shared_ptr<symbol_table::symbol_table>& global_symbol_table,
-                         const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug) {
-        return main_generator(global_symbol_table, nodes, debug).assem();
+                         const std::vector<std::shared_ptr<ast_node::ast_node>>& nodes, bool debug,
+                         unsigned int opt_level) {
+        return main_generator(global_symbol_table, nodes, debug, opt_level).assem();
     }
 }  //  namespace generator

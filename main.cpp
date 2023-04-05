@@ -77,13 +77,15 @@ int lex_parse_and_check_only(const std::string& filename) {
  *
  * @param filename The file to read.
  * @param debug Whether to include extra debugging output.
+ * @param opt_level The optimization level of the assembly output.
  * @return 0 on success; an exception is thrown otherwise.
  */
-int lex_parse_check_and_generate_only(const std::string& filename, bool debug) {
+int lex_parse_check_and_generate_only(const std::string& filename, bool debug, unsigned int opt_level) {
     const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
     const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
     const symbol_table::symbol_table global_symbol_table = type_checker::check(nodes);
-    std::cout << generator::generate(std::make_shared<symbol_table::symbol_table>(global_symbol_table), nodes, debug);
+    std::cout << generator::generate(std::make_shared<symbol_table::symbol_table>(global_symbol_table), nodes, debug,
+                                     opt_level);
 
     std::cout << "Compilation succeeded: assembly complete\n";
 
@@ -97,11 +99,16 @@ int lex_parse_check_and_generate_only(const std::string& filename, bool debug) {
  */
 int main(int argc, char** argv) {
     std::string filename;
+
     bool debug = false;
     bool lex_only_flag = false;
     bool lex_and_parse_only_flag = false;
     bool lex_parse_and_check_only_flag = false;
     bool lex_parse_check_and_generate_only_flag = false;
+    bool o1_flag = false;
+    bool o2_flag = false;
+    bool o3_flag = false;
+
     for (unsigned int index = 1; index < (unsigned int)argc; index++) {
         const std::string arg(argv[index]);
         if (arg == "-l") lex_only_flag = true;
@@ -113,6 +120,12 @@ int main(int argc, char** argv) {
             lex_parse_check_and_generate_only_flag = true;
         else if (arg == "--debug")
             debug = true;
+        else if (arg == "-O1")
+            o1_flag = true;
+        else if (arg == "-O2")
+            o2_flag = true;
+        else if (arg == "-O3")
+            o3_flag = true;
         else
             filename = arg;
     }
@@ -123,8 +136,14 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    unsigned int opt_level = 0;
+    if (o1_flag) opt_level = 1;
+    if (o2_flag) opt_level = 2;
+    if (o3_flag) opt_level = 3;
+
     try {
-        if (lex_parse_check_and_generate_only_flag) return lex_parse_check_and_generate_only(filename, debug);
+        if (lex_parse_check_and_generate_only_flag)
+            return lex_parse_check_and_generate_only(filename, debug, opt_level);
         if (lex_parse_and_check_only_flag) return lex_parse_and_check_only(filename);
         if (lex_and_parse_only_flag) return lex_and_parse_only(filename);
         if (lex_only_flag) return lex_only(filename);
