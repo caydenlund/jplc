@@ -874,10 +874,21 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_false\n";
 
-        assembly << "\tmov rax, [rel " << (*this->constants)[(long)0] << "]";
-        if (this->debug) assembly << " ; False";
-        assembly << "\n\tpush rax\n";
-        this->stack.push();
+        switch (this->opt_level) {
+            case 1:
+                assembly << "\tpush qword 0\n";
+                this->stack.push();
+                break;
+            case 0:
+                assembly << "\tmov rax, [rel " << (*this->constants)[(long)0] << "]";
+                if (this->debug) assembly << " ; False";
+                assembly << "\n\tpush rax\n";
+                this->stack.push();
+                break;
+            default:
+                throw std::runtime_error("`generate_expr_false`: invalid optimization level: \""
+                                         + std::to_string(this->opt_level) + "\"");
+        }
 
         if (this->debug) assembly << "\t;  END generate_expr_false\n";
 
@@ -935,10 +946,27 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_integer\n";
 
-        assembly << "\tmov rax, [rel " << (*this->constants)[expression->value] << "]";
-        if (this->debug) assembly << " ; " << expression->value;
-        assembly << "\n\tpush rax\n";
-        this->stack.push();
+        const bool fits_into_32 = (expression->value & INT32_MAX)  //  NOLINT(hicpp-signed-bitwise)
+                               == expression->value;
+
+        switch (this->opt_level) {
+            case 1:
+                if (fits_into_32) {
+                    assembly << "\tpush qword " << expression->value << "\n";
+                    this->stack.push();
+                    break;
+                }
+                //  Otherwise, fall through.
+            case 0:
+                assembly << "\tmov rax, [rel " << (*this->constants)[expression->value] << "]";
+                if (this->debug) assembly << " ; " << expression->value;
+                assembly << "\n\tpush rax\n";
+                this->stack.push();
+                break;
+            default:
+                throw std::runtime_error("`generate_expr_integer`: invalid optimization level: \""
+                                         + std::to_string(this->opt_level) + "\"");
+        }
 
         if (this->debug) assembly << "\t;  END generate_expr_integer\n";
 
@@ -1082,10 +1110,21 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_true\n";
 
-        assembly << "\tmov rax, [rel " << (*this->constants)[(long)1] << "]";
-        if (this->debug) assembly << " ; True";
-        assembly << "\n\tpush rax\n";
-        this->stack.push();
+        switch (this->opt_level) {
+            case 1:
+                assembly << "\tpush qword 1\n";
+                this->stack.push();
+                break;
+            case 0:
+                assembly << "\tmov rax, [rel " << (*this->constants)[(long)1] << "]";
+                if (this->debug) assembly << " ; True";
+                assembly << "\n\tpush rax\n";
+                this->stack.push();
+                break;
+            default:
+                throw std::runtime_error("`generate_expr_true`: invalid optimization level: \""
+                                         + std::to_string(this->opt_level) + "\"");
+        }
 
         if (this->debug) assembly << "\t;  END generate_expr_true\n";
 
