@@ -874,20 +874,17 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_false\n";
 
-        switch (this->opt_level) {
-            case 1:
-                assembly << "\tpush qword 0\n";
-                this->stack.push();
-                break;
-            case 0:
-                assembly << "\tmov rax, [rel " << (*this->constants)[(long)0] << "]";
-                if (this->debug) assembly << " ; False";
-                assembly << "\n\tpush rax\n";
-                this->stack.push();
-                break;
-            default:
-                throw std::runtime_error("`generate_expr_false`: invalid optimization level: \""
-                                         + std::to_string(this->opt_level) + "\"");
+        if (this->opt_level >= 1) {
+            assembly << "\tpush qword 0";
+            if (this->debug) assembly << " ; False";
+            assembly << "\n";
+            this->stack.push();
+        } else {
+            assembly << "\tmov rax, [rel " << (*this->constants)[(long)0] << "]";
+            if (this->debug) assembly << " ; False";
+            assembly << "\n"
+                     << "\tpush rax\n";
+            this->stack.push();
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_false\n";
@@ -920,40 +917,36 @@ namespace generator {
         std::string jump_1;
         std::string jump_2;
 
-        switch (this->opt_level) {
-            case 1:
-                if (expression->affirmative_expr->type == ast_node::node_type::INTEGER_EXPR
-                    && expression->negative_expr->type == ast_node::node_type::INTEGER_EXPR
-                    && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->affirmative_expr)->value
-                               == 1
-                    && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->negative_expr)->value
-                               == 0) {
-                    break;
-                }
-                //  Otherwise, fall through.
-            case 0:
-                assembly << "\tpop rax\n";
-                this->stack.pop();
-                assembly << "\tcmp rax, 0\n";
+        const bool is_bool_cast
+                = (this->opt_level >= 1)
+               && (expression->affirmative_expr->type == ast_node::node_type::INTEGER_EXPR
+                   && expression->negative_expr->type == ast_node::node_type::INTEGER_EXPR
+                   && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->affirmative_expr)->value
+                              == 1
+                   && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->negative_expr)->value
+                              == 0);
 
-                jump_1 = this->constants->next_jump();
-                jump_2 = this->constants->next_jump();
+        if (is_bool_cast) {
+            if (this->debug) assembly << "\t;  O1: Boolean cast\n";
+        } else {
+            assembly << "\tpop rax\n";
+            this->stack.pop();
+            assembly << "\tcmp rax, 0\n";
 
-                assembly << "\tje " << jump_1 << "\n";
+            jump_1 = this->constants->next_jump();
+            jump_2 = this->constants->next_jump();
 
-                assembly << this->generate_expr(expression->affirmative_expr);
-                this->stack.pop();
+            assembly << "\tje " << jump_1 << "\n";
 
-                assembly << "\tjmp " << jump_2 << "\n";
+            assembly << this->generate_expr(expression->affirmative_expr);
+            this->stack.pop();
 
-                assembly << jump_1 << ":\n";
-                assembly << this->generate_expr(expression->negative_expr);
+            assembly << "\tjmp " << jump_2 << "\n";
 
-                assembly << jump_2 << ":\n";
-                break;
-            default:
-                throw std::runtime_error("`generate_expr_if`: invalid optimization level: \""
-                                         + std::to_string(this->opt_level) + "\"");
+            assembly << jump_1 << ":\n";
+            assembly << this->generate_expr(expression->negative_expr);
+
+            assembly << jump_2 << ":\n";
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_if\n";
@@ -966,26 +959,17 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_integer\n";
 
-        const bool fits_into_32 = (expression->value & INT32_MAX)  //  NOLINT(hicpp-signed-bitwise)
-                               == expression->value;
+        const bool push_literal = (this->opt_level >= 1) && generator::fits_into_32(expression->value);
 
-        switch (this->opt_level) {
-            case 1:
-                if (fits_into_32) {
-                    assembly << "\tpush qword " << expression->value << "\n";
-                    this->stack.push();
-                    break;
-                }
-                //  Otherwise, fall through.
-            case 0:
-                assembly << "\tmov rax, [rel " << (*this->constants)[expression->value] << "]";
-                if (this->debug) assembly << " ; " << expression->value;
-                assembly << "\n\tpush rax\n";
-                this->stack.push();
-                break;
-            default:
-                throw std::runtime_error("`generate_expr_integer`: invalid optimization level: \""
-                                         + std::to_string(this->opt_level) + "\"");
+        if (push_literal) {
+            assembly << "\tpush qword " << expression->value << "\n";
+            this->stack.push();
+        } else {
+            assembly << "\tmov rax, [rel " << (*this->constants)[expression->value] << "]";
+            if (this->debug) assembly << " ; " << expression->value;
+            assembly << "\n"
+                     << "\tpush rax\n";
+            this->stack.push();
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_integer\n";
@@ -1130,20 +1114,17 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_true\n";
 
-        switch (this->opt_level) {
-            case 1:
-                assembly << "\tpush qword 1\n";
-                this->stack.push();
-                break;
-            case 0:
-                assembly << "\tmov rax, [rel " << (*this->constants)[(long)1] << "]";
-                if (this->debug) assembly << " ; True";
-                assembly << "\n\tpush rax\n";
-                this->stack.push();
-                break;
-            default:
-                throw std::runtime_error("`generate_expr_true`: invalid optimization level: \""
-                                         + std::to_string(this->opt_level) + "\"");
+        if (this->opt_level >= 1) {
+            assembly << "\tpush qword 1";
+            if (this->debug) assembly << " ; True";
+            assembly << "\n";
+            this->stack.push();
+        } else {
+            assembly << "\tmov rax, [rel " << (*this->constants)[(long)1] << "]";
+            if (this->debug) assembly << " ; True";
+            assembly << "\n"
+                     << "\tpush rax\n";
+            this->stack.push();
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_true\n";
@@ -1279,6 +1260,58 @@ namespace generator {
         if (this->debug) assembly << "\t;  END generate_expr_variable\n";
 
         return assembly.str();
+    }
+
+    void generator::bind_argument(const std::shared_ptr<ast_node::argument_node>& argument,
+                                  const std::shared_ptr<resolved_type::resolved_type>& r_type) {
+        this->stack.push(r_type->size());
+        if (argument->type == ast_node::ARRAY_ARGUMENT) {
+            const std::shared_ptr<ast_node::array_argument_node> array_argument
+                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
+
+            this->variables.set_variable_address(array_argument->name, (long)this->stack.size());
+
+            long offset = 0;
+            constexpr int reg_size = 8;
+            for (const token::token& size_argument : array_argument->dimension_vars) {
+                this->variables.set_variable_address(size_argument.text, (long)this->stack.size() - offset);
+                offset += reg_size;
+            }
+        } else {
+            const std::shared_ptr<ast_node::variable_argument_node> variable_argument
+                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
+
+            this->variables.set_variable_address(variable_argument->name, (long)this->stack.size());
+        }
+    }
+
+    void generator::bind_lvalue(const std::shared_ptr<ast_node::lvalue_node>& lvalue,
+                                const std::shared_ptr<resolved_type::resolved_type>& r_type) {
+        if (lvalue->type == ast_node::ARGUMENT_LVALUE) {
+            this->bind_argument(std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(lvalue)->argument,
+                                r_type);
+        } else {
+            const std::shared_ptr<ast_node::tuple_lvalue_node> tuple_lvalue
+                    = std::reinterpret_pointer_cast<ast_node::tuple_lvalue_node>(lvalue);
+            const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_r_type
+                    = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
+
+            for (long index = (long)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
+                bind_lvalue(tuple_lvalue->lvalues[index], tuple_r_type->element_types[index]);
+            }
+        }
+    }
+
+    bool generator::fits_into_32(long value) { return (value & INT32_MAX) == value; }
+
+    long generator::log_2(long value) {
+        if (value < 0 || (value & (value - 1)) != 0) return 0;
+
+        long log;
+        for (log = 0; (1 << log) < value; ++log)
+            ;
+
+        return log;
     }
 
     generator::generator(
@@ -1900,46 +1933,6 @@ namespace generator {
         }
 
         if (this->debug) this->main_assembly << "\t;  END generate_cmd_write\n";
-    }
-
-    void generator::bind_argument(const std::shared_ptr<ast_node::argument_node>& argument,
-                                  const std::shared_ptr<resolved_type::resolved_type>& r_type) {
-        this->stack.push(r_type->size());
-        if (argument->type == ast_node::ARRAY_ARGUMENT) {
-            const std::shared_ptr<ast_node::array_argument_node> array_argument
-                    = std::reinterpret_pointer_cast<ast_node::array_argument_node>(argument);
-
-            this->variables.set_variable_address(array_argument->name, (long)this->stack.size());
-
-            long offset = 0;
-            constexpr int reg_size = 8;
-            for (const token::token& size_argument : array_argument->dimension_vars) {
-                this->variables.set_variable_address(size_argument.text, (long)this->stack.size() - offset);
-                offset += reg_size;
-            }
-        } else {
-            const std::shared_ptr<ast_node::variable_argument_node> variable_argument
-                    = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
-
-            this->variables.set_variable_address(variable_argument->name, (long)this->stack.size());
-        }
-    }
-
-    void generator::bind_lvalue(const std::shared_ptr<ast_node::lvalue_node>& lvalue,
-                                const std::shared_ptr<resolved_type::resolved_type>& r_type) {
-        if (lvalue->type == ast_node::ARGUMENT_LVALUE) {
-            this->bind_argument(std::reinterpret_pointer_cast<ast_node::argument_lvalue_node>(lvalue)->argument,
-                                r_type);
-        } else {
-            const std::shared_ptr<ast_node::tuple_lvalue_node> tuple_lvalue
-                    = std::reinterpret_pointer_cast<ast_node::tuple_lvalue_node>(lvalue);
-            const std::shared_ptr<resolved_type::tuple_resolved_type> tuple_r_type
-                    = std::reinterpret_pointer_cast<resolved_type::tuple_resolved_type>(r_type);
-
-            for (long index = (long)tuple_lvalue->lvalues.size() - 1; index >= 0; index--) {
-                bind_lvalue(tuple_lvalue->lvalues[index], tuple_r_type->element_types[index]);
-            }
-        }
     }
 
     void main_generator::generate_linking_preface() {

@@ -21,6 +21,7 @@ Checks: '
     -hicpp-braces-around-statements,
     -hicpp-explicit-conversions,
     -hicpp-named-parameter,
+    -hicpp-signed-bitwise,
     -hicpp-special-member-functions,
     -llvm-header-guard,
     -llvmlibc*,
