@@ -463,7 +463,7 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  Calculate the index to store the result\n";
 
-        if (this->opt_level >= 0) {
+        if (this->opt_level >= 1) {
             assembly << "\tmov rax, [rsp + " << item_size << "]\n";
         } else {
             assembly << "\tmov rax, 0\n"
@@ -535,6 +535,8 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_binop\n";
 
+        const resolved_type::resolved_type_type operand_type = expression->left_operand->r_type->type;
+
         if (expression->operator_type == ast_node::op_type::BINOP_AND
             || expression->operator_type == ast_node::op_type::BINOP_OR) {
             assembly << this->generate_expr(expression->left_operand);
@@ -555,7 +557,8 @@ namespace generator {
             return assembly.str();
         }
 
-        if (this->opt_level >= 1 && expression->operator_type == ast_node::op_type::BINOP_TIMES) {
+        if (this->opt_level >= 1 && operand_type == resolved_type::resolved_type_type::INT_TYPE
+            && expression->operator_type == ast_node::op_type::BINOP_TIMES) {
             const bool left_is_literal = expression->left_operand->type == ast_node::node_type::INTEGER_EXPR;
             const long left_value = left_is_literal ? std::reinterpret_pointer_cast<ast_node::integer_expr_node>(
                                                               expression->left_operand)
@@ -608,8 +611,6 @@ namespace generator {
         }
 
         assembly << this->generate_expr(expression->right_operand) << this->generate_expr(expression->left_operand);
-
-        const resolved_type::resolved_type_type operand_type = expression->left_operand->r_type->type;
 
         const bool needs_alignment = this->stack.needs_alignment();
 
