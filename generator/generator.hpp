@@ -277,6 +277,18 @@ namespace generator {
         //  ||  Methods:  ||
         //  ================
 
+        //  Assembly:
+        //  ---------
+
+        /**
+         * @brief Generates assembly for a constant multiplication.
+         *
+         * @param reg The register to be multiplied.
+         * @param value The value to be multiplied.
+         * @return The assembly code for the multiplication.
+         */
+        std::string generate_assem_mul(const std::string& reg, long value) const;
+
         //  Expressions:
         //  ------------
 

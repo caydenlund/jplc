@@ -99,6 +99,20 @@ namespace generator {
     //  Expressions:
     //  ------------
 
+    std::string generator::generate_assem_mul(const std::string& reg, long value) const {
+        std::stringstream assembly;
+
+        const long log = generator::log_2(value);
+        const bool power_of_two = this->opt_level >= 0 && log > 0;
+        if (power_of_two) {
+            assembly << ";  [[TODO: Shift.]]\n";
+        } else {
+            assembly << "\timul " << reg << ", " << value << "\n";
+        }
+
+        return assembly.str();
+    }
+
     std::string generator::generate_expr(const std::shared_ptr<ast_node::expr_node>& expression) {
         switch (expression->type) {
             case ast_node::ARRAY_INDEX_EXPR:
@@ -214,9 +228,15 @@ namespace generator {
             assembly << jump_2 << ":\n";
         }
 
-        assembly << "\tmov rax, 0\n";
+        if (this->opt_level >= 1) {
+            assembly << "\tmov rax, [rsp + 0]\n";
+        } else {
+            assembly << "\tmov rax, 0\n"
+                     << "\timul rax, [rsp + " << array_offset << "]\n"
+                     << "\tadd rax, [rsp + 0]\n";
+        }
 
-        for (long offset = 0; offset < array_offset; offset += reg_size) {
+        for (long offset = reg_size; offset < array_offset; offset += reg_size) {
             assembly << "\timul rax, [rsp + " << array_offset + offset << "]\n"
                      << "\tadd rax, [rsp + " << offset << "]\n";
         }
@@ -224,7 +244,7 @@ namespace generator {
         assembly << "\timul rax, " << expression->r_type->size() << "\n"
                  << "\tadd rax, [rsp + " << array_offset * 2 << "]\n";
 
-        if (this->debug) assembly << ";  Remove index variables\n";
+        if (this->debug) assembly << "\t;  Remove index variables\n";
         for (long offset = 0; offset < rank; ++offset) { assembly << "\tadd rsp, " << this->stack.pop() << "\n"; }
 
         assembly << "\tadd rsp, " << array_offset + reg_size;
@@ -441,11 +461,28 @@ namespace generator {
         assembly << this->generate_expr(expression->item_expr);
 
         if (this->debug) assembly << "\t;  Calculate the index to store the result\n";
-        assembly << "\tmov rax, 0\n";
-        for (long offset = item_size; offset < reg_size * rank + item_size; offset += reg_size) {
-            assembly << "\timul rax, [rsp + " << rank * reg_size + offset << "]\n"
-                     << "\tadd rax, [rsp + " << offset << "]\n";
+
+        if (this->opt_level >= 0) {
+            assembly << "\tmov rax, [rsp + " << item_size << "]\n";
+        } else {
+            assembly << "\tmov rax, 0\n"
+                     << "\timul rax, [rsp + " << rank * reg_size + item_size << "]\n"
+                     << "\tadd rax, [rsp + " << item_size << "]\n";
         }
+
+        for (long index = 1; index < rank; ++index) {
+            const long offset = reg_size * index + item_size;
+            const std::shared_ptr<ast_node::expr_node>& binding = std::get<1>(expression->binding_pairs[index]);
+            const bool is_literal = this->opt_level >= 1 && binding->type == ast_node::node_type::INTEGER_EXPR;
+            if (is_literal) {
+                assembly << this->generate_assem_mul(
+                        "rax", std::reinterpret_pointer_cast<ast_node::integer_expr_node>(binding)->value);
+            } else {
+                assembly << "\timul rax, [rsp + " << rank * reg_size + offset << "]\n";
+            }
+            assembly << "\tadd rax, [rsp + " << offset << "]\n";
+        }
+
         assembly << "\timul rax, " << item_size << "\n"
                  << "\tadd rax, [rsp + " << 2 * rank * reg_size + item_size << "]\n";
 
