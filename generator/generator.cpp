@@ -103,9 +103,10 @@ namespace generator {
         std::stringstream assembly;
 
         const long log = generator::log_2(value);
-        const bool power_of_two = this->opt_level >= 0 && log > 0;
+        const bool power_of_two = this->opt_level >= 1 && log >= 0;
+
         if (power_of_two) {
-            assembly << ";  [[TODO: Shift.]]\n";
+            assembly << "\tshl " << reg << ", " << log << "\n";
         } else {
             assembly << "\timul " << reg << ", " << value << "\n";
         }
@@ -241,7 +242,7 @@ namespace generator {
                      << "\tadd rax, [rsp + " << offset << "]\n";
         }
 
-        assembly << "\timul rax, " << expression->r_type->size() << "\n"
+        assembly << this->generate_assem_mul("rax", expression->r_type->size()) << "\n"
                  << "\tadd rax, [rsp + " << array_offset * 2 << "]\n";
 
         if (this->debug) assembly << "\t;  Remove index variables\n";
@@ -483,8 +484,8 @@ namespace generator {
             assembly << "\tadd rax, [rsp + " << offset << "]\n";
         }
 
-        assembly << "\timul rax, " << item_size << "\n"
-                 << "\tadd rax, [rsp + " << 2 * rank * reg_size + item_size << "]\n";
+        assembly << this->generate_assem_mul("rax", item_size) << "\tadd rax, [rsp + "
+                 << 2 * rank * reg_size + item_size << "]\n";
 
         if (this->debug) assembly << "\t;  Moving " << item_size << "-byte body from [rsp] to [rax]\n";
         for (long offset = item_size - reg_size; offset >= 0; offset -= reg_size) {
@@ -534,7 +535,6 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_binop\n";
 
-
         if (expression->operator_type == ast_node::op_type::BINOP_AND
             || expression->operator_type == ast_node::op_type::BINOP_OR) {
             assembly << this->generate_expr(expression->left_operand);
@@ -550,7 +550,61 @@ namespace generator {
                      << short_circuit_jump << ":\n"
                      << "\tpush rax\n";
 
+            if (this->debug) assembly << "\t;  END generate_expr_binop\n";
+
             return assembly.str();
+        }
+
+        if (this->opt_level >= 1 && expression->operator_type == ast_node::op_type::BINOP_TIMES) {
+            const bool left_is_literal = expression->left_operand->type == ast_node::node_type::INTEGER_EXPR;
+            const long left_value = left_is_literal ? std::reinterpret_pointer_cast<ast_node::integer_expr_node>(
+                                                              expression->left_operand)
+                                                              ->value
+                                                    : 0;
+            const long left_log = generator::log_2(left_value);
+
+            const bool right_is_literal = expression->right_operand->type == ast_node::node_type::INTEGER_EXPR;
+            const long right_value = right_is_literal ? std::reinterpret_pointer_cast<ast_node::integer_expr_node>(
+                                                                expression->right_operand)
+                                                                ->value
+                                                      : 0;
+            const long right_log = generator::log_2(right_value);
+
+            if (left_is_literal && left_value == 1) {
+                assembly << this->generate_expr(expression->right_operand);
+
+                if (this->debug) assembly << "\t;  END generate_expr_binop\n";
+
+                return assembly.str();
+            }
+
+            if (right_is_literal && right_value == 1) {
+                assembly << this->generate_expr(expression->left_operand);
+
+                if (this->debug) assembly << "\t;  END generate_expr_binop\n";
+
+                return assembly.str();
+            }
+
+            if (left_is_literal && left_log > 0) {
+                assembly << this->generate_expr(expression->right_operand) << "\tpop rax\n"
+                         << "\tshl rax, " << left_log << "\n"
+                         << "\tpush rax\n";
+
+                if (this->debug) assembly << "\t;  END generate_expr_binop\n";
+
+                return assembly.str();
+            }
+
+            if (right_is_literal && right_log > 0) {
+                assembly << this->generate_expr(expression->left_operand) << "\tpop rax\n"
+                         << "\tshl rax, " << right_log << "\n"
+                         << "\tpush rax\n";
+
+                if (this->debug) assembly << "\t;  END generate_expr_binop\n";
+
+                return assembly.str();
+            }
         }
 
         assembly << this->generate_expr(expression->right_operand) << this->generate_expr(expression->left_operand);
@@ -1342,10 +1396,10 @@ namespace generator {
     bool generator::fits_into_32(long value) { return (value & INT32_MAX) == value; }
 
     long generator::log_2(long value) {
-        if (value < 0 || (value & (value - 1)) != 0) return 0;
+        if (value < 0 || (value & (value - 1)) != 0) return -1;
 
         long log;
-        for (log = 0; (1 << log) < value; ++log)
+        for (log = 0; (1L << log) < value; ++log)
             ;
 
         return log;
