@@ -165,14 +165,27 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_array_index\n";
 
-        assembly << this->generate_expr(expression->array);
+        constexpr long reg_size = 8;
+        const long rank = (long)expression->params.size();
+
+        const long array_offset = reg_size * rank;
+
+        const bool is_variable = this->opt_level >= 1 && expression->array->type == ast_node::node_type::VARIABLE_EXPR;
+        bool is_local_variable = false;
+        long gap = 0;
+        if (is_variable) {
+            const std::shared_ptr<ast_node::variable_expr_node> var_expr
+                    = std::reinterpret_pointer_cast<ast_node::variable_expr_node>(expression->array);
+            const std::tuple<std::string, long> variable_address = this->variables.get_variable_address(var_expr->name);
+            is_local_variable = std::get<0>(variable_address) == "rbp";
+            gap = this->stack.size() - std::get<1>(variable_address);
+        }
+
+        if (!is_local_variable) assembly << this->generate_expr(expression->array);
 
         //  Put each index expression onto the stack.
-        const long rank = (long)expression->params.size();
         for (long index = rank - 1; index >= 0; --index) { assembly << generate_expr(expression->params[index]); }
 
-        constexpr long reg_size = 8;
-        const long array_offset = reg_size * rank;
         for (long offset = 0; offset < array_offset; offset += reg_size) {
             const std::string jump_1 = this->constants->next_jump();
             const std::string jump_2 = this->constants->next_jump();
@@ -203,7 +216,7 @@ namespace generator {
             }
 
             assembly << jump_1 << ":\n"
-                     << "\tcmp rax, [rsp + " << array_offset + offset << "]\n"
+                     << "\tcmp rax, [rsp + " << array_offset + offset + gap << "]\n"
                      << "\tjl " << jump_2 << "\n";
 
             if (needs_alignment) {
@@ -233,25 +246,28 @@ namespace generator {
             assembly << "\tmov rax, [rsp + 0]\n";
         } else {
             assembly << "\tmov rax, 0\n"
-                     << "\timul rax, [rsp + " << array_offset << "]\n"
+                     << "\timul rax, [rsp + " << array_offset + gap << "]\n"
                      << "\tadd rax, [rsp + 0]\n";
         }
 
         for (long offset = reg_size; offset < array_offset; offset += reg_size) {
-            assembly << "\timul rax, [rsp + " << array_offset + offset << "]\n"
+            assembly << "\timul rax, [rsp + " << array_offset + offset + gap << "]\n"
                      << "\tadd rax, [rsp + " << offset << "]\n";
         }
 
-        assembly << this->generate_assem_mul("rax", expression->r_type->size()) << "\n"
-                 << "\tadd rax, [rsp + " << array_offset * 2 << "]\n";
+        assembly << this->generate_assem_mul("rax", expression->r_type->size()) << "\n";
+
+        assembly << "\tadd rax, [rsp + " << array_offset * 2 + gap << "]\n";
 
         if (this->debug) assembly << "\t;  Remove index variables\n";
         for (long offset = 0; offset < rank; ++offset) { assembly << "\tadd rsp, " << this->stack.pop() << "\n"; }
 
-        assembly << "\tadd rsp, " << array_offset + reg_size;
-        if (this->debug) assembly << " ; Remove array";
-        assembly << "\n";
-        this->stack.pop();
+        if (!is_local_variable) {
+            assembly << "\tadd rsp, " << array_offset + reg_size;
+            if (this->debug) assembly << " ; Remove array";
+            assembly << "\n";
+            this->stack.pop();
+        }
 
         const long return_size = (long)expression->r_type->size();
         assembly << "\tsub rsp, " << return_size << "\n";
