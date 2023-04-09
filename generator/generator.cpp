@@ -260,7 +260,16 @@ namespace generator {
         assembly << "\tadd rax, [rsp + " << array_offset * 2 + gap << "]\n";
 
         if (this->debug) assembly << "\t;  Remove index variables\n";
-        for (long offset = 0; offset < rank; ++offset) { assembly << "\tadd rsp, " << this->stack.pop() << "\n"; }
+        long total = 0;
+        for (long offset = 0; offset < rank; ++offset) {
+            const long val = this->stack.pop();
+            if (this->opt_level >= 1) {
+                total += val;
+            } else {
+                assembly << "\tadd rsp, " << val << "\n";
+            }
+        }
+        if (this->opt_level >= 1) { assembly << "\tadd rsp, " << total << "\n"; }
 
         if (!is_local_variable) {
             assembly << "\tadd rsp, " << array_offset + reg_size;
