@@ -139,6 +139,9 @@ namespace ast_node {
 
     //  Commands:
     //  ---------
+    assert_cmd_node::assert_cmd_node(const std::shared_ptr<expr_node>& condition, std::string text)
+        : cmd_node(node_type::ASSERT_CMD), condition(condition), text(std::move(text)) {}
+
     assert_cmd_node::assert_cmd_node(const std::shared_ptr<expr_node>& condition, const token::token& string_tok)
         : cmd_node(node_type::ASSERT_CMD), condition(condition), text(token::string_value(string_tok)) {
         if (string_tok.type != token::token_type::STRING)
@@ -148,6 +151,12 @@ namespace ast_node {
     std::string assert_cmd_node::s_expression() const {
         return "(AssertCmd " + this->condition->s_expression() + " \"" + this->text + "\")";
     }
+
+    fn_cmd_node::fn_cmd_node(std::string name, const std::vector<std::shared_ptr<binding_node>>& bindings,
+                             const std::shared_ptr<type_node>& return_type,
+                             const std::vector<std::shared_ptr<stmt_node>>& statements)
+        : cmd_node(node_type::FN_CMD), name(std::move(name)), bindings(bindings), return_type(return_type),
+          statements(statements) {}
 
     fn_cmd_node::fn_cmd_node(const token::token& var_tok, const std::vector<std::shared_ptr<binding_node>>& bindings,
                              const std::shared_ptr<type_node>& return_type,
@@ -188,6 +197,9 @@ namespace ast_node {
 
     std::string print_cmd_node::s_expression() const { return "(PrintCmd \"" + this->text + "\")"; }
 
+    read_cmd_node::read_cmd_node(std::string file_name, const std::shared_ptr<argument_node>& read_dest)
+        : cmd_node(node_type::READ_CMD), file_name(std::move(file_name)), read_dest(read_dest) {}
+
     read_cmd_node::read_cmd_node(const token::token& string_tok, const std::shared_ptr<argument_node>& read_dest)
         : cmd_node(node_type::READ_CMD), file_name(token::string_value(string_tok)), read_dest(read_dest) {
         if (string_tok.type != token::token_type::STRING)
@@ -207,6 +219,9 @@ namespace ast_node {
 
     std::string time_cmd_node::s_expression() const { return "(TimeCmd " + this->command->s_expression() + ")"; }
 
+    type_cmd_node::type_cmd_node(std::string name, const std::shared_ptr<type_node>& new_type)
+        : cmd_node(node_type::TYPE_CMD), name(std::move(name)), new_type(new_type) {}
+
     type_cmd_node::type_cmd_node(const token::token& var_tok, const std::shared_ptr<type_node>& new_type)
         : cmd_node(node_type::TYPE_CMD), name(var_tok.text), new_type(new_type) {
         if (var_tok.type != token::token_type::VARIABLE)
@@ -216,6 +231,9 @@ namespace ast_node {
     std::string type_cmd_node::s_expression() const {
         return "(TypeCmd " + this->name + " " + this->new_type->s_expression() + ")";
     }
+
+    write_cmd_node::write_cmd_node(const std::shared_ptr<expr_node>& expr, std::string file_name)
+        : cmd_node(node_type::WRITE_CMD), expr(expr), file_name(std::move(file_name)) {}
 
     write_cmd_node::write_cmd_node(const std::shared_ptr<expr_node>& expr, const token::token& string_tok)
         : cmd_node(node_type::WRITE_CMD), expr(expr), file_name(token::string_value(string_tok)) {
@@ -277,38 +295,43 @@ namespace ast_node {
         return result.str();
     }
 
-    binop_expr_node::binop_expr_node(const token::token& binop, const std::shared_ptr<expr_node>& left_operand,
+    binop_expr_node::binop_expr_node(op_type operator_type, const std::shared_ptr<expr_node>& left_operand,
+                                     const std::shared_ptr<expr_node>& right_operand)
+        : expr_node(node_type::BINOP_EXPR), operator_type(operator_type), left_operand(left_operand),
+          right_operand(right_operand) {}
+
+    binop_expr_node::binop_expr_node(const token::token& operator_type, const std::shared_ptr<expr_node>& left_operand,
                                      const std::shared_ptr<expr_node>& right_operand)
         : expr_node(node_type::BINOP_EXPR), left_operand(left_operand), right_operand(right_operand) {
-        if (binop.type != token::token_type::OP)
-            throw std::runtime_error("`binop_expr_node`: not an operator: \"" + binop.text + "\"");
-        if (binop.text == "+") this->operator_type = op_type::BINOP_PLUS;
-        else if (binop.text == "-")
+        if (operator_type.type != token::token_type::OP)
+            throw std::runtime_error("`binop_expr_node`: not an operator: \"" + operator_type.text + "\"");
+        if (operator_type.text == "+") this->operator_type = op_type::BINOP_PLUS;
+        else if (operator_type.text == "-")
             this->operator_type = op_type::BINOP_MINUS;
-        else if (binop.text == "*")
+        else if (operator_type.text == "*")
             this->operator_type = op_type::BINOP_TIMES;
-        else if (binop.text == "/")
+        else if (operator_type.text == "/")
             this->operator_type = op_type::BINOP_DIVIDE;
-        else if (binop.text == "%")
+        else if (operator_type.text == "%")
             this->operator_type = op_type::BINOP_MOD;
-        else if (binop.text == "<")
+        else if (operator_type.text == "<")
             this->operator_type = op_type::BINOP_LT;
-        else if (binop.text == ">")
+        else if (operator_type.text == ">")
             this->operator_type = op_type::BINOP_GT;
-        else if (binop.text == "==")
+        else if (operator_type.text == "==")
             this->operator_type = op_type::BINOP_EQ;
-        else if (binop.text == "!=")
+        else if (operator_type.text == "!=")
             this->operator_type = op_type::BINOP_NEQ;
-        else if (binop.text == "<=")
+        else if (operator_type.text == "<=")
             this->operator_type = op_type::BINOP_LEQ;
-        else if (binop.text == ">=")
+        else if (operator_type.text == ">=")
             this->operator_type = op_type::BINOP_GEQ;
-        else if (binop.text == "&&")
+        else if (operator_type.text == "&&")
             this->operator_type = op_type::BINOP_AND;
-        else if (binop.text == "||")
+        else if (operator_type.text == "||")
             this->operator_type = op_type::BINOP_OR;
         else
-            throw std::runtime_error("`binop_expr_node`: not a binary operator: \"" + binop.text + "\"");
+            throw std::runtime_error("`binop_expr_node`: not a binary operator: \"" + operator_type.text + "\"");
     }
 
     std::string binop_expr_node::s_expression() const {
@@ -362,6 +385,9 @@ namespace ast_node {
         result << " " << this->right_operand->s_expression() << ")";
         return result.str();
     }
+
+    call_expr_node::call_expr_node(std::string name, const std::vector<std::shared_ptr<expr_node>>& call_args)
+        : expr_node(node_type::CALL_EXPR), name(std::move(name)), call_args(call_args) {}
 
     call_expr_node::call_expr_node(const token::token& name, const std::vector<std::shared_ptr<expr_node>>& call_args)
         : expr_node(node_type::CALL_EXPR), name(name.text), call_args(call_args) {
@@ -564,6 +590,9 @@ namespace ast_node {
         return result.str();
     }
 
+    unop_expr_node::unop_expr_node(op_type operator_type, const std::shared_ptr<expr_node>& operand)
+        : expr_node(node_type::UNOP_EXPR), operator_type(operator_type), operand(operand) {}
+
     unop_expr_node::unop_expr_node(const token::token& unop, const std::shared_ptr<expr_node>& operand)
         : expr_node(node_type::UNOP_EXPR), operand(operand) {
         if (unop.type != token::token_type::OP)
@@ -629,6 +658,9 @@ namespace ast_node {
 
     //  Statements:
     //  -----------
+    assert_stmt_node::assert_stmt_node(const std::shared_ptr<expr_node>& expr, std::string text)
+        : stmt_node(node_type::ASSERT_STMT), expr(expr), text(std::move(text)) {}
+
     assert_stmt_node::assert_stmt_node(const std::shared_ptr<expr_node>& expr, const token::token& string_tok)
         : stmt_node(node_type::ASSERT_STMT), expr(expr), text(token::string_value(string_tok)) {
         if (string_tok.type != token::token_type::STRING)

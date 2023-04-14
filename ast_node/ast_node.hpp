@@ -480,6 +480,15 @@ namespace ast_node {
          * @details Initializes `type` to `node_type::ASSERT_CMD`.
          *
          * @param condition The first (`<expr>`) argument.
+         * @param text The second (`<string>`) argument.
+         */
+        assert_cmd_node(const std::shared_ptr<expr_node>& condition, std::string text);
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::ASSERT_CMD`.
+         *
+         * @param condition The first (`<expr>`) argument.
          * @param string_tok The second (`<string>`) argument.
          */
         assert_cmd_node(const std::shared_ptr<expr_node>& condition, const token::token& string_tok);
@@ -521,6 +530,19 @@ namespace ast_node {
          *
          */
         const std::vector<std::shared_ptr<stmt_node>> statements;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::FN_CMD`.
+         *
+         * @param name The function name.
+         * @param bindings The function input (set of bindings).
+         * @param return_type The function return type (type node).
+         * @param statements The function body (list of statements).
+         */
+        fn_cmd_node(std::string name, const std::vector<std::shared_ptr<binding_node>>& bindings,
+                    const std::shared_ptr<type_node>& return_type,
+                    const std::vector<std::shared_ptr<stmt_node>>& statements);
 
         /**
          * @brief Class constructor.
@@ -631,6 +653,15 @@ namespace ast_node {
          * @param string_tok The first (`<string>`) argument.
          * @param read_dest The second (`<argument>`) argument.
          */
+        read_cmd_node(std::string file_name, const std::shared_ptr<argument_node>& read_dest);
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::READ_CMD`.
+         *
+         * @param string_tok The first (`<string>`) argument.
+         * @param read_dest The second (`<argument>`) argument.
+         */
         read_cmd_node(const token::token& string_tok, const std::shared_ptr<argument_node>& read_dest);
 
         /**
@@ -718,6 +749,15 @@ namespace ast_node {
          * @brief Class constructor.
          * @details Initializes `type` to `node_type::TYPE_CMD`.
          *
+         * @param name The name of the type.
+         * @param new_type The type to be assigned to the new name.
+         */
+        type_cmd_node(std::string name, const std::shared_ptr<type_node>& new_type);
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::TYPE_CMD`.
+         *
          * @param var_tok The name of the type.
          * @param new_type The type to be assigned to the new name.
          */
@@ -748,6 +788,15 @@ namespace ast_node {
          *
          */
         const std::string file_name;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::WRITE_CMD`.
+         *
+         * @param expr The expression to evaluate.
+         * @param file_name The name of the file to which to write.
+         */
+        write_cmd_node(const std::shared_ptr<expr_node>& expr, std::string file_name);
 
         /**
          * @brief Class constructor.
@@ -912,7 +961,18 @@ namespace ast_node {
          * @brief Class constructor.
          * @details Initializes `type` to `node_type::BINOP_EXPR`.
          *
-         * @param binop The operator token that creates this expression.
+         * @param operator_type The operator type that creates this expression.
+         * @param left_operand The left-hand side operand of the operator.
+         * @param right_operand The right-hand side operand of the operator.
+         */
+        binop_expr_node(op_type operator_type, const std::shared_ptr<expr_node>& left_operand,
+                        const std::shared_ptr<expr_node>& right_operand);
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::BINOP_EXPR`.
+         *
+         * @param operator_type The operator token that creates this expression.
          * @param left_operand The left-hand side operand of the operator.
          * @param right_operand The right-hand side operand of the operator.
          */
@@ -943,6 +1003,15 @@ namespace ast_node {
          *
          */
         const std::vector<std::shared_ptr<expr_node>> call_args;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::CALL_EXPR`.
+         *
+         * @param name The name of the function.
+         * @param call_args The arguments in the function call.
+         */
+        call_expr_node(std::string name, const std::vector<std::shared_ptr<expr_node>>& call_args);
 
         /**
          * @brief Class constructor.
@@ -1301,6 +1370,15 @@ namespace ast_node {
          * @brief Class constructor.
          * @details Initializes `type` to `node_type::UNOP_EXPR`.
          *
+         * @param unop The operator type that creates this expression.
+         * @param operand The operand of this operator.
+         */
+        unop_expr_node(op_type operator_type, const std::shared_ptr<expr_node>& operand);
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::UNOP_EXPR`.
+         *
          * @param unop The operator token that creates this expression.
          * @param operand The operand of this operator.
          */
@@ -1415,6 +1493,15 @@ namespace ast_node {
          *
          */
         const std::string text;
+
+        /**
+         * @brief Class constructor.
+         * @details Initializes `type` to `node_type::ASSERT_STMT`.
+         *
+         * @param expr The expression to evaluate.
+         * @param text The text to print on failure.
+         */
+        assert_stmt_node(const std::shared_ptr<expr_node>& expr, std::string text);
 
         /**
          * @brief Class constructor.
