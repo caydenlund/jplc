@@ -15,6 +15,7 @@
 #include <tuple>
 #include <vector>
 
+#include "cp_value.hpp"
 #include "resolved_type/resolved_type.hpp"
 #include "token/token.hpp"
 
@@ -245,17 +246,23 @@ namespace ast_node {
         expr_node(node_type type = node_type::EXPR);
 
         /**
-         * @brief The resolved type of this expression.
-         *
-         */
-        mutable std::shared_ptr<resolved_type::resolved_type> r_type;
-
-        /**
          * @brief Returns the s-expression string for this AST node.
          *
          * @return The s-expression string for this AST node.
          */
         [[nodiscard]] std::string s_expression() const override;
+
+        /**
+         * @brief The CP value of this AST node.
+         *
+         */
+        mutable cp_value cp_val;
+
+        /**
+         * @brief The resolved type of this expression.
+         *
+         */
+        mutable std::shared_ptr<resolved_type::resolved_type> r_type;
     };
 
     /**
