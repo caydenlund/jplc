@@ -41,13 +41,13 @@ namespace ast_node {
          * @brief The type of this instance.
          *
          */
-        const cp_value_type type;
+        cp_value_type type;
 
         /**
          * @brief The integer value of this instance, if this instance is an integer.
          *
          */
-        const long int_value;
+        long int_value;
     };
 
 }  //  namespace ast_node

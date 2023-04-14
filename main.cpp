@@ -15,6 +15,7 @@
 #include "parser/parser.hpp"
 #include "token/token.hpp"
 #include "type_checker/type_checker.hpp"
+#include "visitor/const_prop_visitor.hpp"
 
 /**
  * @brief Only lexes the input file.
@@ -84,6 +85,10 @@ int lex_parse_check_and_generate_only(const std::string& filename, bool debug, u
     const lexer::token_list_t tokens = lexer::lex_all(file::read_file(filename));
     const std::vector<parser::node_ptr_t> nodes = parser::parse(tokens);
     const symbol_table::symbol_table global_symbol_table = type_checker::check(nodes);
+    if (opt_level >= 2) {
+        visitor::const_prop_visitor const_prop;
+        for (const parser::node_ptr_t& node : nodes) { const_prop.visit_node(node); }
+    }
     std::cout << generator::generate(std::make_shared<symbol_table::symbol_table>(global_symbol_table), nodes, debug,
                                      opt_level);
 
