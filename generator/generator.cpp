@@ -1036,12 +1036,17 @@ namespace generator {
 
         const bool is_bool_cast
                 = (this->opt_level >= 1)
-               && (expression->affirmative_expr->type == ast_node::node_type::INTEGER_EXPR
-                   && expression->negative_expr->type == ast_node::node_type::INTEGER_EXPR
-                   && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->affirmative_expr)->value
-                              == 1
-                   && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->negative_expr)->value
-                              == 0);
+               && ((expression->affirmative_expr->cp_val.type == ast_node::INT_VALUE
+                    && expression->negative_expr->cp_val.type == ast_node::INT_VALUE
+                    && expression->affirmative_expr->cp_val.int_value == 1
+                    && expression->affirmative_expr->cp_val.int_value == 0)
+                   || (expression->affirmative_expr->type == ast_node::node_type::INTEGER_EXPR
+                       && expression->negative_expr->type == ast_node::node_type::INTEGER_EXPR
+                       && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->affirmative_expr)
+                                          ->value
+                                  == 1
+                       && std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->negative_expr)->value
+                                  == 0));
 
         if (is_bool_cast) {
             if (this->debug) assembly << "\t;  O1: Boolean cast\n";
