@@ -1359,24 +1359,34 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  START generate_expr_variable\n";
 
-        const unsigned int size = expression->r_type->size();
-        assembly << "\tsub rsp, " << size << "\n";
-        this->stack.push(size);
+        const ast_node::cp_value& cp_val = expression->cp_val;
+        if (cp_val.type == ast_node::INT_VALUE && generator::fits_into_32(cp_val.int_value)) {
+            if (this->debug) assembly << "\t;  O2: pushing integer constant\n";
 
-        const std::tuple<std::string, long> variable_address = this->variables.get_variable_address(expression->name);
-        const std::string reg = std::get<0>(variable_address);
-        const long reg_offset = std::get<1>(variable_address);
+            this->stack.push();
 
-        if (debug)
-            assembly << "\t;  Moving " << size << " bytes from [" << reg << " - " << reg_offset << "] to [rsp]\n";
+            assembly << "\tpush qword " << cp_val.int_value << "\n";
+        } else {
+            const unsigned int size = expression->r_type->size();
+            assembly << "\tsub rsp, " << size << "\n";
+            this->stack.push(size);
 
-        for (long offset = reg_size; offset <= (long)size; offset += reg_size) {
-            //  Extra indentation for debug mode.
-            if (this->debug) assembly << "\t";
-            assembly << "\tmov r10, [" << reg << " - " << reg_offset - size + offset << "]\n";
+            const std::tuple<std::string, long> variable_address = this->variables.get_variable_address(
+                    expression->name);
+            const std::string reg = std::get<0>(variable_address);
+            const long reg_offset = std::get<1>(variable_address);
 
-            if (this->debug) assembly << "\t";
-            assembly << "\tmov [rsp + " << size - offset << "], r10\n";
+            if (debug)
+                assembly << "\t;  Moving " << size << " bytes from [" << reg << " - " << reg_offset << "] to [rsp]\n";
+
+            for (long offset = reg_size; offset <= (long)size; offset += reg_size) {
+                //  Extra indentation for debug mode.
+                if (this->debug) assembly << "\t";
+                assembly << "\tmov r10, [" << reg << " - " << reg_offset - size + offset << "]\n";
+
+                if (this->debug) assembly << "\t";
+                assembly << "\tmov [rsp + " << size - offset << "], r10\n";
+            }
         }
 
         if (this->debug) assembly << "\t;  END generate_expr_variable\n";
