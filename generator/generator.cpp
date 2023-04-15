@@ -585,20 +585,28 @@ namespace generator {
         if (this->opt_level >= 1 && operand_type == resolved_type::resolved_type_type::INT_TYPE
             && expression->operator_type == ast_node::op_type::BINOP_TIMES) {
             const bool left_is_literal = expression->left_operand->type == ast_node::node_type::INTEGER_EXPR;
-            const long left_value = left_is_literal ? std::reinterpret_pointer_cast<ast_node::integer_expr_node>(
-                                                              expression->left_operand)
-                                                              ->value
-                                                    : 0;
+            const bool left_has_literal_val = expression->left_operand->cp_val.type == ast_node::INT_VALUE;
+            long left_value = 0;
+            if (left_is_literal) {
+                left_value
+                        = std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->left_operand)->value;
+            } else if (left_has_literal_val) {
+                left_value = expression->left_operand->cp_val.int_value;
+            }
             const long left_log = generator::log_2(left_value);
 
             const bool right_is_literal = expression->right_operand->type == ast_node::node_type::INTEGER_EXPR;
-            const long right_value = right_is_literal ? std::reinterpret_pointer_cast<ast_node::integer_expr_node>(
-                                                                expression->right_operand)
-                                                                ->value
-                                                      : 0;
+            const bool right_has_literal_val = expression->right_operand->cp_val.type == ast_node::INT_VALUE;
+            long right_value = 0;
+            if (right_is_literal) {
+                right_value
+                        = std::reinterpret_pointer_cast<ast_node::integer_expr_node>(expression->right_operand)->value;
+            } else if (right_has_literal_val) {
+                right_value = expression->right_operand->cp_val.int_value;
+            }
             const long right_log = generator::log_2(right_value);
 
-            if (left_is_literal && left_value == 1) {
+            if ((left_is_literal || left_has_literal_val) && left_value == 1) {
                 assembly << this->generate_expr(expression->right_operand);
 
                 if (this->debug) assembly << "\t;  END generate_expr_binop\n";
@@ -606,7 +614,7 @@ namespace generator {
                 return assembly.str();
             }
 
-            if (right_is_literal && right_value == 1) {
+            if ((right_is_literal || right_has_literal_val) && right_value == 1) {
                 assembly << this->generate_expr(expression->left_operand);
 
                 if (this->debug) assembly << "\t;  END generate_expr_binop\n";
@@ -614,7 +622,7 @@ namespace generator {
                 return assembly.str();
             }
 
-            if (left_is_literal && left_log > 0) {
+            if ((left_is_literal || left_has_literal_val) && left_log > 0) {
                 assembly << this->generate_expr(expression->right_operand) << "\tpop rax\n"
                          << "\tshl rax, " << left_log << "\n"
                          << "\tpush rax\n";
@@ -624,7 +632,7 @@ namespace generator {
                 return assembly.str();
             }
 
-            if (right_is_literal && right_log > 0) {
+            if ((right_is_literal || right_has_literal_val) && right_log > 0) {
                 assembly << this->generate_expr(expression->left_operand) << "\tpop rax\n"
                          << "\tshl rax, " << right_log << "\n"
                          << "\tpush rax\n";
