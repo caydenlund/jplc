@@ -500,9 +500,12 @@ namespace generator {
             const long offset = reg_size * index + item_size;
             const std::shared_ptr<ast_node::expr_node>& binding = std::get<1>(expression->binding_pairs[index]);
             const bool is_literal = this->opt_level >= 1 && binding->type == ast_node::node_type::INTEGER_EXPR;
+            const bool is_const = this->opt_level >= 2 && binding->cp_val.type == ast_node::INT_VALUE;
             if (is_literal) {
                 assembly << this->generate_assem_mul(
                         "rax", std::reinterpret_pointer_cast<ast_node::integer_expr_node>(binding)->value);
+            } else if (is_const) {
+                assembly << this->generate_assem_mul("rax", binding->cp_val.int_value);
             } else {
                 assembly << "\timul rax, [rsp + " << rank * reg_size + offset << "]\n";
             }
