@@ -272,15 +272,16 @@ namespace generator {
 
         if (this->debug) assembly << "\t;  Remove index variables\n";
         long total = 0;
+        const bool combine_adds = this->opt_level >= 1 && is_variable;
         for (long offset = 0; offset < rank; ++offset) {
             const long val = this->stack.pop();
-            if (this->opt_level >= 1) {
+            if (combine_adds) {
                 total += val;
             } else {
                 assembly << "\tadd rsp, " << val << "\n";
             }
         }
-        if (this->opt_level >= 1) { assembly << "\tadd rsp, " << total << "\n"; }
+        if (combine_adds) { assembly << "\tadd rsp, " << total << "\n"; }
 
         if (!is_local_variable) {
             assembly << "\tadd rsp, " << array_offset + reg_size;
