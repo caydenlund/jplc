@@ -7,9 +7,6 @@
  *
  */
 
-//  TODO (HW10): Remove the extraneous debugging output.
-//               See output including "<<(START|END) #: #>>", "[[#]]".
-
 #include <functional>
 #include <sstream>
 
@@ -254,10 +251,7 @@ namespace generator {
             const long offset = index * reg_size;
             const bool is_constant = this->opt_level >= 2 && (long)expression->array->cp_val.array_value.size() > index
                                   && expression->array->cp_val.array_value[index].type == ast_node::INT_VALUE;
-            if (this->debug)
-                assembly << "\t;  [[Opt level: " << this->opt_level << "]]\n"
-                         << "\t;  [[Array CP value size: " << expression->array->cp_val.array_value.size() << "]]\n"
-                         << "\t;  [[CP value type: " << expression->array->cp_val.type << "]]\n";
+
             if (is_constant) {
                 assembly << this->generate_assem_mul("rax", expression->array->cp_val.array_value[index].int_value);
             } else {
@@ -892,8 +886,6 @@ namespace generator {
 
         const call_signature::call_signature& function = (*this->function_signatures)[expression->name];
 
-        if (this->debug) assembly << "\t;  <<START 1: " << this->stack.size() << ">>\n";
-
         //  1.  If there's a struct return value, allocate space for it on the stack.
         const bool has_struct_return = function.ret_type->type == resolved_type::ARRAY_TYPE
                                     || (function.ret_type->type == resolved_type::TUPLE_TYPE
@@ -907,10 +899,6 @@ namespace generator {
             this->stack.push(function.ret_type->size());
         }
 
-        if (this->debug) assembly << "\t;  <<END 1: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 2: " << this->stack.size() << ">>\n";
-
         //  2.  Add padding so the final stack size, before the call, is a multiple of 16 bytes.
         this->stack.push(function.bytes_on_stack);
         const bool needs_alignment = this->stack.needs_alignment();
@@ -922,18 +910,11 @@ namespace generator {
             this->stack.push();
         }
 
-        if (this->debug) assembly << "\t;  <<END 2: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 3/4: " << this->stack.size() << ">>\n";
         //  3.  Compute every stack argument in reverse order (so that they end up on the stack in the normal order).
         //  4.  Compute every register argument in reverse order.
         for (const unsigned int& index : function.push_order) {
             assembly << generate_expr(expression->call_args[index]);
         }
-
-        if (this->debug) assembly << "\t;  <<END 3/4: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 5: " << this->stack.size() << ">>\n";
 
         //  5.  Pop all register arguments into their correct registers.
         for (const std::string& assem : function.pop_assem) {
@@ -941,35 +922,19 @@ namespace generator {
             this->stack.pop();
         }
 
-        if (this->debug) assembly << "\t;  <<END 5: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 6: " << this->stack.size() << ">>\n";
-
         //  6.  If there's a struct return value, load its address into RDI.
         if (has_struct_return) {
             assembly << "\tlea rdi, [rsp + " << function.bytes_on_stack + (needs_alignment ? reg_size : 0) << "]\n";
         }
 
-        if (this->debug) assembly << "\t;  <<END 6: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 7: " << this->stack.size() << ">>\n";
-
         //  7.  Execute the `call` instruction.
         assembly << "\tcall _" << expression->name << "\n";
-
-        if (this->debug) assembly << "\t;  <<END 7: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 8: " << this->stack.size() << ">>\n";
 
         //  8.  Drop every stack argument.
         for (const long arg : function.stack_args) {
             assembly << "\tadd rsp, " << arg << "\n";
             this->stack.pop();
         }
-
-        if (this->debug) assembly << "\t;  <<END 8: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 9: " << this->stack.size() << ">>\n";
 
         //  9.  Drop the padding, if any.
         if (needs_alignment) {
@@ -979,10 +944,6 @@ namespace generator {
 
             while (this->stack.pop() == 0) {}
         }
-
-        if (this->debug) assembly << "\t;  <<END 9: " << this->stack.size() << ">>\n";
-
-        if (this->debug) assembly << "\t;  <<START 10: " << this->stack.size() << ">>\n";
 
         //  10. If the return value is in a register, push it onto the stack.
         switch (function.ret_type->type) {
@@ -1000,9 +961,6 @@ namespace generator {
                 if (!has_struct_return) this->stack.push(0);
                 break;
         }
-
-
-        if (this->debug) assembly << "\t;  <<END 10: " << this->stack.size() << ">>\n";
 
         if (this->debug) assembly << "\t;  END generate_expr_call\n";
 
@@ -1653,7 +1611,6 @@ namespace generator {
             } else {
                 const std::shared_ptr<ast_node::variable_argument_node> var_argument
                         = std::reinterpret_pointer_cast<ast_node::variable_argument_node>(argument);
-                this->main_assembly << "\t;    [[" << this->rbp_offset << "]]\n";
                 this->variables.set_variable_address(var_argument->name, this->rbp_offset);
                 this->rbp_offset -= (long)r_type->size();
             }
@@ -1667,7 +1624,6 @@ namespace generator {
             const std::shared_ptr<variable_table>& parent_variable_table, bool debug, unsigned int opt_level)
         : generator(global_symbol_table, constants, function_signatures, parent_variable_table, debug, opt_level),
           rbp_offset(initial_rbp_offset) {
-        this->main_assembly << "\t;  [[" << initial_rbp_offset << "]]\n";
         this->main_assembly << function->name << ":\n_" << function->name << ":\n";
 
         const std::shared_ptr<name_info::function_info> func_info
@@ -1676,15 +1632,9 @@ namespace generator {
         const call_signature::call_signature call_sig(func_info->call_args, func_info->r_type);
         (*this->function_signatures)[function->name] = call_sig;
 
-        if (this->debug) this->main_assembly << "\t;  <<START 1: " << this->stack.size() << ">>\n";
-
         //  1. Start with the preamble:
         this->main_assembly << "\tpush rbp\n"
                             << "\tmov rbp, rsp\n";
-
-        if (this->debug) this->main_assembly << "\t;  <<END 1: " << this->stack.size() << ">>\n";
-
-        if (this->debug) this->main_assembly << "\t;  <<START 2: " << this->stack.size() << ">>\n";
 
         //  2. If the function returns a struct, push the address for the return value onto the stack.
         if ((call_sig.ret_type->type == resolved_type::ARRAY_TYPE
@@ -1695,10 +1645,6 @@ namespace generator {
             this->main_assembly << "\tpush rdi\n";
             this->stack.push();
         }
-
-        if (this->debug) this->main_assembly << "\t;  <<END 2: " << this->stack.size() << ">>\n";
-
-        if (this->debug) this->main_assembly << "\t;  <<START 3: " << this->stack.size() << ">>\n";
 
         //  3. Process each argument.
         for (unsigned int arg_index = 0; arg_index < function->bindings.size(); ++arg_index) {
@@ -1711,10 +1657,6 @@ namespace generator {
             }
         }
 
-        if (this->debug) this->main_assembly << "\t;  <<END 3: " << this->stack.size() << ">>\n";
-
-        if (this->debug) this->main_assembly << "\t;  <<START 4: " << this->stack.size() << ">>\n";
-
         //  4. Generate each statement.
         bool has_return = false;
         for (const std::shared_ptr<ast_node::stmt_node>& statement : function->statements) {
@@ -1722,18 +1664,12 @@ namespace generator {
             this->generate_stmt(statement);
         }
 
-        if (this->debug) this->main_assembly << "\t;  <<END 4: " << this->stack.size() << ">>\n";
-
-        if (this->debug) this->main_assembly << "\t;  <<START 5: " << this->stack.size() << ">>\n";
-
         //  5. Add the postamble, if no return statement was found.
         if (!has_return) {
             if (this->stack.size() > 0) this->main_assembly << "\tadd rsp, " << this->stack.size() << "\n";
             this->main_assembly << "\tpop rbp\n"
                                 << "\tret\n";
         }
-
-        if (this->debug) this->main_assembly << "\t;  <<END 5: " << this->stack.size() << ">>\n";
     }
 
     std::string fn_generator::assem() const { return this->main_assembly.str(); }
@@ -1895,10 +1831,6 @@ namespace generator {
 
         if (this->debug) this->main_assembly << "\t;  START generate_cmd_read\n";
 
-        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
-
-        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
-
         this->main_assembly << "\tsub rsp, " << image_size << "\n";
         this->stack.push(image_size);
 
@@ -1911,8 +1843,6 @@ namespace generator {
             this->main_assembly << "\n";
             this->stack.push();
         }
-
-        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
 
         this->main_assembly << "\tlea rsi, [rel " << (*this->constants)[command->file_name] << "]";
         if (this->debug) this->main_assembly << " ; " << command->file_name;
@@ -1935,12 +1865,8 @@ namespace generator {
         const std::shared_ptr<resolved_type::array_resolved_type> array_r_type
                 = std::make_shared<resolved_type::array_resolved_type>(pixel_type, 2);
 
-        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
-
         this->stack.pop();
         this->bind_argument(command->read_dest, array_r_type);
-
-        this->main_assembly << "\t;  [[" << this->stack.size() << "]]\n";
 
         if (this->debug) this->main_assembly << "\t;  END generate_cmd_read\n";
     }
