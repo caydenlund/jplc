@@ -13,6 +13,9 @@ namespace ast_node {
 
     cp_value::cp_value(cp_value_type type) : type(type), int_value(0) {}
 
-    cp_value::cp_value(long value) : type(INT_VALUE), int_value(value) {}
+    cp_value::cp_value(long int_value) : type(INT_VALUE), int_value(int_value) {}
+
+    cp_value::cp_value(const std::vector<cp_value>& array_value)
+        : type(ARRAY_VALUE), int_value(0), array_value(array_value) {}
 
 }  //  namespace ast_node
