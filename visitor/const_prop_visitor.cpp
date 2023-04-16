@@ -116,11 +116,7 @@ namespace visitor {
 
     std::shared_ptr<ast_node::ast_node>
     const_prop_visitor::handle_node_expr_variable(const std::shared_ptr<ast_node::variable_expr_node>& node) {
-        const ast_node::cp_value cp_val = this->context[node->name];
-
-        if (cp_val.type == ast_node::NULL_VALUE) return {};
-
-        node->cp_val = cp_val;
+        node->cp_val = this->context[node->name];
 
         return {};
     }

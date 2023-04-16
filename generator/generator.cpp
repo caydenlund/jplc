@@ -250,12 +250,23 @@ namespace generator {
                      << "\tadd rax, [rsp + 0]\n";
         }
 
-        for (long offset = reg_size; offset < array_offset; offset += reg_size) {
-            assembly << "\timul rax, [rsp + " << array_offset + offset + gap << "]\n"
-                     << "\tadd rax, [rsp + " << offset << "]\n";
+        for (long index = 1; index < rank; ++index) {
+            const long offset = index * reg_size;
+            const bool is_constant = this->opt_level >= 2 && (long)expression->array->cp_val.array_value.size() > index
+                                  && expression->array->cp_val.array_value[index].type == ast_node::INT_VALUE;
+            if (this->debug)
+                assembly << "\t;  [[Opt level: " << this->opt_level << "]]\n"
+                         << "\t;  [[Array CP value size: " << expression->array->cp_val.array_value.size() << "]]\n"
+                         << "\t;  [[CP value type: " << expression->array->cp_val.type << "]]\n";
+            if (is_constant) {
+                assembly << this->generate_assem_mul("rax", expression->array->cp_val.array_value[index].int_value);
+            } else {
+                assembly << "\timul rax, [rsp + " << array_offset + offset + gap << "]\n";
+            }
+            assembly << "\tadd rax, [rsp + " << offset << "]\n";
         }
 
-        assembly << this->generate_assem_mul("rax", expression->r_type->size()) << "\n";
+        assembly << this->generate_assem_mul("rax", expression->r_type->size());
 
         assembly << "\tadd rax, [rsp + " << array_offset * 2 + gap << "]\n";
 
