@@ -53,6 +53,24 @@ namespace visitor {
         std::shared_ptr<ast_node::ast_node> handle_node_stmt_let(const std::shared_ptr<ast_node::let_stmt_node>& node);
 
         /**
+         * @brief Handles the given array literal expression node.
+         *
+         * @param node The node to handle.
+         * @return A new node if a change was made; null otherwise.
+         */
+        std::shared_ptr<ast_node::ast_node>
+        handle_node_expr_array_literal(const std::shared_ptr<ast_node::array_literal_expr_node>& node);
+
+        /**
+         * @brief Handles the given array loop expression node.
+         *
+         * @param node The node to handle.
+         * @return A new node if a change was made; null otherwise.
+         */
+        std::shared_ptr<ast_node::ast_node>
+        handle_node_expr_array_loop(const std::shared_ptr<ast_node::array_loop_expr_node>& node);
+
+        /**
          * @brief Handles the given integer expression node.
          *
          * @param node The node to handle.
