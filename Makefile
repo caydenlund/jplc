@@ -1,7 +1,7 @@
 TEST=test.jpl
 
 CXX=clang++
-CXXFLAGS=-O3 -std=c++17 -Werror -Wall -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -I.
+CXXFLAGS=-g -Og -std=c++17 -Werror -Wall -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -I.
 
 OBJS=main.o ast_node.o ast_node.cp_value.o call_signature.o file.o generator.o lexer.o parser.o resolved_type.o stack_info.o symbol_table.o type_checker.o visitor.o visitor.const_prop_visitor.o visitor.tensor_contraction_visitor.o
 

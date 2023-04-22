@@ -916,6 +916,12 @@ namespace ast_node {
      */
     struct array_loop_expr_node : public expr_node {
         /**
+         * @brief The type of an edge between two variables, for tensor contraction.
+         *
+         */
+        using tc_edge_t = std::pair<std::string, std::string>;
+
+        /**
          * @brief Defines a single `<variable> : <expr>` ordered pair.
          *
          */
@@ -932,6 +938,18 @@ namespace ast_node {
          *
          */
         std::shared_ptr<expr_node> item_expr;
+
+        /**
+         * @brief The set of tensor contraction variables.
+         *
+         */
+        std::vector<std::string> tc_nodes;
+
+        /**
+         * @brief The set of tensor contraction edges.
+         *
+         */
+        std::vector<tc_edge_t> tc_edges;
 
         /**
          * @brief Class constructor.

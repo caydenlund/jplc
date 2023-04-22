@@ -368,9 +368,28 @@ namespace generator {
         constexpr long reg_size = 8;
         std::stringstream assembly;
 
-        if (this->debug)
+        if (this->debug) {
             assembly << "\t;  START generate_expr_array_loop\n"
                      << "\t;  Allocating 8 bytes for the array pointer\n";
+
+            if (expression->is_tc) {
+                const unsigned long num_nodes = expression->tc_nodes.size();
+                assembly << "\t;  TC node detected\n"
+                         << "\t;    * " << num_nodes << " variable" << ((num_nodes == 1) ? "" : "s")
+                         << ((num_nodes > 0) ? ":" : "") << "\n";
+
+                for (const std::string& tc_node : expression->tc_nodes) {
+                    assembly << "\t;        - " << tc_node << "\n";
+                }
+
+                const unsigned int num_edges = expression->tc_edges.size();
+                assembly << "\t;    * " << num_edges << " edge" << ((num_edges == 1) ? "" : "s")
+                         << ((num_edges > 0) ? ":" : "") << "\n";
+                for (const ast_node::array_loop_expr_node::tc_edge_t& edge : expression->tc_edges) {
+                    assembly << "\t;        - " << edge.first << " -> " << edge.second << "\n";
+                }
+            }
+        }
 
         assembly << "\tsub rsp, 8\n";
         this->stack.push();

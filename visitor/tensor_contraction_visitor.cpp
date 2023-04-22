@@ -42,11 +42,116 @@ namespace visitor {
         return {};
     }
 
+    std::vector<ast_node::array_loop_expr_node::tc_edge_t>
+    tensor_contraction_visitor::get_edges(const std::shared_ptr<ast_node::expr_node>& node) {
+        using edge_t = ast_node::array_loop_expr_node::tc_edge_t;
+
+        std::vector<edge_t> edges;
+
+        switch (node->type) {
+            case ast_node::ARRAY_INDEX_EXPR: {
+                const std::shared_ptr<ast_node::array_index_expr_node> array_index_expr
+                        = std::reinterpret_pointer_cast<ast_node::array_index_expr_node>(node);
+
+                const unsigned long num_variables = array_index_expr->params.size();
+                for (unsigned long left = 0; left < num_variables - 1; ++left) {
+                    const std::shared_ptr<ast_node::expr_node> left_param = array_index_expr->params[left];
+
+                    if (left_param->type == ast_node::VARIABLE_EXPR) {
+                        const std::shared_ptr<ast_node::variable_expr_node> left_variable
+                                = std::reinterpret_pointer_cast<ast_node::variable_expr_node>(left_param);
+
+                        for (unsigned long right = left + 1; right < num_variables; ++right) {
+                            const std::shared_ptr<ast_node::expr_node> right_param = array_index_expr->params[right];
+
+                            if (right_param->type == ast_node::VARIABLE_EXPR) {
+                                const std::shared_ptr<ast_node::variable_expr_node> right_variable
+                                        = std::reinterpret_pointer_cast<ast_node::variable_expr_node>(right_param);
+
+                                edges.emplace_back(left_variable->name, right_variable->name);
+                            }
+                        }
+                    }
+                }
+            } break;
+            case ast_node::ARRAY_LOOP_EXPR: {
+                const std::shared_ptr<ast_node::array_loop_expr_node> array_loop_expr
+                        = std::reinterpret_pointer_cast<ast_node::array_loop_expr_node>(node);
+
+                const unsigned long num_variables = array_loop_expr->binding_pairs.size();
+                for (unsigned long left = 0; left < num_variables - 1; ++left) {
+                    for (unsigned long right = left + 1; right < num_variables; ++right) {
+                        edges.emplace_back(std::get<0>(array_loop_expr->binding_pairs[left]).text,
+                                           std::get<0>(array_loop_expr->binding_pairs[right]).text);
+                    }
+                }
+
+                const std::vector<edge_t> sum_edges = tensor_contraction_visitor::get_edges(array_loop_expr->item_expr);
+                edges.insert(edges.end(), sum_edges.begin(), sum_edges.end());
+            } break;
+            case ast_node::BINOP_EXPR: {
+                const std::shared_ptr<ast_node::binop_expr_node> binop_expr
+                        = std::reinterpret_pointer_cast<ast_node::binop_expr_node>(node);
+
+                const std::vector<edge_t> left_edges = tensor_contraction_visitor::get_edges(binop_expr->left_operand);
+                edges.insert(edges.end(), left_edges.begin(), left_edges.end());
+
+                const std::vector<edge_t> right_edges = tensor_contraction_visitor::get_edges(
+                        binop_expr->right_operand);
+                edges.insert(edges.end(), right_edges.begin(), right_edges.end());
+            } break;
+            case ast_node::SUM_LOOP_EXPR: {
+                const std::shared_ptr<ast_node::sum_loop_expr_node> sum_loop_expr
+                        = std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(node);
+
+                if (sum_loop_expr->r_type->type == resolved_type::resolved_type_type::FLOAT_TYPE) {
+                    const unsigned long num_variables = sum_loop_expr->binding_pairs.size();
+                    for (unsigned long left = 0; left < num_variables - 1; ++left) {
+                        for (unsigned long right = left + 1; right < num_variables; ++right) {
+                            edges.emplace_back(std::get<0>(sum_loop_expr->binding_pairs[left]).text,
+                                               std::get<0>(sum_loop_expr->binding_pairs[right]).text);
+                        }
+                    }
+                }
+
+                const std::vector<edge_t> item_edges = tensor_contraction_visitor::get_edges(sum_loop_expr->sum_expr);
+                edges.insert(edges.end(), item_edges.begin(), item_edges.end());
+            } break;
+            default:
+                break;
+        }
+
+        return edges;
+    }
+
     std::shared_ptr<ast_node::ast_node>
     tensor_contraction_visitor::handle_node_expr_array_loop(  //  NOLINT(readability-convert-member-functions-to-static)
             const std::shared_ptr<ast_node::array_loop_expr_node>& node) {
         //  The expression to evaluate must be a `tc_sum`.
-        node->is_tc = node->item_expr->is_tc_sum;
+        const bool is_tc = node->item_expr->is_tc_sum;
+
+        using binding_t = ast_node::array_loop_expr_node::binding_pair_t;
+        using edge_t = ast_node::array_loop_expr_node::tc_edge_t;
+
+        node->is_tc = is_tc;
+
+        if (is_tc) {
+            //  Add all array variables.
+            for (const binding_t& binding : node->binding_pairs) {
+                node->tc_nodes.emplace_back(std::get<0>(binding).text);
+            }
+
+            //  Add all sum variables.
+            const std::shared_ptr<ast_node::sum_loop_expr_node> sum_node
+                    = std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(node->item_expr);
+            for (const binding_t& binding : sum_node->binding_pairs) {
+                node->tc_nodes.emplace_back(std::get<0>(binding).text);
+            }
+
+            //  Add all edges.
+            const std::vector<edge_t> edges = tensor_contraction_visitor::get_edges(node);
+            node->tc_edges.insert(node->tc_edges.end(), edges.begin(), edges.end());
+        }
 
         return {};
     }
