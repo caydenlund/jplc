@@ -16,6 +16,7 @@
 #include "token/token.hpp"
 #include "type_checker/type_checker.hpp"
 #include "visitor/const_prop_visitor.hpp"
+#include "visitor/tensor_contraction_visitor.hpp"
 
 /**
  * @brief Only lexes the input file.
@@ -88,6 +89,10 @@ int lex_parse_check_and_generate_only(const std::string& filename, bool debug, u
     if (opt_level >= 2) {
         visitor::const_prop_visitor const_prop;
         for (const parser::node_ptr_t& node : nodes) { const_prop.visit_node(node); }
+    }
+    if (opt_level >= 3) {
+        visitor::tensor_contraction_visitor tensor_contraction;
+        for (const parser::node_ptr_t& node : nodes) { tensor_contraction.visit_node(node); }
     }
     std::cout << generator::generate(std::make_shared<symbol_table::symbol_table>(global_symbol_table), nodes, debug,
                                      opt_level);

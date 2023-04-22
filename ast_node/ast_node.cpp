@@ -45,7 +45,8 @@ namespace ast_node {
         return "";
     }
 
-    expr_node::expr_node(node_type type) : ast_node(type) {}
+    expr_node::expr_node(node_type type)
+        : ast_node(type), is_tc(false), is_tc_sum(false), is_tc_body(false), is_tc_primitive(false) {}
 
     std::string expr_node::s_expression() const {
         //  Unused; overridden.

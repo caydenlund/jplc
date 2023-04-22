@@ -3,7 +3,7 @@ TEST=test.jpl
 CXX=clang++
 CXXFLAGS=-O3 -std=c++17 -Werror -Wall -fsanitize=address,undefined -fno-sanitize-recover=address,undefined -I.
 
-OBJS=main.o ast_node.o ast_node.cp_value.o call_signature.o file.o generator.o lexer.o parser.o resolved_type.o stack_info.o symbol_table.o type_checker.o visitor.o visitor.const_prop_visitor.o
+OBJS=main.o ast_node.o ast_node.cp_value.o call_signature.o file.o generator.o lexer.o parser.o resolved_type.o stack_info.o symbol_table.o type_checker.o visitor.o visitor.const_prop_visitor.o visitor.tensor_contraction_visitor.o
 
 all: run
 
@@ -53,6 +53,9 @@ visitor.o: visitor/visitor.cpp
 
 visitor.const_prop_visitor.o: visitor/const_prop_visitor.cpp
 	$(CXX) $(CXXFLAGS) -c visitor/const_prop_visitor.cpp -o visitor.const_prop_visitor.o
+
+visitor.tensor_contraction_visitor.o: visitor/tensor_contraction_visitor.cpp
+	$(CXX) $(CXXFLAGS) -c visitor/tensor_contraction_visitor.cpp -o visitor.tensor_contraction_visitor.o
 
 run: jplc
 	./jplc $(TEST) $(FLAGS)

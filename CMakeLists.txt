@@ -23,4 +23,5 @@ add_executable(jplc main.cpp
         symbol_table/symbol_table.cpp
         type_checker/type_checker.cpp
         visitor/const_prop_visitor.cpp
+        visitor/tensor_contraction_visitor.cpp
         visitor/visitor.cpp)

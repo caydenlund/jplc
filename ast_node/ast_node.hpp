@@ -259,6 +259,30 @@ namespace ast_node {
         mutable cp_value cp_val;
 
         /**
+         * @brief Whether this expression node is a tensor contraction.
+         *
+         */
+        bool is_tc;
+
+        /**
+         * @brief Whether this expression node is a `tc_sum`.
+         *
+         */
+        bool is_tc_sum;
+
+        /**
+         * @brief Whether this expression node is a `tc_body`.
+         *
+         */
+        bool is_tc_body;
+
+        /**
+         * @brief Whether this expression node is a `tc_primitive`.
+         *
+         */
+        bool is_tc_primitive;
+
+        /**
          * @brief The resolved type of this expression.
          *
          */

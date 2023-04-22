@@ -22,9 +22,9 @@ namespace visitor {
     class const_prop_visitor : public visitor {
     public:
         /**
-         * @brief Visits the given expression node.
+         * @brief Visits the given AST node.
          *
-         * @param node The expression node to handle.
+         * @param node The AST node to handle.
          * @return A new node if a change was made; null otherwise.
          */
         std::shared_ptr<ast_node::ast_node> handle_node(const std::shared_ptr<ast_node::ast_node>& node) override;
