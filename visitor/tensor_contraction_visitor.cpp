@@ -6,7 +6,8 @@
  *
  */
 
-#include <algorithm>
+#include <functional>
+#include <unordered_set>
 
 #include "tensor_contraction_visitor.hpp"
 
@@ -136,6 +137,50 @@ namespace visitor {
         return edges;
     }
 
+    void tensor_contraction_visitor::sort_node(const std::shared_ptr<ast_node::array_loop_expr_node>& node) {
+        using edge_t = ast_node::tc_edge;
+
+        std::vector<std::string> nodes {node->tc_nodes.begin(), node->tc_nodes.end()};
+        std::vector<std::string> sorted;
+
+        std::vector<edge_t> edges {node->tc_edges.begin(), node->tc_edges.end()};
+
+        const std::function<bool(const std::string&)> is_dependent = [&edges](const std::string& var_name) {
+            for (const edge_t& edge : edges) {  //  NOLINT(readability-use-anyofallof)
+                if (edge.to_node == var_name) { return true; }
+            }
+            return false;
+        };
+
+        while (!nodes.empty()) {
+            std::string from_node;
+            for (const std::string& potent_from_node : nodes) {
+                if (!is_dependent(potent_from_node)) {
+                    from_node = potent_from_node;
+                    break;
+                }
+            }
+            if (from_node.empty()) throw std::runtime_error("TC graph is not a DAG");
+
+            while (true) {
+                auto edge = edges.begin();
+                while (edge != edges.end()) {
+                    if ((*edge).from_node == from_node) { break; }
+                    edge++;
+                }
+                if (edge == edges.end()) break;
+
+                edges.erase(edge, edge + 1);
+            }
+
+            nodes.erase(std::find(nodes.begin(), nodes.end(), from_node));
+
+            sorted.emplace_back(from_node);
+        }
+
+        node->tc_nodes = sorted;
+    }
+
     std::shared_ptr<ast_node::ast_node>
     tensor_contraction_visitor::handle_node_expr_array_loop(  //  NOLINT(readability-convert-member-functions-to-static)
             const std::shared_ptr<ast_node::array_loop_expr_node>& node) {
@@ -163,6 +208,9 @@ namespace visitor {
             //  Add all edges.
             const std::vector<edge_t> edges = tensor_contraction_visitor::get_edges(node, node->tc_nodes);
             node->tc_edges = {edges.begin(), edges.end()};
+
+            //  Topologically sort the nodes.
+            tensor_contraction_visitor::sort_node(node);
         }
 
         return {};

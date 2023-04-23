@@ -1,6 +1,6 @@
 /**
  * @file generator.hpp
- * @package Assignments 9-10
+ * @package generator
  * @author Cayden Lund (u1182408)
  * @brief Defines the assembly `generator` class, and associated subtypes.
  *

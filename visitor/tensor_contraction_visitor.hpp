@@ -28,7 +28,7 @@ namespace visitor {
 
     private:
         /**
-         * @brief Gets all variable edges from the given AST node.
+         * @brief Gets all variable edges from the given TC node.
          *
          * @param node The AST node from which to get the variable edges.
          * @param tc_nodes A reference to a vector of variables for array indexing.
@@ -36,6 +36,13 @@ namespace visitor {
          */
         static std::vector<ast_node::tc_edge>
         get_edges(const std::shared_ptr<ast_node::expr_node>& node, std::vector<std::string>& tc_nodes);
+
+        /**
+         * @brief Topologically sorts the variables of the given TC node.
+         *
+         * @param node The TC node to be sorted.
+         */
+        static void sort_node(const std::shared_ptr<ast_node::array_loop_expr_node>& node);
 
         /**
          * @brief Visits the given array loop expression node.

@@ -10,7 +10,7 @@
 
 namespace ast_node {
     tc_edge::tc_edge(const std::string& from_node, const std::string& to_node)
-        : from_node(from_node), to_node(from_node), hash(from_node + " -> " + to_node) {}
+        : from_node(from_node), to_node(to_node), hash(from_node + " -> " + to_node) {}
 
     bool tc_edge::operator==(const tc_edge& right_node) const { return hash == right_node.hash; }
 }  //  namespace ast_node

@@ -1,6 +1,6 @@
 /**
  * @file generator.cpp
- * @package Assignments 9-10
+ * @package generator
  * @author Cayden Lund (u1182408)
  * @brief Implements the assembly `generator` class, and associated subtypes.
  * @details See the header file for documentation.
@@ -369,27 +369,21 @@ namespace generator {
         std::stringstream assembly;
 
         if (this->debug) {
-            assembly << "\t;  START generate_expr_array_loop\n"
-                     << "\t;  Allocating 8 bytes for the array pointer\n";
+            assembly << "\t;  START generate_expr_array_loop\n";
 
             if (expression->is_tc) {
                 const unsigned long num_nodes = expression->tc_nodes.size();
-                assembly << "\t;  Tensor contraction node\n"
+                assembly << "\t;  [Tensor contraction node]\n"
                          << "\t;    * " << num_nodes << " variable" << ((num_nodes == 1) ? "" : "s")
-                         << ((num_nodes > 0) ? ":" : "") << "\n";
+                         << ((num_nodes > 0) ? "(topological order):" : "") << "\n";
 
                 for (const std::string& tc_node : expression->tc_nodes) {
                     assembly << "\t;        - " << tc_node << "\n";
                 }
-
-                const unsigned int num_edges = expression->tc_edges.size();
-                assembly << "\t;    * " << num_edges << " edge" << ((num_edges == 1) ? "" : "s")
-                         << ((num_edges > 0) ? ":" : "") << "\n";
-                for (const ast_node::tc_edge& edge : expression->tc_edges) {
-                    assembly << "\t;        - " << edge.hash << "\n";
-                }
             }
         }
+
+        if (this->debug) assembly << "\t;  Allocating 8 bytes for the array pointer\n";
 
         assembly << "\tsub rsp, 8\n";
         this->stack.push();
