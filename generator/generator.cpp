@@ -374,7 +374,7 @@ namespace generator {
 
             if (expression->is_tc) {
                 const unsigned long num_nodes = expression->tc_nodes.size();
-                assembly << "\t;  TC node detected\n"
+                assembly << "\t;  Tensor contraction node\n"
                          << "\t;    * " << num_nodes << " variable" << ((num_nodes == 1) ? "" : "s")
                          << ((num_nodes > 0) ? ":" : "") << "\n";
 
@@ -385,8 +385,8 @@ namespace generator {
                 const unsigned int num_edges = expression->tc_edges.size();
                 assembly << "\t;    * " << num_edges << " edge" << ((num_edges == 1) ? "" : "s")
                          << ((num_edges > 0) ? ":" : "") << "\n";
-                for (const ast_node::array_loop_expr_node::tc_edge_t& edge : expression->tc_edges) {
-                    assembly << "\t;        - " << edge.first << " -> " << edge.second << "\n";
+                for (const ast_node::tc_edge& edge : expression->tc_edges) {
+                    assembly << "\t;        - " << edge.hash << "\n";
                 }
             }
         }

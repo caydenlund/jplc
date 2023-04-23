@@ -6,6 +6,8 @@
  *
  */
 
+#include <algorithm>
+
 #include "tensor_contraction_visitor.hpp"
 
 namespace visitor {
@@ -42,9 +44,10 @@ namespace visitor {
         return {};
     }
 
-    std::vector<ast_node::array_loop_expr_node::tc_edge_t>
-    tensor_contraction_visitor::get_edges(const std::shared_ptr<ast_node::expr_node>& node) {
-        using edge_t = ast_node::array_loop_expr_node::tc_edge_t;
+    std::vector<ast_node::tc_edge>
+    tensor_contraction_visitor::get_edges(const std::shared_ptr<ast_node::expr_node>& node,
+                                          std::vector<std::string>& tc_nodes) {
+        using edge_t = ast_node::tc_edge;
 
         std::vector<edge_t> edges;
 
@@ -61,12 +64,18 @@ namespace visitor {
                         const std::shared_ptr<ast_node::variable_expr_node> left_variable
                                 = std::reinterpret_pointer_cast<ast_node::variable_expr_node>(left_param);
 
+                        //  The variable must be a TC node.
+                        if (std::count(tc_nodes.begin(), tc_nodes.end(), left_variable->name) == 0) break;
+
                         for (unsigned long right = left + 1; right < num_variables; ++right) {
                             const std::shared_ptr<ast_node::expr_node> right_param = array_index_expr->params[right];
 
                             if (right_param->type == ast_node::VARIABLE_EXPR) {
                                 const std::shared_ptr<ast_node::variable_expr_node> right_variable
                                         = std::reinterpret_pointer_cast<ast_node::variable_expr_node>(right_param);
+
+                                //  The variable must be a TC node.
+                                if (std::count(tc_nodes.begin(), tc_nodes.end(), right_variable->name) == 0) break;
 
                                 edges.emplace_back(left_variable->name, right_variable->name);
                             }
@@ -86,18 +95,20 @@ namespace visitor {
                     }
                 }
 
-                const std::vector<edge_t> sum_edges = tensor_contraction_visitor::get_edges(array_loop_expr->item_expr);
+                const std::vector<edge_t> sum_edges = tensor_contraction_visitor::get_edges(array_loop_expr->item_expr,
+                                                                                            tc_nodes);
                 edges.insert(edges.end(), sum_edges.begin(), sum_edges.end());
             } break;
             case ast_node::BINOP_EXPR: {
                 const std::shared_ptr<ast_node::binop_expr_node> binop_expr
                         = std::reinterpret_pointer_cast<ast_node::binop_expr_node>(node);
 
-                const std::vector<edge_t> left_edges = tensor_contraction_visitor::get_edges(binop_expr->left_operand);
+                const std::vector<edge_t> left_edges = tensor_contraction_visitor::get_edges(binop_expr->left_operand,
+                                                                                             tc_nodes);
                 edges.insert(edges.end(), left_edges.begin(), left_edges.end());
 
-                const std::vector<edge_t> right_edges = tensor_contraction_visitor::get_edges(
-                        binop_expr->right_operand);
+                const std::vector<edge_t> right_edges = tensor_contraction_visitor::get_edges(binop_expr->right_operand,
+                                                                                              tc_nodes);
                 edges.insert(edges.end(), right_edges.begin(), right_edges.end());
             } break;
             case ast_node::SUM_LOOP_EXPR: {
@@ -114,7 +125,8 @@ namespace visitor {
                     }
                 }
 
-                const std::vector<edge_t> item_edges = tensor_contraction_visitor::get_edges(sum_loop_expr->sum_expr);
+                const std::vector<edge_t> item_edges = tensor_contraction_visitor::get_edges(sum_loop_expr->sum_expr,
+                                                                                             tc_nodes);
                 edges.insert(edges.end(), item_edges.begin(), item_edges.end());
             } break;
             default:
@@ -131,7 +143,7 @@ namespace visitor {
         const bool is_tc = node->item_expr->is_tc_sum;
 
         using binding_t = ast_node::array_loop_expr_node::binding_pair_t;
-        using edge_t = ast_node::array_loop_expr_node::tc_edge_t;
+        using edge_t = ast_node::tc_edge;
 
         node->is_tc = is_tc;
 
@@ -149,8 +161,8 @@ namespace visitor {
             }
 
             //  Add all edges.
-            const std::vector<edge_t> edges = tensor_contraction_visitor::get_edges(node);
-            node->tc_edges.insert(node->tc_edges.end(), edges.begin(), edges.end());
+            const std::vector<edge_t> edges = tensor_contraction_visitor::get_edges(node, node->tc_nodes);
+            node->tc_edges = {edges.begin(), edges.end()};
         }
 
         return {};

@@ -31,10 +31,11 @@ namespace visitor {
          * @brief Gets all variable edges from the given AST node.
          *
          * @param node The AST node from which to get the variable edges.
+         * @param tc_nodes A reference to a vector of variables for array indexing.
          * @return All variables from the given AST node.
          */
-        static std::vector<ast_node::array_loop_expr_node::tc_edge_t>
-        get_edges(const std::shared_ptr<ast_node::expr_node>& node);
+        static std::vector<ast_node::tc_edge>
+        get_edges(const std::shared_ptr<ast_node::expr_node>& node, std::vector<std::string>& tc_nodes);
 
         /**
          * @brief Visits the given array loop expression node.

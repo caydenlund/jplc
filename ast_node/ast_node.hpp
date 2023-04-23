@@ -13,9 +13,12 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 #include "cp_value.hpp"
+#include "tc_edge.hpp"
+
 #include "resolved_type/resolved_type.hpp"
 #include "token/token.hpp"
 
@@ -916,12 +919,6 @@ namespace ast_node {
      */
     struct array_loop_expr_node : public expr_node {
         /**
-         * @brief The type of an edge between two variables, for tensor contraction.
-         *
-         */
-        using tc_edge_t = std::pair<std::string, std::string>;
-
-        /**
          * @brief Defines a single `<variable> : <expr>` ordered pair.
          *
          */
@@ -949,7 +946,7 @@ namespace ast_node {
          * @brief The set of tensor contraction edges.
          *
          */
-        std::vector<tc_edge_t> tc_edges;
+        std::unordered_set<tc_edge, std::hash<tc_edge>> tc_edges;
 
         /**
          * @brief Class constructor.
