@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <sstream>
+#include <unordered_map>
 
 #include "generator.hpp"
 
@@ -107,6 +108,314 @@ namespace generator {
         } else {
             assembly << "\timul " << reg << ", " << value << "\n";
         }
+
+        return assembly.str();
+    }
+
+    std::string
+    generator::generate_tensor_contraction(const std::shared_ptr<ast_node::array_loop_expr_node>& array_loop) {
+        std::stringstream assembly;
+        const std::shared_ptr<ast_node::sum_loop_expr_node> sum_loop
+                = std::reinterpret_pointer_cast<ast_node::sum_loop_expr_node>(array_loop->item_expr);
+        const long num_array_bindings = (long)array_loop->binding_pairs.size();
+        const long num_sum_bindings = (long)sum_loop->binding_pairs.size();
+        const long total_bindings = num_array_bindings + num_sum_bindings;
+        const long num_nodes = (long)array_loop->tc_nodes.size();
+        constexpr long reg_size = 8;
+
+        std::unordered_map<std::string, long> node_to_address;
+
+        for (const std::string& tc_node : array_loop->tc_nodes) {
+            for (long index = 0; index < (long)sum_loop->binding_pairs.size(); ++index) {
+                if (std::get<0>(sum_loop->binding_pairs[index]).text == tc_node) {
+                    node_to_address[tc_node] = reg_size * index;
+                }
+            }
+            for (long index = 0; index < (long)array_loop->binding_pairs.size(); ++index) {
+                if (std::get<0>(array_loop->binding_pairs[index]).text == tc_node) {
+                    node_to_address[tc_node] = reg_size * (index + num_sum_bindings);
+                }
+            }
+        }
+
+        //  Print the variables in topological order, if in debug mode:
+        if (this->debug) {
+            assembly << "\t;  BEGIN generate_tensor_contraction\n"
+                     << "\t;    " << num_nodes << " variable" << ((num_nodes == 1) ? "" : "s")
+                     << ((num_nodes > 0) ? ":" : "") << "\n";
+
+            for (const std::string& tc_node : array_loop->tc_nodes) assembly << "\t;      - " << tc_node << "\n";
+        }
+
+        //  1: Allocate 8 bytes for the array pointer.
+        //  ------------------------------------------
+
+        if (this->debug) assembly << "\t;  Allocating 8 bytes for the array pointer\n";
+
+        assembly << "\tsub rsp, 8\n";
+        this->stack.push();
+
+        //  2: Compute each loop bound and push onto the stack.
+        //  ---------------------------------------------------
+
+        const auto compute_bounds =
+                [&assembly, this](const std::vector<ast_node::array_loop_expr_node::binding_pair_t>& bindings) {
+                    for (long index = (long)bindings.size() - 1; index >= 0; --index) {
+                        const std::tuple<token::token, std::shared_ptr<ast_node::expr_node>>& pair = bindings[index];
+
+                        if (this->debug) assembly << "\t;  Bound: " << std::get<0>(pair).text << "\n";
+
+                        assembly << this->generate_expr(std::get<1>(pair));
+
+                        const std::string jump = this->constants->next_jump();
+
+                        assembly << "\tmov rax, [rsp]\n"
+                                 << "\tcmp rax, 0\n"
+                                 << "\tjg " << jump << "\n";
+
+                        const bool needs_alignment = this->stack.needs_alignment();
+                        if (needs_alignment) {
+                            assembly << "\tsub rsp, 8";
+                            if (this->debug) assembly << " ; Align stack";
+                            assembly << "\n";
+                            this->stack.push();
+                        }
+
+                        assembly << "\tlea rdi, [rel " << (*this->constants)[{"non-positive loop bound"}] << "]";
+                        if (this->debug) assembly << " ; non-positive loop bound";
+                        assembly << "\n"
+                                 << "\tcall _fail_assertion\n";
+
+                        if (needs_alignment) {
+                            assembly << "\tadd rsp, 8";
+                            if (this->debug) assembly << " ; Remove alignment";
+                            assembly << "\n";
+                            this->stack.pop();
+                        }
+
+                        assembly << jump << ":\n";
+                    }
+                };
+
+        if (this->debug) assembly << "\t;  Compute all bounds:\n";
+        if (this->debug) assembly << "\t;  Array bounds:\n";
+
+        compute_bounds(array_loop->binding_pairs);
+
+        if (this->debug) assembly << "\t;  Sum bounds:\n";
+        compute_bounds(sum_loop->binding_pairs);
+
+        //  3: Multiply all the array bounds and call `jpl_alloc`.
+        //  ------------------------------------------------------
+
+        if (this->debug) assembly << "\t;  Computing total heap size to allocate\n";
+
+        assembly << "\tmov rdi, " << reg_size;
+        if (this->debug) assembly << " ; Size of one element";
+        assembly << "\n";
+
+        for (long index = 0; index < num_array_bindings; ++index) {
+            const long offset = reg_size * (num_sum_bindings + index);
+
+            assembly << "\timul rdi, [rsp + " << offset << "]";
+            if (this->debug) assembly << "; Multiply by one dimension";
+            assembly << "\n";
+
+            const std::string next_jump = this->constants->next_jump();
+            assembly << "\tjno " << next_jump << "\n";
+
+            const bool needs_alignment = this->stack.needs_alignment();
+            if (needs_alignment) {
+                assembly << "\tsub rsp, 8";
+                if (this->debug) assembly << " ; Align stack";
+                assembly << "\n";
+                this->stack.push();
+            }
+
+            assembly << "\tlea rdi, [rel " << (*this->constants)[{"overflow computing array size"}] << "]";
+            if (this->debug) assembly << " ; overflow computing array size";
+            assembly << "\n"
+                     << "\tcall _fail_assertion\n";
+
+            if (needs_alignment) {
+                assembly << "\tadd rsp, 8";
+                if (this->debug) assembly << " ; Remove alignment";
+                assembly << "\n";
+                this->stack.pop();
+            }
+
+            assembly << next_jump << ":\n";
+        }
+
+        const bool needs_alignment = this->stack.needs_alignment();
+        if (needs_alignment) {
+            assembly << "\tsub rsp, 8";
+            if (this->debug) assembly << " ; Align stack";
+            assembly << "\n";
+            this->stack.push();
+        }
+
+        assembly << "\tcall _jpl_alloc\n";
+
+        if (needs_alignment) {
+            assembly << "\tadd rsp, 8";
+            if (this->debug) assembly << " ; Remove alignment";
+            assembly << "\n";
+            this->stack.pop();
+        }
+
+        //  4: Save the allocated pointer to the stack in the right place.
+        //  --------------------------------------------------------------
+
+        assembly << "\tmov [rsp + " << reg_size * total_bindings << "], rax";
+        if (this->debug) assembly << " ; Move array pointer to pre-allocated space";
+        assembly << "\n";
+
+        //  5: Push a `0` onto the stack for each array/sum variable.
+        //  ---------------------------------------------------------
+
+        const auto initialize_vars =
+                [&assembly, this](const std::vector<ast_node::array_loop_expr_node::binding_pair_t>& bindings) {
+                    for (long index = (long)(bindings.size() - 1); index >= 0; --index) {
+                        const std::string& name = std::get<0>(bindings[index]).text;
+                        if (this->debug) assembly << "\t;  Initialize " << name << " to 0\n";
+
+                        assembly << "\tmov rax, 0\n"
+                                 << "\tpush rax\n";
+
+                        this->stack.push();
+                        this->variables.set_variable_address(name, this->stack.size());
+                    }
+                };
+
+        initialize_vars(array_loop->binding_pairs);
+        initialize_vars(sum_loop->binding_pairs);
+
+        //  6: Begin the loop.
+        //  ------------------
+
+        const std::string body_start = this->constants->next_jump();
+
+        assembly << body_start << ":";
+        if (this->debug) assembly << " ; Begin loop body";
+        assembly << "\n";
+
+        //  7: Compute the body of the sum loop.
+        //  ------------------------------------
+
+        if (this->debug) assembly << "\t;  Compute sum loop body\n";
+
+        assembly << this->generate_expr(sum_loop->sum_expr);
+
+        //  8: Compute pointer into the array using the array indices.
+        //  ----------------------------------------------------------
+
+        if (this->debug) assembly << "\t;  Compute pointer into the array\n";
+
+        const long var_start = reg_size * (num_sum_bindings + 1);
+        const long bound_start = reg_size * (total_bindings + num_sum_bindings + 1);
+        assembly << "\tmov rax, [rsp + " << var_start << "]\n";
+
+        for (long index = 1; index < num_array_bindings; ++index) {
+            const long offset = reg_size * index;
+            const std::shared_ptr<ast_node::expr_node>& binding = std::get<1>(array_loop->binding_pairs[index]);
+            if (binding->cp_val.type == ast_node::INT_VALUE) {
+                assembly << this->generate_assem_mul("rax", binding->cp_val.int_value);
+            } else {
+                assembly << "\timul rax, [rsp + " << bound_start + offset << "]\n";
+            }
+            assembly << "\tadd rax, [rsp + " << var_start + offset << "]\n";
+        }
+
+        assembly << "\tshl rax, 3";
+        if (this->debug) assembly << " ; Multiply by size of value";
+        assembly << "\n";
+
+        assembly << "\tadd rax, [rsp + " << reg_size * (2 * total_bindings + 1) << "]\n";
+
+        //  9: Add the body to the computed pointer.
+        //  ----------------------------------------
+
+        if (this->debug) assembly << "\t;  Add the body to the pointer\n";
+
+        if (sum_loop->r_type->type == resolved_type::INT_TYPE) {
+            assembly << "\tpop r10\n"
+                     << "\tadd [rax], r10\n";
+        } else {
+            assembly << "\tmovsd xmm0, [rsp]\n"
+                     << "\tadd rsp, 8\n"
+                     << "\taddsd xmm0, [rax]\n"
+                     << "\tmovsd [rax], xmm0\n";
+        }
+
+        //  10: Increment the indices.
+        //  --------------------------
+
+        if (this->debug) assembly << "\t;  Increment the indices\n";
+
+        const long offset = reg_size * total_bindings;
+
+        for (long index = (long)array_loop->tc_nodes.size() - 1; index >= 0; --index) {
+            const std::string& name = array_loop->tc_nodes[index];
+            const long base_addr = node_to_address[name];
+
+            if (this->debug) assembly << "\t;  Increment `" << name << "`\n";
+            assembly << "\tadd qword [rsp + " << base_addr << "], 1\n";
+
+            assembly << "\tmov rax, [rsp + " << base_addr << "]\n"
+                     << "\tcmp rax, [rsp + " << base_addr + offset << "]\n"
+                     << "\tjl " << body_start;
+            if (this->debug) assembly << " ; If " << name << " < bound, run next iteration";
+            assembly << "\n";
+
+            if (index > 0) {
+                assembly << "\tmov qword [rsp + " << base_addr << "], 0";
+                if (this->debug) assembly << " ; " << name << " = 0";
+                assembly << "\n";
+            }
+        }
+
+        //        assembly << "\tadd rsp, " << item_size << "\n";
+        //        this->stack.pop();
+        //
+        //        for (long index = rank - 1; index >= 0; --index) {
+        //            const std::string& name = std::get<0>(array_loop->binding_pairs[index]).text;
+        //
+        //            if (this->debug) assembly << "\t;  Increment " << name << "\n";
+        //            assembly << "\tadd qword [rsp + " << reg_size * index << "], 1\n";
+        //
+        //            if (this->debug) assembly << "\t;  Compare " << name << " to its bound\n";
+        //            assembly << "\tmov rax, [rsp + " << reg_size * index << "]\n"
+        //                     << "\tcmp rax, [rsp + " << reg_size * (index + rank) << "]\n"
+        //                     << "\tjl " << body_start;
+        //            if (this->debug) assembly << " ; If " << name << " < bound, run next iteration";
+        //            assembly << "\n";
+        //
+        //            if (index > 0) {
+        //                assembly << "\tmov qword [rsp + " << index * reg_size << "], 0";
+        //                if (this->debug) assembly << " ; Set " << name << " = 0";
+        //                assembly << "\n";
+        //            }
+        //        }
+
+        //  11: Free array and sum indices and sum bounds.
+        //  ----------------------------------------------
+
+        if (this->debug) assembly << "\t;  Clean up\n";
+
+        assembly << "\tadd rsp, " << reg_size * total_bindings;
+        if (this->debug) assembly << " ; Free all loop variables";
+        assembly << "\n";
+
+        assembly << "\tadd rsp, " << reg_size * num_sum_bindings;
+        if (this->debug) assembly << " ; Free all loop bounds";
+        assembly << "\n";
+
+        for (long index = 0; index < 2 * (total_bindings + 1); ++index) this->stack.pop();
+
+        this->stack.push(reg_size * (num_array_bindings + 1));
+
+        if (this->debug) assembly << "\t;  END generate_tensor_contraction\n";
 
         return assembly.str();
     }
@@ -368,19 +677,14 @@ namespace generator {
         constexpr long reg_size = 8;
         std::stringstream assembly;
 
-        if (this->debug) {
-            assembly << "\t;  START generate_expr_array_loop\n";
+        if (this->debug) assembly << "\t;  START generate_expr_array_loop\n";
 
-            if (expression->is_tc) {
-                const unsigned long num_nodes = expression->tc_nodes.size();
-                assembly << "\t;  [Tensor contraction node]\n"
-                         << "\t;    * " << num_nodes << " variable" << ((num_nodes == 1) ? "" : "s")
-                         << ((num_nodes > 0) ? "(topological order):" : "") << "\n";
+        if (expression->is_tc) {
+            assembly << this->generate_tensor_contraction(expression);
 
-                for (const std::string& tc_node : expression->tc_nodes) {
-                    assembly << "\t;        - " << tc_node << "\n";
-                }
-            }
+            if (this->debug) assembly << "\t;  END generate_expr_array_loop\n";
+
+            return assembly.str();
         }
 
         if (this->debug) assembly << "\t;  Allocating 8 bytes for the array pointer\n";
@@ -923,7 +1227,8 @@ namespace generator {
             this->stack.push();
         }
 
-        //  3.  Compute every stack argument in reverse order (so that they end up on the stack in the normal order).
+        //  3.  Compute every stack argument in reverse order (so that they end up on the stack in the normal
+        //  order).
         //  4.  Compute every register argument in reverse order.
         for (const unsigned int& index : function.push_order) {
             assembly << generate_expr(expression->call_args[index]);

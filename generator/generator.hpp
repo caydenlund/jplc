@@ -289,6 +289,16 @@ namespace generator {
          */
         std::string generate_assem_mul(const std::string& reg, long value) const;
 
+        /**
+         * @brief Generates assembly for a tensor contraction.
+         *
+         * @param array_loop The array loop node.
+         * @return The assembly code for the tensor contraction.
+         */
+        std::string
+        generate_tensor_contraction(const std::shared_ptr<ast_node::array_loop_expr_node>& array_loop);
+
+
         //  Expressions:
         //  ------------
 
